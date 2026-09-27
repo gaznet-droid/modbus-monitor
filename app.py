@@ -13,7 +13,6 @@ SLAVE_ID = 1
 REGISTER_ADDR = 146
 POLL_INTERVAL = 3
 
-# Buffer for the last 60 readings
 history = deque(maxlen=60)
 
 def decode_power(registers):
@@ -28,8 +27,7 @@ def read_power():
         resp = client.read_input_registers(address=REGISTER_ADDR, count=2, slave=SLAVE_ID)
         if resp.isError():
             return None
-        val = decode_power(resp.registers)
-        return val
+        return decode_power(resp.registers)
     except Exception:
         return None
     finally:
@@ -64,34 +62,221 @@ def index():
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <title>Power Monitor</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+      <title>Live Power Monitor</title>
       <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; flex-direction: column; align-items: center; padding: 2rem; margin: 0; }
-        .card { background: #1e293b; padding: 2rem; border-radius: 16px; width: 90%; max-width: 960px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); }
-        .header-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; }
-        .label { font-size: 0.85rem; letter-spacing: 0.05em; color: #94a3b8; text-transform: uppercase; font-weight: 600; }
-        .stat { font-size: 3rem; font-weight: 700; color: #38bdf8; margin: 0.25rem 0 0; font-variant-numeric: tabular-nums; }
-        .mode-badge { font-size: 0.9rem; padding: 0.35rem 0.75rem; border-radius: 9999px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-        .import-badge { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
-        .export-badge { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+        :root {
+          --bg-base: #090d16;
+          --card-bg: #141c2e;
+          --border: #222f49;
+          --text-main: #f8fafc;
+          --text-muted: #94a3b8;
+          --import-color: #38bdf8;
+          --export-color: #34d399;
+          --amber-zero: #f59e0b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          background: var(--bg-base);
+          color: var(--text-main);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 1rem;
+          min-height: 100vh;
+        }
+
+        .container {
+          width: 100%;
+          max-width: 900px;
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+        }
+
+        .card {
+          background: var(--card-bg);
+          border: 1px solid var(--border);
+          border-radius: 16px;
+          padding: 1.25rem;
+          box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+        }
+
+        /* Line chart card takes roughly half viewport on mobile */
+        .chart-card {
+          display: flex;
+          flex-direction: column;
+          min-height: 48vh;
+        }
+
+        .header-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 0.75rem;
+          gap: 0.5rem;
+        }
+
+        .label {
+          font-size: 0.75rem;
+          letter-spacing: 0.06em;
+          color: var(--text-muted);
+          text-transform: uppercase;
+          font-weight: 700;
+        }
+
+        .stat {
+          font-size: 2.2rem;
+          font-weight: 700;
+          color: var(--import-color);
+          line-height: 1.1;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .mode-badge {
+          font-size: 0.75rem;
+          padding: 0.4rem 0.8rem;
+          border-radius: 9999px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          white-space: nowrap;
+        }
+
+        .import-badge { background: rgba(56, 189, 248, 0.15); color: var(--import-color); border: 1px solid rgba(56, 189, 248, 0.3); }
+        .export-badge { background: rgba(52, 211, 153, 0.15); color: var(--export-color); border: 1px solid rgba(52, 211, 153, 0.3); }
+
+        .chart-wrapper {
+          position: relative;
+          flex: 1;
+          width: 100%;
+          min-height: 220px;
+        }
+
+        /* Donut session card */
+        .donut-card {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
+        .donut-header {
+          width: 100%;
+          text-align: left;
+          margin-bottom: 1rem;
+        }
+
+        .donut-container {
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-around;
+          width: 100%;
+          gap: 1rem;
+        }
+
+        .donut-chart-box {
+          position: relative;
+          width: 160px;
+          height: 160px;
+        }
+
+        .legend-box {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+
+        .legend-item {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .legend-label {
+          font-size: 0.75rem;
+          color: var(--text-muted);
+          text-transform: uppercase;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+        }
+
+        .indicator {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          display: inline-block;
+        }
+
+        .legend-val {
+          font-size: 1.15rem;
+          font-weight: 700;
+          font-variant-numeric: tabular-nums;
+        }
+
+        @media (min-width: 600px) {
+          body { padding: 2rem; }
+          .stat { font-size: 3rem; }
+          .label { font-size: 0.85rem; }
+          .mode-badge { font-size: 0.85rem; padding: 0.45rem 1rem; }
+          .chart-wrapper { min-height: 280px; }
+          .donut-chart-box { width: 190px; height: 190px; }
+        }
       </style>
     </head>
     <body>
-      <div class="card">
-        <div class="header-row">
-          <div>
-            <div class="label">Live Net Power</div>
-            <div class="stat" id="currentVal">-- W</div>
+      <div class="container">
+        <!-- Main Real-time Power Chart -->
+        <div class="card chart-card">
+          <div class="header-row">
+            <div>
+              <div class="label">Live Net Power</div>
+              <div class="stat" id="currentVal">-- W</div>
+            </div>
+            <div id="modeBadge" class="mode-badge import-badge">Connecting...</div>
           </div>
-          <div id="modeBadge" class="mode-badge import-badge">Connecting...</div>
+          <div class="chart-wrapper">
+            <canvas id="lineChart"></canvas>
+          </div>
         </div>
-        <canvas id="chart" height="110"></canvas>
+
+        <!-- Cumulative Session Breakdown -->
+        <div class="card donut-card">
+          <div class="donut-header">
+            <div class="label">Session Energy Split</div>
+          </div>
+          <div class="donut-container">
+            <div class="donut-chart-box">
+              <canvas id="donutChart"></canvas>
+            </div>
+            <div class="legend-box">
+              <div class="legend-item">
+                <span class="legend-label">
+                  <span class="indicator" style="background: var(--import-color)"></span> Imported
+                </span>
+                <span class="legend-val" id="totalImportVal" style="color: var(--import-color)">0 Wh</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-label">
+                  <span class="indicator" style="background: var(--export-color)"></span> Exported
+                </span>
+                <span class="legend-val" id="totalExportVal" style="color: var(--export-color)">0 Wh</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <script>
-        const ctx = document.getElementById('chart').getContext('2d');
-        const chart = new Chart(ctx, {
+        // --- 1. Line Chart Setup ---
+        const lineCtx = document.getElementById('lineChart').getContext('2d');
+        const isMobile = window.innerWidth < 600;
+
+        const lineChart = new Chart(lineCtx, {
           type: 'line',
           data: {
             labels: [],
@@ -100,88 +285,140 @@ def index():
               data: [],
               borderColor: '#38bdf8',
               backgroundColor: 'rgba(56, 189, 248, 0.08)',
-              borderWidth: 2,
+              borderWidth: 2.5,
               pointRadius: 2,
-              pointHoverRadius: 4,
+              pointHoverRadius: 5,
               fill: true,
-              tension: 0.1
+              tension: 0.15
             }]
           },
           options: {
             responsive: true,
+            maintainAspectRatio: false,
             animation: false,
             scales: {
               x: {
-                grid: { color: '#334155' },
-                ticks: { color: '#64748b', maxTicksLimit: 10 }
+                grid: { color: '#1e293b' },
+                ticks: {
+                  color: '#94a3b8',
+                  font: { size: isMobile ? 12 : 13, weight: '600' },
+                  maxTicksLimit: isMobile ? 5 : 8
+                }
               },
               y: {
-                // Allows negative readings for solar/battery export
                 grid: {
                   color: function(context) {
-                    // Highlight the 0 W line distinctly
                     if (context.tick && context.tick.value === 0) {
                       return '#f59e0b'; // Amber zero baseline
                     }
-                    return '#334155';
+                    return '#1e293b';
                   },
                   lineWidth: function(context) {
                     return (context.tick && context.tick.value === 0) ? 2 : 1;
                   }
                 },
-                ticks: { 
-                  color: '#64748b', 
-                  callback: v => (v > 0 ? '+' : '') + v + ' W' 
+                ticks: {
+                  color: '#94a3b8',
+                  font: { size: isMobile ? 13 : 14, weight: '700' },
+                  callback: v => (v > 0 ? '+' : '') + v + ' W'
                 }
               }
             },
             plugins: {
               legend: { display: false },
               tooltip: {
-                callbacks: { 
-                  label: ctx => (ctx.parsed.y > 0 ? 'Importing: +' : 'Exporting: ') + ctx.parsed.y + ' W' 
+                callbacks: {
+                  label: ctx => (ctx.parsed.y > 0 ? 'Importing: +' : 'Exporting: ') + ctx.parsed.y + ' W'
                 }
               }
             }
           }
         });
 
+        // --- 2. Donut Chart Setup (Cumulative Session) ---
+        const donutCtx = document.getElementById('donutChart').getContext('2d');
+        let sessionImportWh = 0;
+        let sessionExportWh = 0;
+        let lastTimestamp = null;
+
+        const donutChart = new Chart(donutCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Imported', 'Exported'],
+            datasets: [{
+              data: [0.001, 0], // Start non-zero for visual initialization
+              backgroundColor: ['#38bdf8', '#34d399'],
+              borderColor: '#141c2e',
+              borderWidth: 3,
+              hoverOffset: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+              legend: { display: false }
+            }
+          }
+        });
+
+        // --- 3. Live Polling Loop ---
         async function updateData() {
           try {
             const res = await fetch('/api/data');
             const data = await res.json();
             if (data.length > 0) {
-              chart.data.labels = data.map(d => d.time);
-              chart.data.datasets[0].data = data.map(d => d.value);
+              lineChart.data.labels = data.map(d => d.time);
+              lineChart.data.datasets[0].data = data.map(d => d.value);
 
-              const latest = data[data.length - 1].value;
+              const latest = data[data.length - 1];
+              const val = latest.value;
               const valEl = document.getElementById('currentVal');
               const badgeEl = document.getElementById('modeBadge');
 
-              if (latest < 0) {
-                // Exporting (Solar/Battery generation exceeding home load)
-                valEl.style.color = '#34d399'; // Emerald green
-                valEl.innerText = latest + ' W';
+              // Update primary display & accent color
+              if (val < 0) {
+                valEl.style.color = '#34d399';
+                valEl.innerText = val + ' W';
                 badgeEl.className = 'mode-badge export-badge';
-                badgeEl.innerText = 'Exporting to Grid';
-                chart.data.datasets[0].borderColor = '#34d399';
-                chart.data.datasets[0].backgroundColor = 'rgba(52, 211, 153, 0.08)';
+                badgeEl.innerText = 'Exporting';
+                lineChart.data.datasets[0].borderColor = '#34d399';
+                lineChart.data.datasets[0].backgroundColor = 'rgba(52, 211, 153, 0.08)';
               } else {
-                // Importing (Drawing from grid)
-                valEl.style.color = '#38bdf8'; // Blue
-                valEl.innerText = '+' + latest + ' W';
+                valEl.style.color = '#38bdf8';
+                valEl.innerText = '+' + val + ' W';
                 badgeEl.className = 'mode-badge import-badge';
-                badgeEl.innerText = 'Importing from Grid';
-                chart.data.datasets[0].borderColor = '#38bdf8';
-                chart.data.datasets[0].backgroundColor = 'rgba(56, 189, 248, 0.08)';
+                badgeEl.innerText = 'Importing';
+                lineChart.data.datasets[0].borderColor = '#38bdf8';
+                lineChart.data.datasets[0].backgroundColor = 'rgba(56, 189, 248, 0.08)';
               }
 
-              chart.update('none');
+              lineChart.update('none');
+
+              // Accumulate Watt-Hours for the active browser session
+              const now = Date.now();
+              if (lastTimestamp) {
+                const deltaHours = (now - lastTimestamp) / 3600000;
+                if (val >= 0) {
+                  sessionImportWh += (val * deltaHours);
+                } else {
+                  sessionExportWh += (Math.abs(val) * deltaHours);
+                }
+
+                donutChart.data.datasets[0].data = [sessionImportWh, sessionExportWh];
+                donutChart.update('none');
+
+                document.getElementById('totalImportVal').innerText = sessionImportWh.toFixed(1) + ' Wh';
+                document.getElementById('totalExportVal').innerText = sessionExportWh.toFixed(1) + ' Wh';
+              }
+              lastTimestamp = now;
             }
           } catch (e) {
             console.error(e);
           }
         }
+
         setInterval(updateData, 2000);
         updateData();
       </script>
