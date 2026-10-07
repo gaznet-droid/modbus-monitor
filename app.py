@@ -13,7 +13,8 @@ SLAVE_ID = 1
 REGISTER_ADDR = 146
 POLL_INTERVAL = 3
 
-history = deque(maxlen=60)
+# Keep up to 2 hours in memory so toggling up to 1 hour is instantaneous
+history = deque(maxlen=2400)
 
 def decode_power(registers):
     raw_bytes = struct.pack('>HH', registers[0], registers[1])
@@ -105,7 +106,6 @@ def index():
           box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
         }
 
-        /* Line chart card takes roughly half viewport on mobile */
         .chart-card {
           display: flex;
           flex-direction: column;
@@ -136,6 +136,24 @@ def index():
           font-variant-numeric: tabular-nums;
         }
 
+        .controls-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 0.5rem;
+        }
+
+        .time-select {
+          background: #1e293b;
+          color: var(--text-main);
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          padding: 0.3rem 0.6rem;
+          font-size: 0.75rem;
+          font-weight: 600;
+          outline: none;
+        }
+
         .mode-badge {
           font-size: 0.75rem;
           padding: 0.4rem 0.8rem;
@@ -156,7 +174,6 @@ def index():
           min-height: 220px;
         }
 
-        /* Donut session card */
         .donut-card {
           display: flex;
           flex-direction: column;
@@ -230,7 +247,6 @@ def index():
     </head>
     <body>
       <div class="container">
-        <!-- Main Real-time Power Chart -->
         <div class="card chart-card">
           <div class="header-row">
             <div>
@@ -239,12 +255,23 @@ def index():
             </div>
             <div id="modeBadge" class="mode-badge import-badge">Connecting...</div>
           </div>
+          
+          <div class="controls-row">
+            <span class="label">Time Window</span>
+            <select id="timeWindow" class="time-select">
+              <option value="300">5 Mins</option>
+              <option value="900" selected>15 Mins</option>
+              <option value="1800">30 Mins</option>
+              <option value="2700">45 Mins</option>
+              <option value="3600">1 Hour</option>
+            </select>
+          </div>
+
           <div class="chart-wrapper">
             <canvas id="lineChart"></canvas>
           </div>
         </div>
 
-        <!-- Cumulative Session Breakdown -->
         <div class="card donut-card">
           <div class="donut-header">
             <div class="label">Session Energy Split</div>
@@ -264,7 +291,7 @@ def index():
                 <span class="legend-label">
                   <span class="indicator" style="background: var(--export-color)"></span> Exported
                 </span>
-                <span class="legend-val" id="totalExportVal" style="color: var(--export-color)">0 Wh</span>
+                <span class="legend-val" id="totalExportVal" style="color: var(--export-color)">0.00 Wh</span>
               </div>
             </div>
           </div>
@@ -272,7 +299,6 @@ def index():
       </div>
 
       <script>
-        // --- 1. Line Chart Setup ---
         const lineCtx = document.getElementById('lineChart').getContext('2d');
         const isMobile = window.innerWidth < 600;
 
@@ -285,9 +311,9 @@ def index():
               data: [],
               borderColor: '#38bdf8',
               backgroundColor: 'rgba(56, 189, 248, 0.08)',
-              borderWidth: 2.5,
-              pointRadius: 2,
-              pointHoverRadius: 5,
+              borderWidth: 2,
+              pointRadius: 0,
+              pointHoverRadius: 4,
               fill: true,
               tension: 0.15
             }]
@@ -301,15 +327,15 @@ def index():
                 grid: { color: '#1e293b' },
                 ticks: {
                   color: '#94a3b8',
-                  font: { size: isMobile ? 12 : 13, weight: '600' },
-                  maxTicksLimit: isMobile ? 5 : 8
+                  font: { size: isMobile ? 11 : 12, weight: '600' },
+                  maxTicksLimit: isMobile ? 6 : 10
                 }
               },
               y: {
                 grid: {
                   color: function(context) {
                     if (context.tick && context.tick.value === 0) {
-                      return '#f59e0b'; // Amber zero baseline
+                      return '#f59e0b';
                     }
                     return '#1e293b';
                   },
@@ -319,8 +345,8 @@ def index():
                 },
                 ticks: {
                   color: '#94a3b8',
-                  font: { size: isMobile ? 13 : 14, weight: '700' },
-                  callback: v => (v > 0 ? '+' : '') + v + ' W'
+                  font: { size: isMobile ? 12 : 13, weight: '700' },
+                  callback: v => (v < 0 ? Number(v).toFixed(2) : (v > 0 ? '+' + v : v)) + ' W'
                 }
               }
             },
@@ -328,14 +354,18 @@ def index():
               legend: { display: false },
               tooltip: {
                 callbacks: {
-                  label: ctx => (ctx.parsed.y > 0 ? 'Importing: +' : 'Exporting: ') + ctx.parsed.y + ' W'
+                  label: ctx => {
+                    const y = ctx.parsed.y;
+                    return y < 0 
+                      ? 'Exporting: ' + Number(y).toFixed(2) + ' W'
+                      : 'Importing: +' + y + ' W';
+                  }
                 }
               }
             }
           }
         });
 
-        // --- 2. Donut Chart Setup (Cumulative Session) ---
         const donutCtx = document.getElementById('donutChart').getContext('2d');
         let sessionImportWh = 0;
         let sessionExportWh = 0;
@@ -346,7 +376,7 @@ def index():
           data: {
             labels: ['Imported', 'Exported'],
             datasets: [{
-              data: [0.001, 0], // Start non-zero for visual initialization
+              data: [0.001, 0],
               backgroundColor: ['#38bdf8', '#34d399'],
               borderColor: '#141c2e',
               borderWidth: 3,
@@ -363,24 +393,27 @@ def index():
           }
         });
 
-        // --- 3. Live Polling Loop ---
         async function updateData() {
           try {
             const res = await fetch('/api/data');
             const data = await res.json();
             if (data.length > 0) {
-              lineChart.data.labels = data.map(d => d.time);
-              lineChart.data.datasets[0].data = data.map(d => d.value);
+              // Read selected window duration in seconds (polls every 3s)
+              const windowSeconds = parseInt(document.getElementById('timeWindow').value);
+              const maxPoints = Math.floor(windowSeconds / 3);
+              const slicedData = data.slice(-maxPoints);
+
+              lineChart.data.labels = slicedData.map(d => d.time);
+              lineChart.data.datasets[0].data = slicedData.map(d => d.value);
 
               const latest = data[data.length - 1];
               const val = latest.value;
               const valEl = document.getElementById('currentVal');
               const badgeEl = document.getElementById('modeBadge');
 
-              // Update primary display & accent color
               if (val < 0) {
                 valEl.style.color = '#34d399';
-                valEl.innerText = val + ' W';
+                valEl.innerText = Number(val).toFixed(2) + ' W';
                 badgeEl.className = 'mode-badge export-badge';
                 badgeEl.innerText = 'Exporting';
                 lineChart.data.datasets[0].borderColor = '#34d399';
@@ -396,7 +429,6 @@ def index():
 
               lineChart.update('none');
 
-              // Accumulate Watt-Hours for the active browser session
               const now = Date.now();
               if (lastTimestamp) {
                 const deltaHours = (now - lastTimestamp) / 3600000;
@@ -410,7 +442,7 @@ def index():
                 donutChart.update('none');
 
                 document.getElementById('totalImportVal').innerText = sessionImportWh.toFixed(1) + ' Wh';
-                document.getElementById('totalExportVal').innerText = sessionExportWh.toFixed(1) + ' Wh';
+                document.getElementById('totalExportVal').innerText = sessionExportWh.toFixed(2) + ' Wh';
               }
               lastTimestamp = now;
             }
