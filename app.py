@@ -13,7 +13,6 @@ SLAVE_ID = 1
 REGISTER_ADDR = 146
 POLL_INTERVAL = 3
 
-# Keep up to 5 hours in memory so 4-hour window works seamlessly
 history = deque(maxlen=6000)
 
 def decode_power(registers):
@@ -182,9 +181,24 @@ def index():
 
         .donut-header {
           width: 100%;
-          text-align: left;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
           margin-bottom: 1rem;
         }
+
+        .reset-btn {
+          background: transparent;
+          color: var(--text-muted);
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          padding: 0.2rem 0.5rem;
+          font-size: 0.65rem;
+          text-transform: uppercase;
+          font-weight: 600;
+          cursor: pointer;
+        }
+        .reset-btn:hover { color: var(--text-main); border-color: var(--text-muted); }
 
         .donut-container {
           display: flex;
@@ -275,6 +289,7 @@ def index():
         <div class="card donut-card">
           <div class="donut-header">
             <div class="label">Session Energy Split</div>
+            <button class="reset-btn" onclick="resetSession()">Reset Totals</button>
           </div>
           <div class="donut-container">
             <div class="donut-chart-box">
@@ -367,16 +382,19 @@ def index():
         });
 
         const donutCtx = document.getElementById('donutChart').getContext('2d');
-        let sessionImportWh = 0;
-        let sessionExportWh = 0;
+        
+        // Load persistent session totals from localStorage if available
+        let sessionImportWh = parseFloat(localStorage.getItem('sessionImportWh')) || 0;
+        let sessionExportWh = parseFloat(localStorage.getItem('sessionExportWh')) || 0;
         let lastTimestamp = null;
 
+        const initialImport = sessionImportWh > 0 ? sessionImportWh : 0.001;
         const donutChart = new Chart(donutCtx, {
           type: 'doughnut',
           data: {
             labels: ['Imported', 'Exported'],
             datasets: [{
-              data: [0.001, 0],
+              data: [initialImport, sessionExportWh],
               backgroundColor: ['#38bdf8', '#34d399'],
               borderColor: '#141c2e',
               borderWidth: 3,
@@ -392,6 +410,21 @@ def index():
             }
           }
         });
+
+        // Initialize UI legend values from storage immediately
+        document.getElementById('totalImportVal').innerText = sessionImportWh.toFixed(1) + ' Wh';
+        document.getElementById('totalExportVal').innerText = sessionExportWh.toFixed(2) + ' Wh';
+
+        function resetSession() {
+          sessionImportWh = 0;
+          sessionExportWh = 0;
+          localStorage.removeItem('sessionImportWh');
+          localStorage.removeItem('sessionExportWh');
+          donutChart.data.datasets[0].data = [0.001, 0];
+          donutChart.update('none');
+          document.getElementById('totalImportVal').innerText = '0 Wh';
+          document.getElementById('totalExportVal').innerText = '0.00 Wh';
+        }
 
         async function updateData() {
           try {
@@ -437,7 +470,14 @@ def index():
                   sessionExportWh += (Math.abs(val) * deltaHours);
                 }
 
-                donutChart.data.datasets[0].data = [sessionImportWh, sessionExportWh];
+                // Save to localStorage so values survive page refreshes
+                localStorage.setItem('sessionImportWh', sessionImportWh);
+                localStorage.setItem('sessionExportWh', sessionExportWh);
+
+                donutChart.data.datasets[0].data = [
+                  sessionImportWh === 0 ? 0.001 : sessionImportWh, 
+                  sessionExportWh
+                ];
                 donutChart.update('none');
 
                 document.getElementById('totalImportVal').innerText = sessionImportWh.toFixed(1) + ' Wh';
