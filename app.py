@@ -13,8 +13,8 @@ SLAVE_ID = 1
 REGISTER_ADDR = 146
 POLL_INTERVAL = 3
 
-# Keep up to 2 hours in memory so toggling up to 1 hour is instantaneous
-history = deque(maxlen=2400)
+# Keep up to 5 hours in memory so 4-hour window works seamlessly
+history = deque(maxlen=6000)
 
 def decode_power(registers):
     raw_bytes = struct.pack('>HH', registers[0], registers[1])
@@ -259,11 +259,11 @@ def index():
           <div class="controls-row">
             <span class="label">Time Window</span>
             <select id="timeWindow" class="time-select">
-              <option value="300">5 Mins</option>
-              <option value="900" selected>15 Mins</option>
+              <option value="900">15 Mins</option>
               <option value="1800">30 Mins</option>
-              <option value="2700">45 Mins</option>
               <option value="3600">1 Hour</option>
+              <option value="7200">2 Hours</option>
+              <option value="14400" selected>4 Hours</option>
             </select>
           </div>
 
@@ -398,7 +398,6 @@ def index():
             const res = await fetch('/api/data');
             const data = await res.json();
             if (data.length > 0) {
-              // Read selected window duration in seconds (polls every 3s)
               const windowSeconds = parseInt(document.getElementById('timeWindow').value);
               const maxPoints = Math.floor(windowSeconds / 3);
               const slicedData = data.slice(-maxPoints);
