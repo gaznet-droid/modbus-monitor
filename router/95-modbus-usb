@@ -1,0 +1,21 @@
+#!/bin/sh
+case "$ACTION:$DEVTYPE" in
+    add:partition)
+        /usr/local/usr/bin/python3 /usr/local/usr/lib/clockmill/modbus_usb.py mount 2>&1 | logger -t modbus-usb
+        if /usr/local/usr/bin/python3 /usr/local/usr/lib/clockmill/modbus_usb.py check >/dev/null 2>&1; then
+            if [ -x /etc/init.d/modbus-monitor ] && /etc/init.d/modbus-monitor enabled; then
+                if /etc/init.d/modbus-monitor status >/dev/null 2>&1; then
+                    /etc/init.d/modbus-monitor restart
+                else
+                    /etc/init.d/modbus-monitor start
+                fi
+            fi
+        fi
+        ;;
+    remove:partition)
+        if awk -v dev="/dev/$DEVNAME" '$1==dev && $2=="/usr/local/mnt/modbus-usb" {found=1} END {exit !found}' /proc/mounts; then
+            [ ! -x /etc/init.d/modbus-monitor ] || /etc/init.d/modbus-monitor stop
+            /bin/umount -l /usr/local/mnt/modbus-usb
+        fi
+        ;;
+esac
