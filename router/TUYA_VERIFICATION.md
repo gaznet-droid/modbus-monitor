@@ -56,3 +56,7 @@ New /etc/init.d/modbus-tuya is enabled at boot, nice 19, with no respawn policy.
 Private router backup: /etc/modbus-tuya-cloud-backup-20261023 (original collector plus private config). Roll back with /etc/init.d/modbus-tuya stop and disable, then restore the backed-up collector/config. Do not delete history or request accounting.
 
 21 tests pass, including transport prevention at expiry, restart persistence, missing/invalid deadline rejection, existing budgets and USB loss. Browser clients continue reading bounded cached USB queries; no Worker/D1 writes or per-view Tuya calls were added. This collector cannot control usage by other applications sharing the Tuya allowance.
+
+### Rollout blocked by router unresponsiveness
+
+After the first successful automatic cycle and HTTP 200 latest verification, follow-up history requests stalled. Fresh SSH timed out during banner exchange, HTTPS management timed out, and the existing session stopped returning output. Therefore this rollout is NOT accepted as healthy. Cause is unconfirmed. On recovering access, first stop and disable modbus-tuya, preserve USB databases and accounting, then inspect router logs/storage/memory before re-enabling collection. The service was enabled before loss of access and has not yet been disabled.
