@@ -1,0 +1,13 @@
+#!/bin/sh /etc/rc.common
+START=99
+STOP=10
+USE_PROCD=1
+start_service() {
+    procd_open_instance
+    procd_set_param command /usr/local/usr/bin/python3 -u /usr/local/usr/lib/modbus-monitor/tuya_collector.py --run
+    procd_set_param nice 19
+    procd_set_param stdout 0
+    procd_set_param stderr 1
+    # Deliberately no respawn: a safety stop requires operator review.
+    procd_close_instance
+}

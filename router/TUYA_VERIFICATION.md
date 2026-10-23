@@ -46,3 +46,13 @@ The dedicated IoT Core service page showed Cloud Develop Base Resource Trial, mo
 Proposed cloud fallback: two device status reads per 900-second cycle, cached token reuse, about 216 requests/day in normal operation including token calls. Proposed local ceilings: 300 requests/day and 10,000/month, counting retries and tokens. The 10,000-request ceiling corresponds to about US$0.0371 of API resource usage under that listed rate. No message subscription is added. Account-wide usage and remaining allowance still require monitoring. No subscription, purchase, trial extension or automatic polling was enabled.
 
 Gareth's deliberate cloud-fallback approval is pending, because the original programme prefers routine LAN collection and disallows silently substituting routine cloud polling. Trial expiry must remain a hard boundary for any approved initial run.
+
+## Automatic cloud rollout — 23 October 2026
+
+Gareth authorised temporary automatic Shed/Garage collection while a local collector is evaluated. Deployed a 900-second schedule with persistent 300/day and 10,000/calendar-month request caps (tokens and retries included). Requests stop before transport at the trial boundary: 23 November 2026 00:00 UTC, earlier than the displayed service expiry. Missing/expired deadline refuses startup. Budget/expiry stops do not respawn.
+
+New /etc/init.d/modbus-tuya is enabled at boot, nice 19, with no respawn policy. Only this new collector was started; monitor, tunnels and network were not restarted. Existing USB guard and separate database remain in use. First automatic cycle consumed three requests, wrote both samples, and had no device errors. Health and latest returned HTTP 200. Available router RAM after startup was approximately 34 MB.
+
+Private router backup: /etc/modbus-tuya-cloud-backup-20261023 (original collector plus private config). Roll back with /etc/init.d/modbus-tuya stop and disable, then restore the backed-up collector/config. Do not delete history or request accounting.
+
+21 tests pass, including transport prevention at expiry, restart persistence, missing/invalid deadline rejection, existing budgets and USB loss. Browser clients continue reading bounded cached USB queries; no Worker/D1 writes or per-view Tuya calls were added. This collector cannot control usage by other applications sharing the Tuya allowance.

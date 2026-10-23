@@ -134,15 +134,44 @@ class CloudSafeguardTests(unittest.TestCase):
             budget = collector.RequestBudget(store, 2, 3, clock=lambda: now[0])
             self.assertEqual(budget.claim_cycle(900), 900)
             budget.reserve()
-            with self.assertRaises(collector.TuyaError):
+            with self.assertRaises(collector.PollingStopped):
                 budget.reserve()
             now[0] += 86400
             budget.reserve()
-            with self.assertRaises(collector.TuyaError):
+            with self.assertRaises(collector.PollingStopped):
                 budget.reserve()
             now[0] -= 86400
-            with self.assertRaises(collector.TuyaError):
+            with self.assertRaises(collector.PollingStopped):
                 budget.reserve()
+            store.close()
+
+    def test_deadline_blocks_transport_and_survives_restart(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'tuya.sqlite3'
+            for _ in range(2):
+                store = collector.USBStore(path, lambda: None)
+                budget = collector.RequestBudget(store, 300, 10000,
+                    clock=lambda: 200, expires_at=200)
+                cloud = collector.TuyaCloud('id', 'secret',
+                    transport=lambda *_args, **_kwargs: self.fail('Network after expiry'),
+                    before_request=budget.reserve)
+                with self.assertRaises(collector.PollingStopped):
+                    cloud.token()
+                self.assertIsNone(store.metadata('request_budget'))
+                store.close()
+
+    def test_approved_schedule_requires_future_deadline_without_network(self):
+        with tempfile.TemporaryDirectory() as folder:
+            store = collector.USBStore(Path(folder) / 'tuya.sqlite3', lambda: None)
+            cloud = collector.TuyaCloud('id', 'secret',
+                transport=lambda *_args, **_kwargs: self.fail('Network without deadline'))
+            conf = dict(approved_cloud_polling=True, daily_request_budget=300,
+                        monthly_request_budget=10000)
+            for deadline in (None, True, float('nan'), time.time() - 1):
+                conf['cloud_stop_epoch'] = deadline
+                with self.assertRaises(collector.PollingStopped):
+                    collector.run_cloud(cloud, conf, store, threading.Event())
+                self.assertIsNone(store.metadata('collection_mode'))
             store.close()
 
     def test_process_lock_prevents_competing_collectors(self):

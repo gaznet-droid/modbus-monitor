@@ -52,6 +52,10 @@ class TuyaError(RuntimeError):
         super().__init__(self.code)
 
 
+class PollingStopped(RuntimeError):
+    """A persistent safety boundary: never retry within the collector."""
+
+
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
@@ -233,20 +237,23 @@ class USBStore:
 
 class RequestBudget:
     """USB-persisted UTC request budgets and a restart-safe cycle gate."""
-    def __init__(self, store, daily, monthly, clock=time.time):
+    def __init__(self, store, daily, monthly, clock=time.time, expires_at=None):
         self.store, self.daily, self.monthly, self.clock = store, daily, monthly, clock
+        self.expires_at = expires_at
 
     def reserve(self):
         now = self.clock()
+        if self.expires_at is not None and now >= self.expires_at:
+            raise PollingStopped("Cloud trial deadline reached")
         day = time.strftime("%Y-%m-%d", time.gmtime(now))
         month = day[:7]
         state = json.loads(self.store.metadata("request_budget") or "{}")
         if state.get("day", day) > day or state.get("month", month) > month:
-            raise TuyaError("Clock moved backwards; cloud polling paused")
+            raise PollingStopped("Clock moved backwards; cloud polling paused")
         dc = state.get("day_count", 0) if state.get("day") == day else 0
         mc = state.get("month_count", 0) if state.get("month") == month else 0
         if dc >= self.daily or mc >= self.monthly:
-            raise TuyaError("Configured request budget exhausted")
+            raise PollingStopped("Configured request budget exhausted")
         self.store.metadata("request_budget", json.dumps({"day": day, "month": month,
                             "day_count": dc + 1, "month_count": mc + 1}))
 
@@ -310,12 +317,19 @@ def run_cloud(cloud, conf, store, stop):
         value = conf.get(field)
         if not isinstance(value, int) or isinstance(value, bool) or value < 1:
             raise ValueError("Set verified daily and monthly request budgets before scheduling")
-    budget = RequestBudget(store, conf["daily_request_budget"], conf["monthly_request_budget"])
+    deadline = conf.get("cloud_stop_epoch")
+    if (isinstance(deadline, bool) or not isinstance(deadline, (int, float))
+            or not math.isfinite(deadline) or deadline <= time.time()):
+        raise PollingStopped("Set a future cloud trial deadline before scheduling")
+    budget = RequestBudget(store, conf["daily_request_budget"], conf["monthly_request_budget"],
+                           expires_at=deadline)
     cloud.before_request = budget.reserve
     store.metadata("collection_mode", "automatic")
     failures = json.loads(store.metadata("device_backoff") or "{}")
     interval = conf.get("interval_seconds", 900)
     while not stop.is_set():
+        if time.time() >= deadline:
+            raise PollingStopped("Cloud trial deadline reached")
         wait = budget.claim_cycle(interval)
         if wait:
             stop.wait(min(wait, 60))
@@ -366,7 +380,10 @@ def main():
                 stop = threading.Event()
                 signal.signal(signal.SIGTERM, lambda *_: stop.set())
                 signal.signal(signal.SIGINT, lambda *_: stop.set())
-                run_cloud(cloud,conf,store,stop)
+                try:
+                    run_cloud(cloud,conf,store,stop)
+                finally:
+                    store.metadata("collection_mode", "manual")
             finally:
                 store.close()
 
