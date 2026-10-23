@@ -38,3 +38,11 @@ Deployed code revision 81718f2 on 23 October 2026. Baseline hashes matched the r
 Public health, latest Juwai, both Juwai history routes and existing 8-hour/calendar-day/24-hour history routes returned HTTP 200. Unsupported solar queries returned 400. A production Chrome check confirmed current HTML and real USB samples, and no Voltage calls while viewing Power/Juwai. Automatic Tuya collection remains disabled.
 
 The stored test samples at this point are Shed 26.47 V / 0.038 A / 1.02 W and Garage 21.13 V / 0.869 A / 18.37 W, observed at 2026-10-23 12:49:57–58 UTC. Their age is always shown; these are not labelled as continuously live.
+
+## Verified allowance and proposed rollout (not enabled)
+
+The dedicated IoT Core service page showed Cloud Develop Base Resource Trial, monthly allowance US$0.20, in service from 23 October to 23 November 2026. Tuya's official pricing page (https://developer.tuya.com/en/docs/iot/membership-service?id=K9m8k45jwvg9j, updated July 2026) lists Trial API calls outside mainland China at US$3.71 per million, with approximately 26,000 calls when allocating half the allowance to APIs; the trial suspends at exhaustion instead of allowing paid overage.
+
+Proposed cloud fallback: two device status reads per 900-second cycle, cached token reuse, about 216 requests/day in normal operation including token calls. Proposed local ceilings: 300 requests/day and 10,000/month, counting retries and tokens. The 10,000-request ceiling corresponds to about US$0.0371 of API resource usage under that listed rate. No message subscription is added. Account-wide usage and remaining allowance still require monitoring. No subscription, purchase, trial extension or automatic polling was enabled.
+
+Gareth's deliberate cloud-fallback approval is pending, because the original programme prefers routine LAN collection and disallows silently substituting routine cloud polling. Trial expiry must remain a hard boundary for any approved initial run.
