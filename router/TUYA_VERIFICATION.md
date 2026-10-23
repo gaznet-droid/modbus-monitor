@@ -11,7 +11,7 @@ Target: https://modbus.clockmillbarn.uk. No Clock Mill Hub source or services ch
 - Router --probe succeeded for Shed and Garage. Solar excluded because its API permission problem remains unresolved.
 - One bounded --once call succeeded. Guarded USB tuya.sqlite3 contains exactly one sample per device and four rollup rows. PRAGMA quick_check returned ok.
 - Local Modbus health remained healthy after both calls. Public health returned HTTP 200 after tunnel reconnection following reboot.
-- No Tuya init service, cron schedule, HTTP route or dashboard feature has been enabled.
+- No Tuya init service or cron schedule has been enabled. Cached API and Juwai UI are prepared for deployment after 19 unit tests and Chrome mobile/desktop checks passed.
 
 ## Recovery incident
 
@@ -23,3 +23,10 @@ Router SSH and HTTPS stopped responding during staging. The collector itself had
 - Verify Dad's LAN topology and whether supported local access exists. Cloud fallback is a deliberate decision; no automatic cloud polling has been approved here.
 - Review quota and add scheduling locks, backoff and storage-failure recovery before enabling any continuous cloud service.
 - Expose bounded read-only cached data through the existing Modbus origin and add UI only after the collection route is agreed.
+
+## Cached-view validation
+
+- Nineteen tests pass on Linux and Mac, including bounded/indexed cached reads, shared-client caching, storage-loss/negative-cache recovery, read-only HTTP behavior, persistent quota/cycle gates and exclusive locking.
+- Chrome passes lazy provider requests, cached metric selection, hidden-page pause, lazy voltage start/stop, keyboard navigation, 390px mobile layout and desktop layout with no JS errors.
+- Dad confirmed the observed meter readings via Gareth before UI rollout.
+- Automatic cloud polling is prepared but disabled; no claim of LAN access, quota approval or stable continuous collection is made.

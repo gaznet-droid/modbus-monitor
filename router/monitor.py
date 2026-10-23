@@ -316,7 +316,7 @@ class Monitor:
                     self.meter_failed=True
             self.stop.wait(max(.2,3-(time.monotonic()-started)))
 
-def handler(store, web, voltage=None):
+def handler(store, web, voltage=None, tuya=None):
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.0"
         def setup(self):
@@ -343,6 +343,14 @@ def handler(store, web, voltage=None):
                     return self.send(200,(web/"index.html").read_bytes(),"text/html; charset=utf-8")
                 if parsed.path=="/chart.umd.min.js":
                     return self.send(200,(web/"chart.umd.min.js").read_bytes(),"text/javascript; charset=utf-8")
+                if parsed.path=="/api/tuya/latest" and tuya is not None:
+                    if query:
+                        raise ValueError()
+                    return self.send(200,tuya.latest())
+                if parsed.path=="/api/tuya/history" and tuya is not None:
+                    if set(query)!={"device","window"} or any(len(v)!=1 for v in query.values()):
+                        raise ValueError()
+                    return self.send(200,tuya.history(query["device"][0],query["window"][0]))
                 if parsed.path=="/api/live":
                     since=int(query.get("since",["0"])[0])
                     if not 0<=since<=int(time.time()*1000)+60000:
@@ -421,7 +429,9 @@ def main():
         store=Store("/proc/self/fd/"+str(directory)+"/monitor.sqlite3",guard)
         monitor=Monitor(store,config["meter_host"],config.get("meter_port",8838))
         voltage=VoltageReader(config["meter_host"],config.get("meter_port",8838))
-        server=WebServer((config.get("bind","127.0.0.1"),config.get("port",8096)),handler(store,Path(__file__).parent/"web",voltage))
+        from tuya_cached import CachedTuya
+        tuya=CachedTuya(modbus_usb.storage_directory,modbus_usb.check)
+        server=WebServer((config.get("bind","127.0.0.1"),config.get("port",8096)),handler(store,Path(__file__).parent/"web",voltage,tuya))
         server.daemon_threads=True
         thread=threading.Thread(target=monitor.poll,daemon=True)
         thread.start()

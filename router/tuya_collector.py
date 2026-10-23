@@ -5,6 +5,8 @@ Requires a private /etc/modbus-tuya.json (mode 0600) and the existing dedicated
 USB guard for storage. This file is deliberately NOT registered as a service.
 """
 import argparse
+import contextlib
+import fcntl
 import hashlib
 import hmac
 import json
@@ -15,10 +17,12 @@ from pathlib import Path
 import re
 import sqlite3
 import stat
+import signal
 import sys
+import threading
 import time
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import Request, HTTPRedirectHandler, build_opener
 
 LOG = logging.getLogger("modbus-tuya")
 API = "https://openapi.tuyaeu.com"  # Existing Central Europe project ONLY.
@@ -46,6 +50,24 @@ class TuyaError(RuntimeError):
     def __init__(self, code):
         self.code = str(code)
         super().__init__(self.code)
+
+
+class NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+@contextlib.contextmanager
+def process_lock(path):
+    fd = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise RuntimeError("Another Modbus Tuya operation is already running") from None
+        yield
+    finally:
+        os.close(fd)
 
 
 def decode_status(items):
@@ -82,10 +104,13 @@ def decode_status(items):
 
 
 class TuyaCloud:
-    def __init__(self, client_id, client_secret, transport=urlopen):
+    def __init__(self, client_id, client_secret, transport=None, before_request=lambda: None):
         self.client_id = client_id
         self._secret = client_secret
-        self.transport = transport
+        self.transport = transport or build_opener(NoRedirect()).open
+        self.before_request = before_request
+        self.refresh_used = False
+        self.token_failure = False
         self.access_token = None
         self.expires_at = 0
 
@@ -107,6 +132,7 @@ class TuyaCloud:
         if token:
             headers["access_token"] = token
         req = Request(API + path, headers=headers, method="GET")
+        self.before_request()  # Persistently reserve every real request, including retries.
         try:
             with self.transport(req, timeout=12) as response:
                 obj = json.loads(response.read(100000))
@@ -123,14 +149,17 @@ class TuyaCloud:
     def token(self):
         if self.access_token and time.monotonic() < self.expires_at:
             return
+        self.token_failure = True
         obj = self.get("/v1.0/token?grant_type=1")
         result = obj.get("result") or {}
         token = result.get("access_token")
         expire = result.get("expire_time", 7200)
-        if not isinstance(token, str) or not token or not isinstance(expire, (int, float)):
+        if (not isinstance(token, str) or not token or isinstance(expire, bool) or
+                not isinstance(expire, (int, float)) or not math.isfinite(expire)):
             raise TuyaError("Invalid token response")
         self.access_token = token
         self.expires_at = time.monotonic() + max(60, min(float(expire) - 300, 3600))
+        self.token_failure = False
 
     def status(self, device_id):
         if not DEVICE_ID.fullmatch(device_id):
@@ -139,7 +168,8 @@ class TuyaCloud:
         try:
             obj = self.get("/v1.0/devices/" + device_id + "/status", authenticated=True)
         except TuyaError as exc:
-            if exc.code in ("1010", "1011"):
+            if exc.code in ("1010", "1011") and not self.refresh_used:
+                self.refresh_used = True
                 self.access_token = None
                 self.token()
                 obj = self.get("/v1.0/devices/" + device_id + "/status", authenticated=True)
@@ -192,6 +222,42 @@ class USBStore:
     def close(self):
         self.db.close()
 
+    def metadata(self, name, value=None):
+        self.guard()
+        if value is None:
+            row = self.db.execute("SELECT value FROM metadata WHERE name=?", (name,)).fetchone()
+            return row[0] if row else None
+        with self.db:
+            self.db.execute("INSERT OR REPLACE INTO metadata VALUES (?,?)", (name, str(value)))
+
+
+class RequestBudget:
+    """USB-persisted UTC request budgets and a restart-safe cycle gate."""
+    def __init__(self, store, daily, monthly, clock=time.time):
+        self.store, self.daily, self.monthly, self.clock = store, daily, monthly, clock
+
+    def reserve(self):
+        now = self.clock()
+        day = time.strftime("%Y-%m-%d", time.gmtime(now))
+        month = day[:7]
+        state = json.loads(self.store.metadata("request_budget") or "{}")
+        if state.get("day", day) > day or state.get("month", month) > month:
+            raise TuyaError("Clock moved backwards; cloud polling paused")
+        dc = state.get("day_count", 0) if state.get("day") == day else 0
+        mc = state.get("month_count", 0) if state.get("month") == month else 0
+        if dc >= self.daily or mc >= self.monthly:
+            raise TuyaError("Configured request budget exhausted")
+        self.store.metadata("request_budget", json.dumps({"day": day, "month": month,
+                            "day_count": dc + 1, "month_count": mc + 1}))
+
+    def claim_cycle(self, interval):
+        now = int(self.clock())
+        due = int(self.store.metadata("next_cloud_cycle") or 0)
+        if now < due:
+            return due - now
+        self.store.metadata("next_cloud_cycle", now + interval)
+        return 0
+
 
 def load_config(path):
     p = Path(path)
@@ -199,7 +265,8 @@ def load_config(path):
     if mode & 0o077:
         raise RuntimeError("Tuya config must be private (chmod 600)")
     c = json.loads(p.read_text())
-    if not (isinstance(c.get("client_id"), str) and isinstance(c.get("client_secret"), str)):
+    if not (isinstance(c.get("client_id"), str) and c["client_id"].strip() and
+            isinstance(c.get("client_secret"), str) and c["client_secret"].strip()):
         raise ValueError("Missing Tuya credentials")
     interval = c.get("interval_seconds", 900)
     if not isinstance(interval, int) or isinstance(interval, bool) or interval < 900:
@@ -215,7 +282,7 @@ def load_config(path):
     return c
 
 
-def collect_once(cloud, devices, store=None):
+def collect_once(cloud, devices, store=None, errors=None):
     ok = 0
     for label, ident in devices.items():
         try:
@@ -226,37 +293,82 @@ def collect_once(cloud, devices, store=None):
             print(json.dumps({"device":label,"ts":ts,"values":output},separators=(",", ":")))
             ok += 1
         except (TuyaError, ValueError) as exc:
+            if errors is not None:
+                errors[label] = exc.code if isinstance(exc, TuyaError) else "Invalid telemetry"
             LOG.warning("Read-only status for %s unavailable (%s)",label,
                         exc.code if isinstance(exc,TuyaError) else "Invalid telemetry")
+            if getattr(cloud, "token_failure", False) or isinstance(exc, TuyaError) and exc.code in (
+                    "1010", "1011", "HTTP-429", "Configured request budget exhausted"):
+                break
     return ok
+
+
+def run_cloud(cloud, conf, store, stop):
+    if conf.get("approved_cloud_polling") is not True:
+        raise RuntimeError("Automatic cloud polling needs a deliberate rollout approval")
+    for field in ("daily_request_budget", "monthly_request_budget"):
+        value = conf.get(field)
+        if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+            raise ValueError("Set verified daily and monthly request budgets before scheduling")
+    budget = RequestBudget(store, conf["daily_request_budget"], conf["monthly_request_budget"])
+    cloud.before_request = budget.reserve
+    store.metadata("collection_mode", "automatic")
+    failures = json.loads(store.metadata("device_backoff") or "{}")
+    interval = conf.get("interval_seconds", 900)
+    while not stop.is_set():
+        wait = budget.claim_cycle(interval)
+        if wait:
+            stop.wait(min(wait, 60))
+            continue
+        now = time.time()
+        devices = {k: v for k, v in conf["devices"].items()
+                   if now >= failures.get(k, {}).get("next", 0)}
+        errors = {}
+        cloud.refresh_used = False
+        collect_once(cloud, devices, store, errors)
+        for alias in devices:
+            if alias in errors:
+                count = min(6, failures.get(alias, {}).get("count", 0) + 1)
+                failures[alias] = {"count": count,
+                                   "next": time.time() + min(21600, interval * 2**count)}
+            else:
+                failures.pop(alias, None)
+        store.metadata("device_backoff", json.dumps(failures))
+        if cloud.token_failure or any(code in ("1010", "1011", "HTTP-429",
+                    "Configured request budget exhausted") for code in errors.values()):
+            raise RuntimeError("Cloud authentication, quota or rate-limit failure; operator review required")
 
 
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("--config",default="/etc/modbus-tuya.json")
-    parser.add_argument("--probe",action="store_true",help="GET only; no USB writes")
-    parser.add_argument("--once",action="store_true",help="GET then write one set to guarded USB")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--probe",action="store_true",help="Supervised GET only; no USB writes")
+    mode.add_argument("--once",action="store_true",help="GET then write one set to guarded USB")
+    mode.add_argument("--run",action="store_true",help="Approved, budgeted automatic cloud polling")
+    parser.add_argument("--lock-file",default="/var/run/modbus-tuya.lock")
     args=parser.parse_args()
-    if args.probe and args.once:
-        parser.error("Choose either --probe or --once")
     logging.basicConfig(level=logging.INFO,format="%(levelname)s %(message)s")
     conf=load_config(args.config)
     cloud=TuyaCloud(conf["client_id"],conf["client_secret"])
-    if args.probe:
-        raise SystemExit(0 if collect_once(cloud,conf["devices"]) else 1)
-    sys.path.insert(0,"/usr/local/usr/lib/clockmill")
-    import modbus_usb
-    # Reuse the original Modbus USB mount/identity guard, with no disk fallback.
-    with modbus_usb.storage_directory() as fd:
-        store=USBStore("/proc/self/fd/"+str(fd)+"/tuya.sqlite3",modbus_usb.check)
-        try:
-            while True:
-                started=time.monotonic()
-                collect_once(cloud,conf["devices"],store)
-                if args.once: return
-                time.sleep(max(1,conf["interval_seconds"]-(time.monotonic()-started)))
-        finally:
-            store.close()
+    with process_lock(args.lock_file):
+        if args.probe:
+            raise SystemExit(0 if collect_once(cloud,conf["devices"]) == len(conf["devices"]) else 1)
+        sys.path.insert(0,"/usr/local/usr/lib/clockmill")
+        import modbus_usb
+        # Reuse the original Modbus USB mount/identity guard, with no disk fallback.
+        with modbus_usb.storage_directory() as fd:
+            store=USBStore("/proc/self/fd/"+str(fd)+"/tuya.sqlite3",modbus_usb.check)
+            try:
+                if args.once:
+                    store.metadata("collection_mode", "manual")
+                    raise SystemExit(0 if collect_once(cloud,conf["devices"],store) == len(conf["devices"]) else 1)
+                stop = threading.Event()
+                signal.signal(signal.SIGTERM, lambda *_: stop.set())
+                signal.signal(signal.SIGINT, lambda *_: stop.set())
+                run_cloud(cloud,conf,store,stop)
+            finally:
+                store.close()
 
 if __name__ == "__main__":
     main()

@@ -228,6 +228,20 @@
           .chart-wrapper { min-height: 280px; }
           .donut-chart-box { width: 190px; height: 190px; }
         }
+
+        .juwai-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+        .juwai-card h2 { font-size:1rem; margin-bottom:.9rem; }
+        .juwai-power { font-size:clamp(1.8rem,6vw,3rem); font-weight:700; color:var(--import-color); margin:.3rem 0 1rem; }
+        .juwai-metrics { display:flex; gap:2rem; margin-bottom:1rem; }
+        .juwai-metrics dt { color:var(--text-muted); font-size:.8rem; margin-bottom:.35rem; }
+        .juwai-metrics dd { font-size:1.2rem; font-variant-numeric:tabular-nums; }
+        .juwai-card[data-stale="true"] .juwai-power { color:var(--text-muted); }
+        .juwai-controls { display:flex; flex-wrap:wrap; align-items:center; gap:1rem; margin-bottom:1rem; }
+        .juwai-controls label { display:flex; align-items:center; gap:.5rem; font-size:.85rem; color:var(--text-muted); }
+        .juwai-controls select { min-height:44px; background:#1e293b; color:var(--text-main); border:1px solid var(--border); border-radius:8px; padding:.5rem .6rem; font:inherit; color-scheme:dark; }
+        .juwai-controls select:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        .juwai-chart { position:relative; height:280px; }
+        @media(max-width:600px) { .juwai-grid { grid-template-columns:1fr; } .tabs { gap:.2rem; } .tabs button { padding:.75rem 1rem; } }
       </style>
     </head>
     <body>
@@ -235,6 +249,7 @@
         <nav class="tabs" role="tablist" aria-label="Meter view">
           <button id="powerTab" type="button" role="tab" aria-selected="true" aria-controls="powerPanel">Power</button>
           <button id="voltageTab" type="button" role="tab" aria-selected="false" aria-controls="voltagePanel" tabindex="-1">Voltage</button>
+          <button id="juwaiTab" type="button" role="tab" aria-selected="false" aria-controls="juwaiPanel" tabindex="-1">Juwai</button>
         </nav>
         <section id="powerPanel" class="tab-panel" role="tabpanel" aria-labelledby="powerTab">
         <div class="card chart-card">
@@ -323,11 +338,30 @@
           </div>
           <p class="period-note">Reads about every 3 seconds, only while this tab is visible. Switching to Power, hiding or closing the page stops new requests. No background voltage recording. Gaps are not filled; session readings clear when you reload.</p>
         </section>
+<section id="juwaiPanel" class="tab-panel" role="tabpanel" aria-labelledby="juwaiTab" hidden>
+  <p id="juwaiStatus" class="period-note" role="status">Select Juwai to load stored readings.</p>
+  <div class="juwai-grid"><article class="card juwai-card" id="shedCard" data-stale="true">
+<h2>Shed</h2><div class="label">Last stored power</div><div class="juwai-power" id="shedPower">— W</div>
+<dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="shedVoltage">— V</dd></div><div><dt>Current</dt><dd id="shedCurrent">— A</dd></div></dl>
+<p class="period-note" id="shedAge">Loading stored reading…</p></article><article class="card juwai-card" id="garageCard" data-stale="true">
+<h2>Garage</h2><div class="label">Last stored power</div><div class="juwai-power" id="garagePower">— W</div>
+<dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="garageVoltage">— V</dd></div><div><dt>Current</dt><dd id="garageCurrent">— A</dd></div></dl>
+<p class="period-note" id="garageAge">Loading stored reading…</p></article></div>
+  <div class="card">
+    <div class="juwai-controls">
+      <label for="juwaiMetric">Reading <select id="juwaiMetric"><option value="power_w">Power (W)</option><option value="voltage_v">Voltage (V)</option><option value="current_a">Current (A)</option></select></label>
+      <label for="juwaiWindow">Period <select id="juwaiWindow"><option value="24h">24 hours</option><option value="7d">7 days</option><option value="30d">30 days</option><option value="365d">365 days</option></select></label>
+    </div>
+    <div class="juwai-chart"><canvas id="juwaiChart" role="img" aria-label="Stored Juwai readings for Shed and Garage"></canvas></div>
+    <p id="juwaiHistoryNote" class="period-note">History starts with the first stored sample.</p>
+  </div>
+  <p class="period-note">Solar meter is not connected: Tuya permission is unresolved. Read-only monitoring.</p>
+</section>
       </div>
-
       <script>
 const $ = id => document.getElementById(id);
 let activeTab = 'power';
+const views = ['power','voltage','juwai'];
 let voltageChart = null, voltagePoints = [], voltageTimer = null, voltageController = null, voltageVersion = 0;
 function stopVoltage() {
   voltageVersion++;
@@ -376,8 +410,9 @@ async function readVoltage(version) {
 }
 function selectTab(name) {
   if(activeTab===name)return;
-  activeTab=name;stopVoltage();
-  for(const view of ['power','voltage']){
+  activeTab=name;stopVoltage();stopJuwai();
+  if(name!=='power'){generation++;controller?.abort();}
+  for(const view of views){
     const current=view===name;
     $(view+'Tab').setAttribute('aria-selected',String(current));$(view+'Tab').tabIndex=current?0:-1;
     $(view+'Panel').hidden=!current;
@@ -386,20 +421,88 @@ function selectTab(name) {
     generation++;controller?.abort();
     makeVoltageChart();voltageChart.resize();
     $('voltageStatus').innerText='Requesting voltage…';readVoltage(voltageVersion);
+  } else if(name==='juwai') {
+    makeJuwaiChart();juwaiChart.resize();readJuwai(juwaiVersion);
   } else {
     chart.resize();donut.resize();lastHistory=0;
     loadHistory().catch(e=>{if(e.name!=='AbortError')$('lastReading').innerText='Connection lost';});
   }
 }
-for(const view of ['power','voltage']){
+for(const view of views){
   $(view+'Tab').addEventListener('click',()=>selectTab(view));
   $(view+'Tab').addEventListener('keydown',event=>{
     if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
     event.preventDefault();
-    const next=event.key==='Home'?'power':event.key==='End'?'voltage':view==='power'?'voltage':'power';
+    const i=views.indexOf(view);
+    const next=event.key==='Home'?views[0]:event.key==='End'?views[views.length-1]:views[(i+(event.key==='ArrowRight'?1:views.length-1))%views.length];
     selectTab(next);$(next+'Tab').focus();
   });
 }
+
+let juwaiChart=null, juwaiTimer=null, juwaiController=null, juwaiVersion=0;
+let juwaiHistory={}, juwaiHistoryKey='', juwaiHistoryTime=0;
+const juwaiFields={power_w:{label:'Power',unit:'W',column:4},voltage_v:{label:'Voltage',unit:'V',column:2},current_a:{label:'Current',unit:'A',column:3}};
+function stopJuwai(){juwaiVersion++;clearTimeout(juwaiTimer);juwaiTimer=null;juwaiController?.abort();juwaiController=null;}
+function makeJuwaiChart(){
+  if(juwaiChart)return;
+  juwaiChart=new Chart($('juwaiChart'),{type:'line',data:{datasets:['Shed','Garage'].map((name,i)=>({label:name,data:[],parsing:false,borderColor:['#38bdf8','#34d399'][i],backgroundColor:['#38bdf8','#34d399'][i],pointRadius:3,pointHitRadius:10,borderWidth:2,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:v=>new Date(v).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})},grid:{color:'#1e293b'}},y:{ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()+' '+juwaiFields[$('juwaiMetric').value].unit}}}}});
+}
+function drawJuwai(){
+  if(!juwaiChart)return;
+  const field=juwaiFields[$('juwaiMetric').value];let count=0;
+  for(const [i,id] of ['shed','garage'].entries()){
+    const series=juwaiHistory[id],points=[];
+    for(const row of series?.points||[]){
+      const prev=points[points.length-1];
+      if(prev && row[0]-prev.x>Math.max(1800000,series.step_ms*2.1))points.push({x:prev.x+series.step_ms,y:null});
+      points.push({x:row[0],y:Number.isFinite(row[field.column])?row[field.column]:null});count++;
+    }
+    juwaiChart.data.datasets[i].data=points;
+    if(series){juwaiChart.options.scales.x.min=series.start;juwaiChart.options.scales.x.max=series.end;}
+  }
+  juwaiChart.options.scales.y.title={display:true,text:field.label+' ('+field.unit+')',color:'#94a3b8'};
+  juwaiChart.update('none');
+  $('juwaiHistoryNote').textContent=count?'Stored sample averages. Missing intervals are left as gaps. History starts with the first stored sample.':'No stored samples in this period.';
+}
+function renderJuwai(data){
+  for(const device of data.devices){
+    if(!['shed','garage'].includes(device.id))continue;
+    const id=device.id,number=(v,unit,digits)=>Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:digits})+' '+unit:'— '+unit;
+    $(id+'Power').textContent=number(device.values.power_w,'W',2);
+    $(id+'Voltage').textContent=number(device.values.voltage_v,'V',2);
+    $(id+'Current').textContent=number(device.values.current_a,'A',3);
+    $(id+'Card').dataset.stale=String(device.stale);
+    $(id+'Age').textContent=device.observed_at?(device.stale?'Stale sample · ':'Stored ')+new Date(device.observed_at).toLocaleString():'No stored reading';
+  }
+  $('juwaiStatus').textContent=data.collection_mode==='automatic'?'Showing stored readings. Automatic collection is configured; check each sample’s update time.':'Verified samples · automatic collection is not enabled.';
+}
+async function readJuwai(version){
+  if(version!==juwaiVersion||activeTab!=='juwai'||document.hidden)return;
+  // One in-flight cycle; changing range cancels and invalidates the old cycle.
+  const aborter=new AbortController();juwaiController=aborter;
+  const window=$('juwaiWindow').value;
+  try{
+    const tasks=[getJSON('/api/tuya/latest',aborter.signal).then(data=>{if(version===juwaiVersion&&activeTab==='juwai'&&!document.hidden)renderJuwai(data);})];
+    if(juwaiHistoryKey!==window||Date.now()-juwaiHistoryTime>=300000){
+      tasks.push(Promise.all(['shed','garage'].map(id=>getJSON('/api/tuya/history?device='+id+'&window='+window,aborter.signal).then(data=>[id,data]))).then(rows=>{
+        if(version!==juwaiVersion||activeTab!=='juwai'||document.hidden)return;
+        juwaiHistory=Object.fromEntries(rows);juwaiHistoryKey=window;juwaiHistoryTime=Date.now();drawJuwai();
+      }));
+    }
+    const results=await Promise.allSettled(tasks);
+    if(version!==juwaiVersion||activeTab!=='juwai'||document.hidden)return;
+    if(results[0].status==='rejected'){
+      $('juwaiStatus').textContent='Stored readings unavailable. Previous values may be out of date.';
+      for(const id of ['shed','garage']){$(id+'Card').dataset.stale='true';$(id+'Age').textContent='Update unavailable · previous sample';}
+    }
+    if(results[1]?.status==='rejected')$('juwaiHistoryNote').textContent='Stored history unavailable. Previous chart may be out of date.';
+  }finally{
+    if(version===juwaiVersion&&activeTab==='juwai'&&!document.hidden){juwaiController=null;juwaiTimer=setTimeout(()=>readJuwai(version),30000);}
+  }
+}
+$('juwaiMetric').addEventListener('change',drawJuwai);
+$('juwaiWindow').addEventListener('change',()=>{stopJuwai();juwaiHistoryKey='';juwaiHistory={};drawJuwai();readJuwai(juwaiVersion);});
+
 const ranges = {"15m":900,"30m":1800,"1h":3600,"2h":7200,"4h":14400,"8h":28800,"1d":86400,"24h":86400,"7d":604800,"30d":2592000,"90d":7776000,"365d":31536000};
 let selected = '15m';
 let customBounds = null;
@@ -528,16 +631,17 @@ async function tick(){
   finally{setTimeout(tick,3000);}
 }
 document.addEventListener('visibilitychange',()=>{
-  stopVoltage();
+  stopVoltage();stopJuwai();
   if(!document.hidden){
     if(activeTab==='voltage')readVoltage(voltageVersion);
+    else if(activeTab==='juwai')readJuwai(juwaiVersion);
     else if(selected!=='custom')lastHistory=0;
   } else if(activeTab==='voltage') {
     $('voltageStatus').innerText='Paused while this page is hidden';$('voltageValue').style.opacity='.55';
   }
 });
-window.addEventListener('pagehide',stopVoltage);
-window.addEventListener('pageshow',event=>{if(event.persisted && activeTab==='voltage' && !document.hidden)readVoltage(voltageVersion);});
+window.addEventListener('pagehide',()=>{stopVoltage();stopJuwai();});
+window.addEventListener('pageshow',event=>{if(event.persisted&&!document.hidden){if(activeTab==='voltage')readVoltage(voltageVersion);else if(activeTab==='juwai')readJuwai(juwaiVersion);}});
 tick();
 
       </script>
