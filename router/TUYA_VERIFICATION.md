@@ -30,3 +30,11 @@ Router SSH and HTTPS stopped responding during staging. The collector itself had
 - Chrome passes lazy provider requests, cached metric selection, hidden-page pause, lazy voltage start/stop, keyboard navigation, 390px mobile layout and desktop layout with no JS errors.
 - Dad confirmed the observed meter readings via Gareth before UI rollout.
 - Automatic cloud polling is prepared but disabled; no claim of LAN access, quota approval or stable continuous collection is made.
+
+## Deployed cached view
+
+Deployed code revision 81718f2 on 23 October 2026. Baseline hashes matched the router before installation. A root-private source backup is at /etc/modbus-tuya-backup-81718f2. The existing Modbus service alone was restarted after read-only cached queries passed on the router; no other service was restarted. No database or credential contents were included in the source payload.
+
+Public health, latest Juwai, both Juwai history routes and existing 8-hour/calendar-day/24-hour history routes returned HTTP 200. Unsupported solar queries returned 400. A production Chrome check confirmed current HTML and real USB samples, and no Voltage calls while viewing Power/Juwai. Automatic Tuya collection remains disabled.
+
+The stored test samples at this point are Shed 26.47 V / 0.038 A / 1.02 W and Garage 21.13 V / 0.869 A / 18.37 W, observed at 2026-10-23 12:49:57–58 UTC. Their age is always shown; these are not labelled as continuously live.
