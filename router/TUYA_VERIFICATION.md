@@ -60,3 +60,7 @@ Private router backup: /etc/modbus-tuya-cloud-backup-20261023 (original collecto
 ### Rollout blocked by router unresponsiveness
 
 After the first successful automatic cycle and HTTP 200 latest verification, follow-up history requests stalled. Fresh SSH timed out during banner exchange, HTTPS management timed out, and the existing session stopped returning output. Therefore this rollout is NOT accepted as healthy. Cause is unconfirmed. On recovering access, first stop and disable modbus-tuya, preserve USB databases and accounting, then inspect router logs/storage/memory before re-enabling collection. The service was enabled before loss of access and has not yet been disabled.
+
+### Recovery verification — 25 October 2026
+
+Gareth restored SSH access. Router uptime was 1 day 22 hours; available RAM about 55 MB. Temporarily stopped/disabled modbus-tuya during inspection. USB had 191 genuine samples per device, latest 15:16 UTC on 25 October, and persistent accounting showed 143 requests today / 442 in October. Both 24-hour history endpoints returned HTTP 200 with 96 points; health also returned HTTP 200. Available kernel/service logs had no matching OOM/USB errors. This demonstrates collection continued after the subsequent reboot; it does not establish Friday's failure cause. Restored the previously authorised 900-second schedule with unchanged caps/deadline and persistent restart gate.
