@@ -144,6 +144,44 @@ class GenerationTests(unittest.TestCase):
         self.assertEqual(e['coverage_s'],900)
         self.assertEqual(estimate_energy([(0,-1000),(900000,-500)],0,900000)['estimated_kwh'],0)
 
+    def test_binned_energy_conserves_totals_and_marks_missing_zero_and_partial(self):
+        from tuya_cached import generation_bins,estimate_energy
+        end=6*3600000
+        plans={'buckets':generation_bins(0,end,'hour')}
+        # Hour 0 measured zero, hour 1 positive, long gap, partial last hour.
+        rows=[(i*900000,0 if i<=4 else 1000) for i in range(9)]
+        rows += [(5*3600000,1000),(5*3600000+900000,1000),(end-900000,1000)]
+        e=estimate_energy(rows,0,end,plans)
+        bins=e['buckets']
+        self.assertEqual(bins[0]['estimated_kwh'],0)
+        self.assertEqual(bins[0]['coverage_s'],3600)
+        self.assertIsNone(bins[3]['estimated_kwh'])
+        self.assertEqual(bins[-1]['coverage_s'],2700)
+        self.assertAlmostEqual(sum(b['estimated_kwh'] or 0 for b in bins),e['estimated_kwh'])
+        self.assertEqual(sum(b['coverage_s'] for b in bins),e['coverage_s'])
+
+    def test_daily_and_weekly_bins_cover_dst_and_split_zero_crossings(self):
+        from tuya_cached import generation_bins,estimate_energy,period_bounds
+        from datetime import datetime,timezone
+        now=int(datetime(2026,10,26,12,tzinfo=timezone.utc).timestamp()*1000)
+        start,end=period_bounds('yesterday',now)
+        self.assertEqual(len(generation_bins(start,end,'hour')),25)
+        self.assertEqual(len(generation_bins(start,end,'day')),1)
+        edges=generation_bins(start,end,'day')
+        rows=[(start+i*900000,1000) for i in range(101)]
+        e=estimate_energy(rows,start,end,{'buckets':edges})
+        self.assertAlmostEqual(e['buckets'][0]['estimated_kwh'],25)
+        for unit in ['hour','day','week']:
+            bins=generation_bins(start-30*86400000,end,unit)
+            self.assertEqual(bins[0]['start'],start-30*86400000)
+            self.assertEqual(bins[-1]['end'],end)
+            self.assertTrue(all(a['end']==b['start'] for a,b in zip(bins,bins[1:])))
+        e=estimate_energy([(0,-1000),(900000,1000)],0,900000,
+            {'buckets':[{'start':0,'end':450000,'estimated_kwh':None,'coverage_s':0,'period_s':450},
+                        {'start':450000,'end':900000,'estimated_kwh':None,'coverage_s':0,'period_s':450}]})
+        self.assertEqual(e['buckets'][0]['estimated_kwh'],0)
+        self.assertAlmostEqual(e['buckets'][1]['estimated_kwh'],.0625)
+
     def test_uk_calendar_days_handle_clock_changes(self):
         from tuya_cached import period_bounds
         from datetime import datetime,timezone

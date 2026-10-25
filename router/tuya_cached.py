@@ -1,5 +1,6 @@
 """Bounded read-only USB queries. This module never contacts Tuya or devices."""
 import copy
+from bisect import bisect_right
 import math
 import sqlite3
 import threading
@@ -28,38 +29,70 @@ def period_bounds(window, now):
     return end - WINDOWS[window]*1000, end
 
 
-def estimate_energy(rows, start, end):
-    """Trapezoids over measured minute averages; never bridge >30 minute gaps.
+def generation_bins(start, end, unit):
+    """Small calendar-aligned bins clipped to the selected interval (UK days)."""
+    if end <= start:
+        return []
+    local = datetime.fromtimestamp(start/1000, LONDON)
+    if unit == "hour":
+        boundaries = list(range((start//3600000+1)*3600000, end, 3600000))
+    else:
+        boundary = local.replace(hour=0, minute=0, second=0, microsecond=0)
+        days = 1 if unit == "day" else 7
+        if unit == "week":
+            boundary -= timedelta(days=boundary.weekday())
+        boundaries = []
+        boundary += timedelta(days=days)
+        while int(boundary.timestamp()*1000) < end:
+            stamp = int(boundary.timestamp()*1000)
+            if stamp > start:
+                boundaries.append(stamp)
+            boundary += timedelta(days=days)
+    edges = [start, *boundaries, end]
+    return [{"start":a, "end":b, "estimated_kwh":None,
+             "coverage_s":0.0, "period_s":(b-a)/1000}
+            for a,b in zip(edges,edges[1:])]
 
-    Clip boundary segments by interpolation. Never extrapolate before/after data.
-    This is an estimate, not a cumulative meter-register reading.
-    """
+
+def positive_wh(a, b, milliseconds):
+    if a >= 0 and b >= 0:
+        average = (a+b)*.5
+    elif a <= 0 and b <= 0:
+        average = 0.0
+    else:
+        positive = max(a,b)
+        average = positive*.5*positive/abs(b-a)
+    return average*milliseconds/3600000
+
+
+def estimate_energy(rows, start, end, plans=None):
+    """Integrate signed power once, split at bin boundaries; never extrapolate."""
     previous = None
     wh, coverage = 0.0, 0.0
+    plans = plans or {}
+    limits = {key:[b['end'] for b in bins] for key,bins in plans.items()}
     for ts, power in rows:
         valid = isinstance(power, (int, float)) and math.isfinite(power)
         if previous is not None and valid:
-            t0, p0 = previous
-            dt = ts - t0
-            left, right = max(start, t0), min(end, ts)
+            t0,p0 = previous
+            dt = ts-t0
+            left,right = max(start,t0),min(end,ts)
             if 0 < dt <= 1800000 and right > left:
-                a = p0 + (power - p0) * (left - t0) / dt
-                b = p0 + (power - p0) * (right - t0) / dt
-                # Generation is the positive part of signed power. Preserve
-                # coverage through reverse flow and integrate zero crossings.
-                if a >= 0 and b >= 0:
-                    average = (a+b)*.5
-                elif a <= 0 and b <= 0:
-                    average = 0.0
-                else:
-                    positive = max(a,b)
-                    average = positive * .5 * positive / abs(b-a)
-                wh += average * (right-left) / 3600000
-                coverage += (right-left) / 1000
-        previous = (ts, power) if valid else None
-    return {"estimated_kwh": wh/1000 if coverage else None,
-            "coverage_s": coverage, "period_s": max(0, (end-start)/1000),
-            "estimated": True}
+                def at(t): return p0+(power-p0)*(t-t0)/dt
+                wh += positive_wh(at(left),at(right),right-left)
+                coverage += (right-left)/1000
+                for key,bins in plans.items():
+                    i = bisect_right(limits[key],left)
+                    while i < len(bins) and bins[i]['start'] < right:
+                        bucket=bins[i]
+                        a,b=max(left,bucket['start']),min(right,bucket['end'])
+                        bucket['estimated_kwh']=(bucket['estimated_kwh'] or 0)+positive_wh(at(a),at(b),b-a)/1000
+                        bucket['coverage_s']+=(b-a)/1000
+                        i+=1
+        previous = (ts,power) if valid else None
+    return {"estimated_kwh":wh/1000 if coverage else None,
+            "coverage_s":coverage,"period_s":max(0,(end-start)/1000),
+            "estimated":True,**plans}
 
 
 class CachedTuya:
@@ -142,7 +175,12 @@ class CachedTuya:
                 cursor = db.execute("""SELECT bucket, power_sum / NULLIF(power_n,0)
                     FROM rollups WHERE device=? AND period=60 AND bucket>=? AND bucket<=?
                     ORDER BY bucket""", (device, start-1800000, min(int(self.clock()*1000), end+1800000)))
-                energy = estimate_energy(cursor, start, end)
+                unit = "week" if window == "30d" else "day" if window == "7d" else "hour"
+                plans = {"buckets":generation_bins(start,end,unit)}
+                if window == "30d":
+                    plans["daily_buckets"] = generation_bins(start,end,"day")
+                energy = estimate_energy(cursor,start,end,plans)
+                energy["bucket_unit"] = unit
             return {"device": device, "window": window, "start": start, "end": end,
                     "energy": energy,
                     "step_ms": step, "points": [list(r) for r in rows],

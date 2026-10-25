@@ -259,6 +259,31 @@
         #totalCard .juwai-kwh { color:var(--export-color); }
         .juwai-chart-section { margin-top:1.3rem; padding-top:1.2rem; border-top:1px solid var(--border); }
         .juwai-period { margin:0; }
+
+        .juwai-mobile-only { display:none; }
+        @media(max-width:600px) {
+          .juwai-desktop-chart, #juwaiHistoryNote { display:none; }
+          .juwai-mobile-only { display:block; }
+          .juwai-group { padding:.75rem; }
+          .juwai-grid { gap:.65rem; }
+          .juwai-group .juwai-card { padding:.8rem; }
+          .juwai-group .juwai-card h2 { margin-bottom:.5rem; }
+          .juwai-group .juwai-metrics { margin:.6rem 0; }
+          .juwai-group .juwai-card > .period-note { margin:.3rem 0; }
+          .mobile-generation-summary { display:flex; flex-direction:column; gap:.3rem; margin-bottom:1.25rem; color:var(--text-muted); font-size:.85rem; }
+          .mobile-generation-summary strong { font-size:2rem; color:var(--export-color); font-variant-numeric:tabular-nums; }
+          #mobileGenerationSplit { margin-top:.3rem; color:var(--text-main); }
+          #mobileChartHeading { font-size:1rem; margin-bottom:.8rem; }
+          .mobile-meter-buttons { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.25rem; margin-bottom:.8rem; }
+          .mobile-meter-buttons button, #mobileWeekBack, #mobileWeekDrill { min-height:44px; border:1px solid var(--border); border-radius:8px; background:#1e293b; color:var(--text-main); font:inherit; font-size:.8rem; padding:.5rem; cursor:pointer; }
+          .mobile-meter-buttons button[aria-pressed="true"] { color:var(--import-color); border-color:var(--import-color); }
+          .mobile-chart { position:relative; height:300px; margin:0 -.4rem; }
+          #mobileBinControls label { display:flex; align-items:center; gap:.6rem; font-size:.8rem; color:var(--text-muted); margin:.6rem 0; }
+          #mobileBucketChoice { min-width:0; flex:1; min-height:44px; padding:.4rem; border:1px solid var(--border); border-radius:8px; background:#1e293b; color:var(--text-main); font:inherit; color-scheme:dark; }
+          .mobile-bucket-details { padding:.8rem; border:1px solid var(--border); border-radius:8px; font-size:.85rem; line-height:1.7; white-space:pre-line; }
+          .mobile-calculation summary { min-height:44px; padding:.6rem 0; cursor:pointer; font-size:.8rem; color:var(--text-muted); }
+          .juwai-mobile-only :is(button,select,summary):focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        }
       </style>
     </head>
     <body>
@@ -367,7 +392,17 @@
 <h2>Total</h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="totalPower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="totalEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
 <p class="period-note">Shed + Garage</p></article></div>
 <div class="juwai-chart-section"><div class="juwai-controls"><label for="juwaiMetric">Chart <select id="juwaiMetric"><option value="power_w">Power (W)</option><option value="voltage_v">Voltage (V)</option><option value="current_a">Current (A)</option></select></label></div>
-<div class="juwai-chart"><canvas id="juwaiChart" role="img" aria-label="Shed, Garage and combined power for the selected period"></canvas></div>
+<div class="juwai-mobile-only" id="mobileGenerationView">
+<div class="mobile-generation-summary"><span id="mobileGenerationPeriod">Today</span><strong id="mobileGenerationTotal">— kWh</strong><span>estimated generation</span><div id="mobileGenerationSplit"></div></div>
+<h3 id="mobileChartHeading">Generation by hour</h3>
+<div class="mobile-meter-buttons" id="mobileMeterButtons" role="group" aria-label="Chart meter"><button type="button" data-meter="total" aria-pressed="true">Total</button><button type="button" data-meter="shed" aria-pressed="false">Shed</button><button type="button" data-meter="garage" aria-pressed="false">Garage</button><button type="button" data-meter="compare" aria-pressed="false">Compare</button></div>
+<button type="button" id="mobileWeekBack" hidden>← All weeks</button>
+<div class="mobile-chart"><canvas id="mobileJuwaiChart" role="img" aria-label="Generation chart; use the period details selector below for values"></canvas></div>
+<div id="mobileBinControls"><label for="mobileBucketChoice">Details for <select id="mobileBucketChoice"></select></label><div id="mobileBucketDetails" class="mobile-bucket-details" role="status" aria-live="polite"></div><button type="button" id="mobileWeekDrill" hidden>View daily detail</button></div>
+<p id="mobileCoverage" class="period-note"></p>
+<details class="mobile-calculation"><summary>How this is calculated</summary><p class="period-note">Generation is estimated from power readings collected every 15 minutes. Reverse flow contributes no generation. Gaps over 30 minutes are excluded. Bars with incomplete readings show recorded generation only. Grey hatched slots mean no data, not zero generation. Days use UK time.</p></details>
+</div>
+<div class="juwai-chart juwai-desktop-chart"><canvas id="juwaiChart" role="img" aria-label="Shed, Garage and combined power for the selected period"></canvas></div>
 <p id="juwaiHistoryNote" class="period-note" aria-live="polite">Loading generation…</p></div>
 </div>
 <p class="period-note">Solar meter is not connected: Tuya permission is unresolved. Read-only monitoring.</p>
@@ -492,6 +527,7 @@ function drawJuwai(){
     (duration?'Recorded: Shed '+hours(covered[0])+'h, Garage '+hours(covered[1])+'h of '+hours(duration)+'h. ':'')+
     (complete?'':'Not enough readings for a combined total. ')+
     (['today','yesterday'].includes($('juwaiWindow').value)?'Calendar days use UK time.':'')):'Loading generation…';
+  drawMobileJuwai();
 }
 function renderJuwai(data){
   for(const device of data.devices){
@@ -527,13 +563,103 @@ async function readJuwai(version){
       $('juwaiStatus').hidden=false;$('juwaiStatus').textContent='Readings unavailable. Previous values may be out of date.';$('totalPower').textContent='— W';$('totalCard').dataset.stale='true';
       for(const id of ['shed','garage']){$(id+'Card').dataset.stale='true';$(id+'Age').textContent='Update unavailable · previous sample';}
     }
-    if(results[1]?.status==='rejected'){$('juwaiHistoryNote').textContent='Generation history unavailable. Please try again.';for(const id of ['shed','garage','total'])$(id+'Energy').textContent='— kWh';}
+    if(results[1]?.status==='rejected'){$('mobileCoverage').textContent='Generation history unavailable. Please try again.';$('mobileGenerationTotal').textContent='— kWh';$('juwaiHistoryNote').textContent='Generation history unavailable. Please try again.';for(const id of ['shed','garage','total'])$(id+'Energy').textContent='— kWh';}
   }finally{
     if(version===juwaiVersion&&activeTab==='juwai'&&!document.hidden){juwaiController=null;juwaiTimer=setTimeout(()=>readJuwai(version),30000);}
   }
 }
 $('juwaiMetric').addEventListener('change',drawJuwai);
-$('juwaiWindow').addEventListener('change',()=>{stopJuwai();juwaiHistoryKey='';juwaiHistory={};drawJuwai();readJuwai(juwaiVersion);});
+$('juwaiWindow').addEventListener('change',()=>{mobileWeek=null;mobileBinIndex=null;mobileMeter='total';stopJuwai();juwaiHistoryKey='';juwaiHistory={};drawJuwai();readJuwai(juwaiVersion);});
+
+let mobileChart=null, mobileMeter='total', mobileWeek=null, mobileBinIndex=null, mobileBins=[];
+const mobileMedia=matchMedia('(max-width:600px)');
+const ukDate=(ts,options)=>new Date(ts).toLocaleString('en-GB',{timeZone:'Europe/London',...options});
+const mobileKwh=v=>Number.isFinite(v)?v.toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})+' kWh':'No data';
+function mobileBinLabel(b,unit,long=false){
+  if(unit==='hour')return ukDate(b.start,long?{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZoneName:'short'}:{hour:'2-digit',minute:'2-digit'});
+  const start=ukDate(b.start,{day:'numeric',month:'short'});
+  return unit==='week'?start+' – '+ukDate(b.end-1,{day:'numeric',month:'short'}):ukDate(b.start,{weekday:'short',day:'numeric',...(long?{month:'short'}:{})});
+}
+const missingMobileBins={id:'missingMobileBins',beforeDatasetsDraw(chart){
+  const {ctx,chartArea,scales}=chart;if(chart.config.type!=='bar'||!chartArea)return;
+  const width=(chartArea.right-chartArea.left)/Math.max(1,mobileBins.length)*.78;
+  for(const [i,pair] of mobileBins.entries()){
+    const missing=pair.every(b=>!b||!b.coverage_s);
+    const partial=!missing&&pair.some(b=>!b||b.coverage_s< b.period_s*.95);
+    if(!missing&&!partial)continue;
+    const x=scales.x.getPixelForValue(i)-width/2;
+    ctx.save();ctx.beginPath();ctx.rect(x,chartArea.top,width,chartArea.bottom-chartArea.top);ctx.clip();
+    ctx.fillStyle='rgba(148,163,184,.07)';ctx.fillRect(x,chartArea.top,width,chartArea.bottom-chartArea.top);
+    ctx.strokeStyle='rgba(148,163,184,.17)';ctx.lineWidth=1;
+    for(let y=chartArea.top-width;y<chartArea.bottom;y+=12){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+width,y+width);ctx.stroke();}
+    if(width>18){ctx.translate(x+width/2,chartArea.top+48);ctx.rotate(-Math.PI/2);ctx.fillStyle='#94a3b8';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText(missing?'No data':'Partial',0,0);}
+    ctx.restore();
+  }
+}};
+function showMobileBin(index){
+  if(!mobileBins.length){$('mobileBucketDetails').textContent='No generation intervals available.';return;}
+  mobileBinIndex=Math.max(0,Math.min(mobileBins.length-1,Number(index)||0));
+  const pair=mobileBins[mobileBinIndex],unit=mobileWeek?'day':juwaiHistory.shed?.energy?.bucket_unit||'hour';
+  $('mobileBucketChoice').value=String(mobileBinIndex);
+  const complete=pair.every(b=>Number.isFinite(b?.estimated_kwh));
+  const lines=[mobileBinLabel(pair[0]||pair[1],unit,true),
+    'Shed: '+mobileKwh(pair[0]?.estimated_kwh),'Garage: '+mobileKwh(pair[1]?.estimated_kwh),
+    'Total: '+(complete?mobileKwh(pair[0].estimated_kwh+pair[1].estimated_kwh):'Unavailable · missing readings')];
+  const minutes=b=>b?(b.period_s>=3600?(b.coverage_s/3600).toLocaleString(undefined,{maximumFractionDigits:1})+' / '+(b.period_s/3600).toLocaleString(undefined,{maximumFractionDigits:1})+' h':Math.round(b.coverage_s/60)+' / '+Math.round(b.period_s/60)+' min'):'No data';
+  lines.push('Recorded · Shed '+minutes(pair[0])+'; Garage '+minutes(pair[1]));
+  $('mobileBucketDetails').textContent=lines.join('\n');
+  $('mobileWeekDrill').hidden=unit!=='week';
+}
+function drawMobileJuwai(){
+  if(!mobileMedia.matches)return;
+  const period=$('juwaiWindow').value, metric=$('juwaiMetric').value;
+  const energies=['shed','garage'].map(id=>juwaiHistory[id]?.energy);
+  $('mobileGenerationPeriod').textContent=$('juwaiWindow').selectedOptions[0].textContent;
+  $('mobileGenerationTotal').textContent=$('totalEnergy').textContent;
+  $('mobileGenerationSplit').textContent='Shed '+$('shedEnergy').textContent+' · Garage '+$('garageEnergy').textContent;
+  const coverage=Math.min(...energies.map(e=>e?.coverage_s||0)),duration=energies[0]?.period_s||0;
+  const hours=s=>(s/3600).toLocaleString(undefined,{maximumFractionDigits:1});
+  $('mobileCoverage').textContent=juwaiHistoryKey?'Recorded: Shed '+hours(energies[0]?.coverage_s||0)+'h · Garage '+hours(energies[1]?.coverage_s||0)+'h of '+hours(duration)+'h. Hatched slots have missing or incomplete readings.':'Loading generation…';
+  if(mobileChart){mobileChart.destroy();mobileChart=null;}
+  const bars=metric==='power_w'&&period!=='live';
+  $('juwaiMetric').querySelector('[value=power_w]').textContent=bars?'Generation (kWh)':'Power (W)';
+  $('mobileMeterButtons').hidden=bars;$('mobileBinControls').hidden=!bars;$('mobileWeekBack').hidden=!bars||!mobileWeek;
+  if(!bars)mobileWeek=null;
+  let datasets,labels=[],unit='hour';
+  if(bars){
+    unit=mobileWeek?'day':energies[0]?.bucket_unit||'hour';
+    const rows=energies.map(e=>(mobileWeek?e?.daily_buckets:e?.buckets)||[]);
+    const left=rows[0].filter(b=>!mobileWeek||b.start>=mobileWeek.start&&b.end<=mobileWeek.end);
+    const key=b=>unit==='hour'?Math.floor(b.start/3600000):ukDate(b.start,{year:'numeric',month:'2-digit',day:'2-digit'});
+    const right=new Map(rows[1].map(b=>[key(b),b]));
+    mobileBins=left.map(b=>[b,right.get(key(b))]);
+    labels=mobileBins.map(pair=>mobileBinLabel(pair[0],unit));
+    datasets=['Shed','Garage'].map((name,i)=>({label:name,data:mobileBins.map(pair=>pair[i]?.estimated_kwh??null),backgroundColor:['#38bdf8','#34d399'][i],borderRadius:3,barPercentage:.8,categoryPercentage:.85,minBarLength:2}));
+    $('mobileChartHeading').textContent='Estimated generation by '+unit+(mobileWeek?' · '+mobileBinLabel(mobileWeek,'week'):'');
+    $('mobileBucketChoice').replaceChildren(...labels.map((label,i)=>{const o=document.createElement('option');o.value=i;o.textContent=mobileBinLabel(mobileBins[i][0],unit,true);return o;}));
+    if(mobileBinIndex===null)mobileBinIndex=Math.max(0,mobileBins.length-1);
+    showMobileBin(mobileBinIndex);
+  }else{
+    const field=juwaiFields[metric];if(metric!=='power_w'&&mobileMeter==='total')mobileMeter='compare';
+    for(const button of $('mobileMeterButtons').querySelectorAll('button')){button.hidden=metric!=='power_w'&&button.dataset.meter==='total';button.setAttribute('aria-pressed',String(button.dataset.meter===mobileMeter));}
+    const source=juwaiChart.data.datasets;
+    const ids=mobileMeter==='compare'?[0,1]:[mobileMeter==='total'?2:mobileMeter==='shed'?0:1];
+    datasets=ids.map(i=>({...source[i],data:source[i].data,hidden:false,pointRadius:0,pointHitRadius:16,borderWidth:2,fill:false}));
+    $('mobileChartHeading').textContent=(mobileMeter==='compare'?'Shed and Garage':mobileMeter[0].toUpperCase()+mobileMeter.slice(1))+' '+field.label.toLowerCase();
+  }
+  const series=juwaiHistory.shed||juwaiHistory.garage;
+  const tick=v=>ukDate(v,period==='live'||['today','yesterday','24h','previous24h'].includes(period)?{hour:'2-digit',minute:'2-digit'}:{day:'numeric',month:'short'});
+  mobileChart=new Chart($('mobileJuwaiChart'),{type:bars?'bar':'line',data:{labels,datasets},plugins:bars?[missingMobileBins]:[],options:{responsive:true,maintainAspectRatio:false,animation:false,
+    interaction:{mode:'index',intersect:false},onClick:(event)=>{if(bars&&mobileChart?.chartArea){const i=Math.round(mobileChart.scales.x.getValueForPixel(event.x));showMobileBin(i);}},
+    scales:{x:bars?{type:'category',stacked:true,grid:{display:false},ticks:{color:'#94a3b8',maxRotation:0,autoSkip:true,maxTicksLimit:unit==='hour'?5:7}}:{type:'linear',min:series?.start,max:series?.end,grid:{display:false},ticks:{color:'#94a3b8',maxTicksLimit:4,callback:tick}},
+      y:{stacked:bars,beginAtZero:bars,title:{display:true,text:bars?'Generation (kWh)':juwaiFields[metric].unit,color:'#94a3b8'},ticks:{color:'#94a3b8',maxTicksLimit:5},grid:{color:'#222f49'}}},
+    plugins:{legend:{display:datasets.length>1,labels:{color:'#94a3b8',usePointStyle:true,boxWidth:8,padding:16}},tooltip:{enabled:!bars,callbacks:{title:items=>ukDate(items[0].parsed.x,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZoneName:'short'}),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()+' '+juwaiFields[metric].unit}}}}});
+}
+$('mobileBucketChoice').addEventListener('change',e=>showMobileBin(e.target.value));
+$('mobileMeterButtons').addEventListener('click',e=>{const button=e.target.closest('button[data-meter]');if(button){mobileMeter=button.dataset.meter;drawMobileJuwai();}});
+$('mobileWeekDrill').addEventListener('click',()=>{mobileWeek=mobileBins[mobileBinIndex]?.[0]||null;mobileBinIndex=null;drawMobileJuwai();});
+$('mobileWeekBack').addEventListener('click',()=>{mobileWeek=null;mobileBinIndex=null;drawMobileJuwai();});
+mobileMedia.addEventListener('change',()=>{if(activeTab==='juwai'){if(mobileMedia.matches)drawMobileJuwai();else {$('juwaiMetric').querySelector('[value=power_w]').textContent='Power (W)';juwaiChart?.resize();if(mobileChart){mobileChart.destroy();mobileChart=null;}}}});
 
 const ranges = {"15m":900,"30m":1800,"1h":3600,"2h":7200,"4h":14400,"8h":28800,"1d":86400,"24h":86400,"7d":604800,"30d":2592000,"90d":7776000,"365d":31536000};
 let selected = '15m';
