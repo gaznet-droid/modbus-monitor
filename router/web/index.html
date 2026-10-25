@@ -242,6 +242,23 @@
         .juwai-controls select:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
         .juwai-chart { position:relative; height:280px; }
         @media(max-width:600px) { .juwai-grid { grid-template-columns:1fr; } .tabs { gap:.2rem; } .tabs button { padding:.75rem 1rem; } }
+
+        .juwai-group { padding:clamp(.8rem,3vw,1.5rem); }
+        .juwai-group-heading { display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1.2rem; flex-wrap:wrap; }
+        .juwai-group-heading h1 { font-size:1.2rem; }
+        .juwai-group-heading label { display:flex; gap:.6rem; align-items:center; color:var(--text-muted); font-size:.85rem; }
+        .juwai-group-heading select { min-height:44px; max-width:100%; background:#1e293b; color:var(--text-main); border:1px solid var(--border); border-radius:8px; padding:.5rem; font:inherit; color-scheme:dark; }
+        .juwai-group-heading select:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        .juwai-group .juwai-card { box-shadow:none; background:#101828; padding:1rem; }
+        .juwai-card-values { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:.7rem; }
+        .juwai-card-values .label { font-size:.65rem; min-height:2.4em; }
+        .juwai-power, .juwai-kwh { font-size:clamp(1.15rem,3vw,1.9rem); line-height:1.2; font-variant-numeric:tabular-nums; font-weight:700; margin:.35rem 0 .5rem; overflow-wrap:anywhere; }
+        .juwai-energy { text-align:right; }
+        .juwai-kwh { color:var(--export-color); }
+        #totalCard { grid-column:1 / -1; border-color:#345046; }
+        #totalCard .juwai-kwh { color:var(--export-color); }
+        .juwai-chart-section { margin-top:1.3rem; padding-top:1.2rem; border-top:1px solid var(--border); }
+        .juwai-period { margin:0; }
       </style>
     </head>
     <body>
@@ -339,23 +356,21 @@
           <p class="period-note">Reads about every 3 seconds, only while this tab is visible. Switching to Power, hiding or closing the page stops new requests. No background voltage recording. Gaps are not filled; session readings clear when you reload.</p>
         </section>
 <section id="juwaiPanel" class="tab-panel" role="tabpanel" aria-labelledby="juwaiTab" hidden>
-  <p id="juwaiStatus" class="period-note" role="status">Select Juwai to load stored readings.</p>
-  <div class="juwai-grid"><article class="card juwai-card" id="shedCard" data-stale="true">
-<h2>Shed</h2><div class="label">Last stored power</div><div class="juwai-power" id="shedPower">— W</div>
-<dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="shedVoltage">— V</dd></div><div><dt>Current</dt><dd id="shedCurrent">— A</dd></div></dl>
-<p class="period-note" id="shedAge">Loading stored reading…</p></article><article class="card juwai-card" id="garageCard" data-stale="true">
-<h2>Garage</h2><div class="label">Last stored power</div><div class="juwai-power" id="garagePower">— W</div>
-<dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="garageVoltage">— V</dd></div><div><dt>Current</dt><dd id="garageCurrent">— A</dd></div></dl>
-<p class="period-note" id="garageAge">Loading stored reading…</p></article></div>
-  <div class="card">
-    <div class="juwai-controls">
-      <label for="juwaiMetric">Reading <select id="juwaiMetric"><option value="power_w">Power (W)</option><option value="voltage_v">Voltage (V)</option><option value="current_a">Current (A)</option></select></label>
-      <label for="juwaiWindow">Period <select id="juwaiWindow"><option value="24h">24 hours</option><option value="7d">7 days</option><option value="30d">30 days</option><option value="365d">365 days</option></select></label>
-    </div>
-    <div class="juwai-chart"><canvas id="juwaiChart" role="img" aria-label="Stored Juwai readings for Shed and Garage"></canvas></div>
-    <p id="juwaiHistoryNote" class="period-note">History starts with the first stored sample.</p>
-  </div>
-  <p class="period-note">Solar meter is not connected: Tuya permission is unresolved. Read-only monitoring.</p>
+<div class="card juwai-group">
+<div class="juwai-group-heading"><h1>Generation</h1><label for="juwaiWindow">Period <select id="juwaiWindow"><option value="live">Live · past hour</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
+<p id="juwaiStatus" class="period-note" role="status" hidden></p>
+<div class="juwai-grid"><article class="card juwai-card" id="shedCard" data-stale="true">
+<h2>Shed</h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="shedPower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="shedEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
+<dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="shedVoltage">— V</dd></div><div><dt>Current</dt><dd id="shedCurrent">— A</dd></div></dl><p class="period-note" id="shedAge">Loading…</p></article><article class="card juwai-card" id="garageCard" data-stale="true">
+<h2>Garage</h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="garagePower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="garageEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
+<dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="garageVoltage">— V</dd></div><div><dt>Current</dt><dd id="garageCurrent">— A</dd></div></dl><p class="period-note" id="garageAge">Loading…</p></article><article class="card juwai-card" id="totalCard" data-stale="true">
+<h2>Total</h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="totalPower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="totalEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
+<p class="period-note">Shed + Garage</p></article></div>
+<div class="juwai-chart-section"><div class="juwai-controls"><label for="juwaiMetric">Chart <select id="juwaiMetric"><option value="power_w">Power (W)</option><option value="voltage_v">Voltage (V)</option><option value="current_a">Current (A)</option></select></label></div>
+<div class="juwai-chart"><canvas id="juwaiChart" role="img" aria-label="Shed, Garage and combined power for the selected period"></canvas></div>
+<p id="juwaiHistoryNote" class="period-note" aria-live="polite">Loading generation…</p></div>
+</div>
+<p class="period-note">Solar meter is not connected: Tuya permission is unresolved. Read-only monitoring.</p>
 </section>
       </div>
       <script>
@@ -445,7 +460,7 @@ const juwaiFields={power_w:{label:'Power',unit:'W',column:4},voltage_v:{label:'V
 function stopJuwai(){juwaiVersion++;clearTimeout(juwaiTimer);juwaiTimer=null;juwaiController?.abort();juwaiController=null;}
 function makeJuwaiChart(){
   if(juwaiChart)return;
-  juwaiChart=new Chart($('juwaiChart'),{type:'line',data:{datasets:['Shed','Garage'].map((name,i)=>({label:name,data:[],parsing:false,borderColor:['#38bdf8','#34d399'][i],backgroundColor:['#38bdf8','#34d399'][i],pointRadius:3,pointHitRadius:10,borderWidth:2,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:v=>new Date(v).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})},grid:{color:'#1e293b'}},y:{ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()+' '+juwaiFields[$('juwaiMetric').value].unit}}}}});
+  juwaiChart=new Chart($('juwaiChart'),{type:'line',data:{datasets:['Shed','Garage','Total'].map((name,i)=>({label:name,data:[],parsing:false,borderColor:['#38bdf8','#34d399','#fbbf24'][i],backgroundColor:['#38bdf8','#34d399','#fbbf24'][i],pointRadius:3,pointHitRadius:10,borderWidth:2,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:v=>new Date(v).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})},grid:{color:'#1e293b'}},y:{ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()+' '+juwaiFields[$('juwaiMetric').value].unit}}}}});
 }
 function drawJuwai(){
   if(!juwaiChart)return;
@@ -460,9 +475,23 @@ function drawJuwai(){
     juwaiChart.data.datasets[i].data=points;
     if(series){juwaiChart.options.scales.x.min=series.start;juwaiChart.options.scales.x.max=series.end;}
   }
+  const combined=juwaiChart.data.datasets[2];combined.hidden=$('juwaiMetric').value!=='power_w';
+  const other=new Map((juwaiHistory.garage?.points||[]).map(r=>[r[0],r[4]]));
+  combined.data=(juwaiChart.data.datasets[0].data||[]).map(p=>({x:p.x,y:Number.isFinite(p.y)&&Number.isFinite(other.get(p.x))?p.y+other.get(p.x):null}));
   juwaiChart.options.scales.y.title={display:true,text:field.label+' ('+field.unit+')',color:'#94a3b8'};
   juwaiChart.update('none');
-  $('juwaiHistoryNote').textContent=count?'Stored sample averages. Missing intervals are left as gaps. History starts with the first stored sample.':'No stored samples in this period.';
+  const period=$('juwaiWindow').selectedOptions[0].textContent;
+  document.querySelectorAll('.juwai-period').forEach(el=>el.textContent=period);
+  const energies=['shed','garage'].map(id=>juwaiHistory[id]?.energy);
+  for(const [i,id] of ['shed','garage'].entries())$(id+'Energy').textContent=Number.isFinite(energies[i]?.estimated_kwh)?energies[i].estimated_kwh.toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})+' kWh':'— kWh';
+  const complete=energies.every(e=>Number.isFinite(e?.estimated_kwh));
+  $('totalEnergy').textContent=complete?energies.reduce((sum,e)=>sum+e.estimated_kwh,0).toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})+' kWh':'— kWh';
+  const covered=energies.map(e=>e?.coverage_s||0), duration=energies[0]?.period_s||0;
+  const hours=s=>(s/3600).toLocaleString(undefined,{maximumFractionDigits:1});
+  $('juwaiHistoryNote').textContent=juwaiHistoryKey?('Generation is estimated from 15-minute readings. Gaps over 30 minutes are excluded. '+
+    (duration?'Recorded: Shed '+hours(covered[0])+'h, Garage '+hours(covered[1])+'h of '+hours(duration)+'h. ':'')+
+    (complete?'':'Not enough readings for a combined total. ')+
+    (['today','yesterday'].includes($('juwaiWindow').value)?'Calendar days use UK time.':'')):'Loading generation…';
 }
 function renderJuwai(data){
   for(const device of data.devices){
@@ -472,9 +501,12 @@ function renderJuwai(data){
     $(id+'Voltage').textContent=number(device.values.voltage_v,'V',2);
     $(id+'Current').textContent=number(device.values.current_a,'A',3);
     $(id+'Card').dataset.stale=String(device.stale);
-    $(id+'Age').textContent=device.observed_at?(device.stale?'Stale sample · ':'Stored ')+new Date(device.observed_at).toLocaleString():'No stored reading';
+    $(id+'Age').textContent=device.observed_at?(device.stale?'Reading delayed · ':'Updated ')+new Date(device.observed_at).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}):'Reading unavailable';
   }
-  $('juwaiStatus').textContent=data.collection_mode==='automatic'?'Showing stored readings. Automatic collection is configured; check each sample’s update time.':'Verified samples · automatic collection is not enabled.';
+  const valid=data.devices.filter(d=>['shed','garage'].includes(d.id)&&!d.stale&&Number.isFinite(d.values.power_w));
+  $('totalPower').textContent=valid.length===2?valid.reduce((sum,d)=>sum+d.values.power_w,0).toLocaleString(undefined,{maximumFractionDigits:2})+' W':'— W';
+  $('totalCard').dataset.stale=String(valid.length!==2);
+  $('juwaiStatus').hidden=true;
 }
 async function readJuwai(version){
   if(version!==juwaiVersion||activeTab!=='juwai'||document.hidden)return;
@@ -492,10 +524,10 @@ async function readJuwai(version){
     const results=await Promise.allSettled(tasks);
     if(version!==juwaiVersion||activeTab!=='juwai'||document.hidden)return;
     if(results[0].status==='rejected'){
-      $('juwaiStatus').textContent='Stored readings unavailable. Previous values may be out of date.';
+      $('juwaiStatus').hidden=false;$('juwaiStatus').textContent='Readings unavailable. Previous values may be out of date.';$('totalPower').textContent='— W';$('totalCard').dataset.stale='true';
       for(const id of ['shed','garage']){$(id+'Card').dataset.stale='true';$(id+'Age').textContent='Update unavailable · previous sample';}
     }
-    if(results[1]?.status==='rejected')$('juwaiHistoryNote').textContent='Stored history unavailable. Previous chart may be out of date.';
+    if(results[1]?.status==='rejected'){$('juwaiHistoryNote').textContent='Generation history unavailable. Please try again.';for(const id of ['shed','garage','total'])$(id+'Energy').textContent='— kWh';}
   }finally{
     if(version===juwaiVersion&&activeTab==='juwai'&&!document.hidden){juwaiController=null;juwaiTimer=setTimeout(()=>readJuwai(version),30000);}
   }

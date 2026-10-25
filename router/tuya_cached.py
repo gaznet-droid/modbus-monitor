@@ -4,10 +4,53 @@ import math
 import sqlite3
 import threading
 import time
+from pathlib import Path
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+with (Path(__file__).parent / "tz/Europe-London.tzif").open("rb") as tzfile:
+    LONDON = ZoneInfo.from_file(tzfile, key="Europe/London")
 
 DEVICES = {"shed": "Shed", "garage": "Garage"}
-WINDOWS = {"24h": 86400, "7d": 604800, "30d": 2592000, "365d": 31536000}
+WINDOWS = {"24h": 86400, "7d": 604800, "30d": 2592000, "365d": 31536000, "live": 3600, "today": 86400,
+           "yesterday": 86400, "previous24h": 86400}
 FIELDS = ("voltage_v", "current_a", "power_w")
+
+
+def period_bounds(window, now):
+    if window in ("today", "yesterday"):
+        midnight = datetime.fromtimestamp(now / 1000, LONDON).replace(
+            hour=0, minute=0, second=0, microsecond=0)
+        if window == "yesterday":
+            return int((midnight - timedelta(days=1)).timestamp()*1000), int(midnight.timestamp()*1000)
+        return int(midnight.timestamp()*1000), now
+    end = now - 86400000 if window == "previous24h" else now
+    return end - WINDOWS[window]*1000, end
+
+
+def estimate_energy(rows, start, end):
+    """Trapezoids over measured minute averages; never bridge >30 minute gaps.
+
+    Clip boundary segments by interpolation. Never extrapolate before/after data.
+    This is an estimate, not a cumulative meter-register reading.
+    """
+    previous = None
+    wh, coverage = 0.0, 0.0
+    for ts, power in rows:
+        valid = isinstance(power, (int, float)) and math.isfinite(power) and power >= 0
+        if previous is not None and valid:
+            t0, p0 = previous
+            dt = ts - t0
+            left, right = max(start, t0), min(end, ts)
+            if 0 < dt <= 1800000 and right > left:
+                a = p0 + (power - p0) * (left - t0) / dt
+                b = p0 + (power - p0) * (right - t0) / dt
+                wh += (a + b) * .5 * (right-left) / 3600000
+                coverage += (right-left) / 1000
+        previous = (ts, power) if valid else None
+    return {"estimated_kwh": wh/1000 if coverage else None,
+            "coverage_s": coverage, "period_s": max(0, (end-start)/1000),
+            "estimated": True}
 
 
 class CachedTuya:
@@ -22,7 +65,7 @@ class CachedTuya:
         self.cache = {}
 
     def _read(self, key, ttl, query):
-        # One shared lock/cache across all HTTP clients; at most nine cache keys.
+        # Shared bounded cache across clients: latest plus two devices per allowed period.
         with self.lock:
             cached = self.cache.get(key)
             if cached and self.monotonic() < cached[0]:
@@ -73,7 +116,7 @@ class CachedTuya:
             raise ValueError("Invalid Juwai history query")
         def query(db):
             end = int(self.clock() * 1000)
-            start = end - WINDOWS[window] * 1000
+            start, end = period_bounds(window, end)
             period = 60 if WINDOWS[window] <= 604800 else 3600
             step = max(period * 1000,
                        math.ceil((end - start) / (999 * period * 1000)) * period * 1000)
@@ -84,7 +127,15 @@ class CachedTuya:
                 FROM rollups WHERE device=? AND period=? AND bucket>=? AND bucket<=?
                 GROUP BY CAST(bucket / ? AS INTEGER) ORDER BY 1 LIMIT 1000""",
                 (step, step, device, period, start, end, step)).fetchall()
+            energy = None
+            if window != "365d":
+                # Stream <=32 days of indexed minute groups; no raw history scan.
+                cursor = db.execute("""SELECT bucket, power_sum / NULLIF(power_n,0)
+                    FROM rollups WHERE device=? AND period=60 AND bucket>=? AND bucket<=?
+                    ORDER BY bucket""", (device, start-1800000, min(int(self.clock()*1000), end+1800000)))
+                energy = estimate_energy(cursor, start, end)
             return {"device": device, "window": window, "start": start, "end": end,
+                    "energy": energy,
                     "step_ms": step, "points": [list(r) for r in rows],
                     "columns": ["ts", "samples", *FIELDS]}
         return self._read((device, window), 300, query)

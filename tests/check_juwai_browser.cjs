@@ -21,14 +21,22 @@ const path=require('node:path');
   await until("document.getElementById('currentVal')?.textContent.includes('150')");
   assert.equal(await js("__requests.filter(u=>u.includes('/voltage')||u.includes('/tuya/')).length"),0);
   await js("document.getElementById('juwaiTab').click()");
-  await until("document.getElementById('shedPower').textContent==='1.02 W' && juwaiHistoryKey==='24h'");
+  await until("document.getElementById('shedPower').textContent==='1.02 W' && juwaiHistoryKey==='today'");
   assert.equal(await js("__requests.filter(u=>u.startsWith('/api/tuya/latest')).length"),1);
   assert.equal(await js("__requests.filter(u=>u.startsWith('/api/tuya/history')).length"),2);
   assert.equal(await js("__requests.filter(u=>u.startsWith('/api/voltage')).length"),0);
   const count=await js('__requests.length');
   await js("document.getElementById('juwaiMetric').value='voltage_v';document.getElementById('juwaiMetric').dispatchEvent(new Event('change'))");
   assert.equal(await js('__requests.length'),count);
-  assert.equal(await js("document.getElementById('juwaiStatus').textContent"),'Verified samples · automatic collection is not enabled.');
+  assert.equal(await js("document.getElementById('juwaiStatus').hidden"),true);
+  assert.equal(await js("document.getElementById('totalEnergy').textContent"),'3.750 kWh');
+  assert.equal(await js("document.getElementById('shedEnergy').textContent"),'1.250 kWh');
+  assert.equal(await js("document.getElementById('totalPower').textContent"),'19.39 W');
+  for(const range of ['live','24h','previous24h','yesterday','7d','30d','today']){
+    await js("document.getElementById('juwaiWindow').value='"+range+"';document.getElementById('juwaiWindow').dispatchEvent(new Event('change'))");
+    await until("juwaiHistoryKey==='"+range+"'");
+    assert.equal(await js("document.getElementById('totalEnergy').textContent"),'3.750 kWh');
+  }
   assert.equal(await js('document.documentElement.scrollWidth<=innerWidth'),true);
   assert.equal(await js("document.getElementById('juwaiPanel').parentElement.classList.contains('container')"),true);
   assert.equal(await js("getComputedStyle(document.querySelector('.juwai-grid')).gridTemplateColumns.split(' ').length"),1);

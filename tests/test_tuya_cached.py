@@ -120,6 +120,54 @@ class CachedTuyaTests(unittest.TestCase):
             store.db.close()
 
 
+class GenerationTests(unittest.TestCase):
+    def test_constant_power_clipped_period_and_gap_exclusion(self):
+        from tuya_cached import estimate_energy
+        rows=[(i*900000,1000) for i in range(9)]
+        self.assertAlmostEqual(estimate_energy(rows,0,7200000)['estimated_kwh'],2)
+        self.assertAlmostEqual(estimate_energy(rows,450000,6750000)['estimated_kwh'],1.75)
+        self.assertIsNone(estimate_energy([(0,1000),(3600000,1000)],0,3600000)['estimated_kwh'])
+        self.assertIsNone(estimate_energy([(0,1000)],0,3600000)['estimated_kwh'])
+        self.assertAlmostEqual(estimate_energy([(0,0),(900000,2000)],0,900000)['estimated_kwh'],.25)
+
+    def test_invalid_samples_and_no_extrapolation(self):
+        from tuya_cached import estimate_energy
+        self.assertIsNone(estimate_energy([(0,1000),(900000,None),(1800000,1000)],0,1800000)['estimated_kwh'])
+        e=estimate_energy([(900000,1000),(1800000,1000)],0,3600000)
+        self.assertAlmostEqual(e['estimated_kwh'],.25)
+        self.assertEqual(e['coverage_s'],900)
+
+    def test_uk_calendar_days_handle_clock_changes(self):
+        from tuya_cached import period_bounds
+        from datetime import datetime,timezone
+        now=int(datetime(2026,10,26,12,tzinfo=timezone.utc).timestamp()*1000)
+        start,end=period_bounds('yesterday',now)
+        self.assertEqual(end-start,25*3600000)
+        now=int(datetime(2026,3,30,12,tzinfo=timezone.utc).timestamp()*1000)
+        start,end=period_bounds('yesterday',now)
+        self.assertEqual(end-start,23*3600000)
+        self.assertEqual(period_bounds('previous24h',now),(now-2*86400000,now-86400000))
+
+    def test_history_energy_uses_retained_rollups_after_raw_samples_expire(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'tuya.sqlite3'
+            store=collector.USBStore(path,lambda:None)
+            now=1793000000000//60000*60000
+            for i in range(5):
+                store.add('shed',now-3600000+i*900000,
+                    dict(voltage_v=24,current_a=1,power_w=1000),{})
+            with store.db: store.db.execute('DELETE FROM samples')
+            @contextlib.contextmanager
+            def directory(): yield 0
+            cached=CachedTuya(directory,lambda:None,clock=lambda:now/1000,
+                database_uri=lambda _:path.as_uri()+'?mode=ro')
+            result=cached.history('shed','live')
+            self.assertAlmostEqual(result['energy']['estimated_kwh'],1)
+            self.assertEqual(result['energy']['coverage_s'],3600)
+            self.assertIsNone(cached.history('garage','live')['energy']['estimated_kwh'])
+            store.close()
+
+
 class CloudSafeguardTests(unittest.TestCase):
     def test_budgets_and_cycle_gate_survive_process_restarts(self):
         with tempfile.TemporaryDirectory() as folder:
