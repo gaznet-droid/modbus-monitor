@@ -137,6 +137,13 @@ class GenerationTests(unittest.TestCase):
         self.assertAlmostEqual(e['estimated_kwh'],.25)
         self.assertEqual(e['coverage_s'],900)
 
+    def test_reverse_flow_is_zero_generation_with_full_coverage(self):
+        from tuya_cached import estimate_energy
+        e=estimate_energy([(0,-1000),(900000,1000)],0,900000)
+        self.assertAlmostEqual(e['estimated_kwh'],.0625)
+        self.assertEqual(e['coverage_s'],900)
+        self.assertEqual(estimate_energy([(0,-1000),(900000,-500)],0,900000)['estimated_kwh'],0)
+
     def test_uk_calendar_days_handle_clock_changes(self):
         from tuya_cached import period_bounds
         from datetime import datetime,timezone

@@ -37,7 +37,7 @@ def estimate_energy(rows, start, end):
     previous = None
     wh, coverage = 0.0, 0.0
     for ts, power in rows:
-        valid = isinstance(power, (int, float)) and math.isfinite(power) and power >= 0
+        valid = isinstance(power, (int, float)) and math.isfinite(power)
         if previous is not None and valid:
             t0, p0 = previous
             dt = ts - t0
@@ -45,7 +45,16 @@ def estimate_energy(rows, start, end):
             if 0 < dt <= 1800000 and right > left:
                 a = p0 + (power - p0) * (left - t0) / dt
                 b = p0 + (power - p0) * (right - t0) / dt
-                wh += (a + b) * .5 * (right-left) / 3600000
+                # Generation is the positive part of signed power. Preserve
+                # coverage through reverse flow and integrate zero crossings.
+                if a >= 0 and b >= 0:
+                    average = (a+b)*.5
+                elif a <= 0 and b <= 0:
+                    average = 0.0
+                else:
+                    positive = max(a,b)
+                    average = positive * .5 * positive / abs(b-a)
+                wh += average * (right-left) / 3600000
                 coverage += (right-left) / 1000
         previous = (ts, power) if valid else None
     return {"estimated_kwh": wh/1000 if coverage else None,
