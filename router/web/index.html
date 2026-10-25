@@ -284,6 +284,30 @@
           .mobile-calculation summary { min-height:44px; padding:.6rem 0; cursor:pointer; font-size:.8rem; color:var(--text-muted); }
           .juwai-mobile-only :is(button,select,summary):focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
         }
+
+        @media(max-width:600px) {
+          .juwai-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem; }
+          .juwai-group .juwai-card { padding:.7rem; min-width:0; }
+          .juwai-card h2 { font-size:1rem; }
+          #shedCard .juwai-card-values, #garageCard .juwai-card-values { display:flex; flex-direction:column-reverse; gap:.6rem; }
+          #shedCard .juwai-energy, #garageCard .juwai-energy { text-align:left; }
+          .juwai-card .juwai-kwh { font-size:clamp(1.125rem,4.6vw,1.25rem); margin:.2rem 0; }
+          #shedCard .juwai-power, #garageCard .juwai-power { font-size:1.125rem; margin:.2rem 0; }
+          .juwai-card-values .label { min-height:0; }
+          .juwai-energy .label { font-size:0; }
+          .juwai-energy .label::after { content:'Generated'; font-size:.7rem; }
+          #shedCard .juwai-card-values > div:first-child .label, #garageCard .juwai-card-values > div:first-child .label { font-size:0; }
+          #shedCard .juwai-card-values > div:first-child .label::after, #garageCard .juwai-card-values > div:first-child .label::after { content:'Power'; font-size:.7rem; }
+          .juwai-card .juwai-period { display:none; }
+          .juwai-group .juwai-metrics { display:grid; grid-template-columns:1fr; gap:.4rem; margin:.8rem 0; }
+          .juwai-metrics > div { display:flex; justify-content:space-between; flex-wrap:wrap; align-items:baseline; gap:.2rem; }
+          .juwai-metrics dt { font-size:.75rem; margin:0; }
+          .juwai-metrics dd { font-size:.875rem; }
+          .juwai-card > .period-note { font-size:.7rem; }
+          #totalCard { grid-column:1 / -1; }
+          #totalCard .juwai-power { font-size:1.25rem; margin:.2rem 0; }
+          .mobile-generation-disclaimer { color:var(--text-muted); font-size:.75rem; margin:-.5rem 0 .8rem; }
+        }
       </style>
     </head>
     <body>
@@ -383,6 +407,7 @@
 <section id="juwaiPanel" class="tab-panel" role="tabpanel" aria-labelledby="juwaiTab" hidden>
 <div class="card juwai-group">
 <div class="juwai-group-heading"><h1>Generation</h1><label for="juwaiWindow">Period <select id="juwaiWindow"><option value="live">Live · past hour</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
+<p class="juwai-mobile-only mobile-generation-disclaimer">Generation totals are estimates.</p>
 <p id="juwaiStatus" class="period-note" role="status" hidden></p>
 <div class="juwai-grid"><article class="card juwai-card" id="shedCard" data-stale="true">
 <h2>Shed</h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="shedPower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="shedEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>

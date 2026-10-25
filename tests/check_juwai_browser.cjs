@@ -39,7 +39,7 @@ const path=require('node:path');
   }
   assert.equal(await js('document.documentElement.scrollWidth<=innerWidth'),true);
   assert.equal(await js("document.getElementById('juwaiPanel').parentElement.classList.contains('container')"),true);
-  assert.equal(await js("getComputedStyle(document.querySelector('.juwai-grid')).gridTemplateColumns.split(' ').length"),1);
+  assert.equal(await js("getComputedStyle(document.querySelector('.juwai-grid')).gridTemplateColumns.split(' ').length"),2);
   await js("document.getElementById('juwaiMetric').value='power_w';document.getElementById('juwaiMetric').dispatchEvent(new Event('change'))");
   assert.equal(await js("mobileChart.config.type"),'bar');
   assert.equal(await js('mobileChart.data.datasets.length'),2);
