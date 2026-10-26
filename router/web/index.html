@@ -290,7 +290,7 @@
           .juwai-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem; }
           .juwai-group .juwai-card { padding:.7rem; min-width:0; }
           .juwai-card h2 { font-size:1rem; }
-          #shedCard .juwai-card-values, #garageCard .juwai-card-values { display:flex; flex-direction:column-reverse; gap:.6rem; }
+          #shedCard .juwai-card-values, #garageCard .juwai-card-values { display:flex; flex-direction:column; gap:.6rem; }
           #shedCard .juwai-energy, #garageCard .juwai-energy { text-align:left; }
           .juwai-card .juwai-kwh { font-size:clamp(1.125rem,4.6vw,1.25rem); margin:.2rem 0; }
           #shedCard .juwai-power, #garageCard .juwai-power { font-size:1.125rem; margin:.2rem 0; }
@@ -298,7 +298,7 @@
           .juwai-energy .label { font-size:0; }
           .juwai-energy .label::after { content:'Generated'; font-size:.7rem; }
           #shedCard .juwai-card-values > div:first-child .label, #garageCard .juwai-card-values > div:first-child .label { font-size:0; }
-          #shedCard .juwai-card-values > div:first-child .label::after, #garageCard .juwai-card-values > div:first-child .label::after { content:'Power'; font-size:.7rem; }
+          #shedCard .juwai-card-values > div:first-child .label::after, #garageCard .juwai-card-values > div:first-child .label::after { content:'Latest power'; font-size:.7rem; }
           .juwai-card .juwai-period { display:none; }
           .juwai-group .juwai-metrics { display:grid; grid-template-columns:1fr; gap:.4rem; margin:.8rem 0; }
           .juwai-metrics > div { display:flex; justify-content:space-between; flex-wrap:wrap; align-items:baseline; gap:.2rem; }
@@ -353,13 +353,26 @@
           .ewelink-chart-section { margin-top:1rem; }
           .tabs button { padding:.75rem .8rem; }
         }
+        .device-title { display:flex; align-items:center; gap:.5rem; }
+        .device-title span { min-width:0; }
+        .device-icon { width:22px; height:22px; flex-shrink:0; color:var(--import-color); }
+        .ewelink-heading { margin-bottom:.65rem; }
+        .ewelink-heading h2 { min-height:0; }
+        .device-update { display:flex; align-items:center; flex-wrap:wrap; gap:.35rem .6rem; margin-top:1rem; color:var(--text-muted); font-size:.7rem; line-height:1.5; }
+        .device-connection { display:inline-flex; align-items:center; gap:.35rem; }
+        .device-update time { display:inline; margin:0; font-size:inherit; }
+        .device-update .ewelink-state { color:inherit; font-size:inherit; }
+        .status-dot { width:6px; height:6px; border-radius:50%; background:#f59e0b; flex-shrink:0; }
+        [data-stale="false"] .status-dot { background:#34d399; animation:connection-pulse 2.4s ease-in-out infinite; }
+        @keyframes connection-pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+        @media(prefers-reduced-motion:reduce) { [data-stale="false"] .status-dot { animation:none; } }
+        @media(max-width:600px) { .ewelink-card .device-update { grid-column:1/-1; margin:0; } .device-icon { width:20px; height:20px; } }
       </style>
     </head>
     <body>
       <div class="container">
         <nav class="tabs" role="tablist" aria-label="Meter view">
           <button id="powerTab" type="button" role="tab" aria-selected="true" aria-controls="powerPanel">Power</button>
-          <button id="voltageTab" type="button" role="tab" aria-selected="false" aria-controls="voltagePanel" tabindex="-1">Voltage</button>
           <button id="juwaiTab" type="button" role="tab" aria-selected="false" aria-controls="juwaiPanel" tabindex="-1">Juwai</button>
           <button id="ewelinkTab" type="button" role="tab" aria-selected="false" aria-controls="ewelinkPanel" tabindex="-1">eWeLink</button>
         </nav>
@@ -406,7 +419,6 @@
           </div>
         </div>
 
-        <p id="historyNote" style="color:#94a3b8;font-size:.8rem;line-height:1.5" aria-live="polite">History builds from the start of local recording. Missing readings are left as gaps.</p>
         <div class="card donut-card">
           <div class="donut-header">
             <div class="label">Selected Period Energy</div>
@@ -433,22 +445,12 @@
             </div>
           </div>
         </div>
-        </section>
-        <section id="voltagePanel" class="tab-panel" role="tabpanel" aria-labelledby="voltageTab" hidden>
-          <div class="card chart-card">
-            <div class="voltage-heading">
-              <div>
-                <h2 class="label">Live voltage</h2>
-                <div id="voltageValue" class="stat">— V</div>
-              </div>
-              <span class="voltage-mode">On demand<br>Last 15 minutes of this session</span>
-            </div>
-            <p id="voltageStatus" class="period-note" role="status">Select Voltage to start readings.</p>
-            <div class="chart-wrapper">
-              <canvas id="voltageChart" role="img" aria-label="Voltage readings collected while this tab is visible"></canvas>
-            </div>
-          </div>
-          <p class="period-note">Reads about every 3 seconds, only while this tab is visible. Switching to Power, hiding or closing the page stops new requests. No background voltage recording. Gaps are not filled; session readings clear when you reload.</p>
+<section id="voltageSection" class="card chart-card" aria-labelledby="voltageHeading">
+<div class="voltage-heading"><div><h2 id="voltageHeading" class="label">Live voltage</h2><div id="voltageValue" class="stat">— V</div></div><span class="voltage-mode">Past 15 minutes<br>This session</span></div>
+<p id="voltageStatus" class="period-note" role="status">Readings start when this section is visible.</p>
+<div class="chart-wrapper"><canvas id="voltageChart" role="img" aria-label="Voltage readings collected while this section is visible"></canvas></div>
+<p class="period-note">Updates while this section is visible. Missing readings are left as gaps.</p>
+</section>
         </section>
 <section id="juwaiPanel" class="tab-panel" role="tabpanel" aria-labelledby="juwaiTab" hidden>
 <div class="card juwai-group">
@@ -456,12 +458,12 @@
 <p class="juwai-mobile-only mobile-generation-disclaimer">Generation totals are estimates.</p>
 <p id="juwaiStatus" class="period-note" role="status" hidden></p>
 <div class="juwai-grid"><article class="card juwai-card" id="shedCard" data-stale="true">
-<h2>Shed</h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="shedPower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="shedEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
-<dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="shedVoltage">— V</dd></div><div><dt>Current</dt><dd id="shedCurrent">— A</dd></div></dl><p class="period-note" id="shedAge">Loading…</p></article><article class="card juwai-card" id="garageCard" data-stale="true">
-<h2>Garage</h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="garagePower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="garageEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
-<dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="garageVoltage">— V</dd></div><div><dt>Current</dt><dd id="garageCurrent">— A</dd></div></dl><p class="period-note" id="garageAge">Loading…</p></article><article class="card juwai-card" id="totalCard" data-stale="true">
-<h2>Total</h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="totalPower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="totalEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
-<p class="period-note">Shed + Garage</p></article></div>
+<h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m2 10 10-7 10 7M5 9v12h14V9M9 21v-8h6v8"/></svg><span>Shed</span></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="shedPower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="shedEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
+<dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="shedVoltage">— V</dd></div><div><dt>Current</dt><dd id="shedCurrent">— A</dd></div></dl><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="shedState">Loading…</span></span><time id="shedAge">Waiting for readings</time></div></article><article class="card juwai-card" id="garageCard" data-stale="true">
+<h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m2 9 10-6 10 6M4 8v13h16V8M7 21V11h10v10M7 14h10M7 17h10"/></svg><span>Garage</span></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="garagePower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="garageEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
+<dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="garageVoltage">— V</dd></div><div><dt>Current</dt><dd id="garageCurrent">— A</dd></div></dl><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="garageState">Loading…</span></span><time id="garageAge">Waiting for readings</time></div></article><article class="card juwai-card" id="totalCard" data-stale="true">
+<h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2" y="4" width="8" height="8" rx="1"/><rect x="14" y="4" width="8" height="8" rx="1"/><path d="M6 15v4h12v-4m-6 1v6"/></svg><span>Shed and garage total</span></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="totalPower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="totalEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
+<div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="totalState">Loading…</span></span><time id="totalAge">Waiting for readings</time></div></article></div>
 <div class="juwai-chart-section"><div class="juwai-controls"><label for="juwaiMetric">Chart <select id="juwaiMetric"><option value="power_w">Power (W)</option><option value="voltage_v">Voltage (V)</option><option value="current_a">Current (A)</option></select></label></div>
 <div class="juwai-mobile-only" id="mobileGenerationView">
 <div class="mobile-generation-summary"><span id="mobileGenerationPeriod">Today</span><strong id="mobileGenerationTotal">— kWh</strong><span>estimated generation</span><div id="mobileGenerationSplit"></div></div>
@@ -482,21 +484,21 @@
 <div class="card juwai-group ewelink-group"><div class="juwai-group-heading"><h1>Inverters &amp; fridge</h1><label for="ewelinkPeriod">Period <select id="ewelinkPeriod"><option value="live">Live · past hour</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
 <p id="ewelinkStatus" class="period-note" role="status">Loading connection status…</p>
 <div class="ewelink-grid"><article id="ew-inverter-1000" class="card ewelink-card" data-stale="true">
-<div class="ewelink-heading"><h2>1000 watt inverter</h2><span class="ewelink-state" data-state>Loading…</span></div>
+<div class="ewelink-heading"><h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m13 6-4 6h6l-4 6M1 8h3m-3 8h3m16-8h3m-3 8h3"/></svg><span>1000 watt inverter</span></h2></div>
 <div class="ewelink-reading"><div class="label">Latest power</div><div class="ewelink-power" data-power>— W</div></div>
-<dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl><time>Waiting for readings</time></article><article id="ew-garage-inverter" class="card ewelink-card" data-stale="true">
-<div class="ewelink-heading"><h2>Garage inverter</h2><span class="ewelink-state" data-state>Loading…</span></div>
+<dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span class="ewelink-state" data-state>Loading…</span></span><time>Waiting for readings</time></div></article><article id="ew-garage-inverter" class="card ewelink-card" data-stale="true">
+<div class="ewelink-heading"><h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m13 6-4 6h6l-4 6M1 8h3m-3 8h3m16-8h3m-3 8h3"/></svg><span>Garage inverter</span></h2></div>
 <div class="ewelink-reading"><div class="label">Latest power</div><div class="ewelink-power" data-power>— W</div></div>
-<dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl><time>Waiting for readings</time></article><article id="ew-inverter-600" class="card ewelink-card" data-stale="true">
-<div class="ewelink-heading"><h2>600 watt inverter</h2><span class="ewelink-state" data-state>Loading…</span></div>
+<dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span class="ewelink-state" data-state>Loading…</span></span><time>Waiting for readings</time></div></article><article id="ew-inverter-600" class="card ewelink-card" data-stale="true">
+<div class="ewelink-heading"><h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m13 6-4 6h6l-4 6M1 8h3m-3 8h3m16-8h3m-3 8h3"/></svg><span>600 watt inverter</span></h2></div>
 <div class="ewelink-reading"><div class="label">Latest power</div><div class="ewelink-power" data-power>— W</div></div>
-<dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl><time>Waiting for readings</time></article><article id="ew-charger-inverter" class="card ewelink-card" data-stale="true">
-<div class="ewelink-heading"><h2>Charger inverter</h2><span class="ewelink-state" data-state>Loading…</span></div>
+<dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span class="ewelink-state" data-state>Loading…</span></span><time>Waiting for readings</time></div></article><article id="ew-charger-inverter" class="card ewelink-card" data-stale="true">
+<div class="ewelink-heading"><h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="6" width="17" height="14" rx="2"/><path d="M8 3v3m7-3v3m-4 3-3 5h6l-3 4"/></svg><span>Charger inverter</span></h2></div>
 <div class="ewelink-reading"><div class="label">Latest power</div><div class="ewelink-power" data-power>— W</div></div>
-<dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl><time>Waiting for readings</time></article><article id="ew-fridge" class="card ewelink-card" data-stale="true">
-<div class="ewelink-heading"><h2>Fridge</h2><span class="ewelink-state" data-state>Loading…</span></div>
+<dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span class="ewelink-state" data-state>Loading…</span></span><time>Waiting for readings</time></div></article><article id="ew-fridge" class="card ewelink-card" data-stale="true">
+<div class="ewelink-heading"><h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M5 9h14M8 5v1m0 7v3"/></svg><span>Fridge</span></h2></div>
 <div class="ewelink-reading"><div class="label">Latest power</div><div class="ewelink-power" data-power>— W</div></div>
-<dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl><time>Waiting for readings</time></article></div>
+<dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span class="ewelink-state" data-state>Loading…</span></span><time>Waiting for readings</time></div></article></div>
 <div class="ewelink-chart-section"><h2 id="ewelinkChartHeading">Power history</h2><div class="juwai-controls"><label for="ewelinkDevice">Device <select id="ewelinkDevice"><option value="inverter-1000">1000 watt inverter</option><option value="garage-inverter">Garage inverter</option><option value="inverter-600">600 watt inverter</option><option value="charger-inverter">Charger inverter</option><option value="fridge">Fridge</option></select></label></div>
 <button id="ewelinkBack" type="button" hidden>← All weeks</button>
 <div class="ewelink-chart"><canvas id="ewelinkChart" role="img" aria-label="Selected device power history; use the details selector below for bar values"></canvas></div>
@@ -509,7 +511,9 @@
       <script>
 const $ = id => document.getElementById(id);
 let activeTab = 'power';
-const views = ['power','voltage','juwai','ewelink'];
+const views = ['power','juwai','ewelink'];
+let voltageVisible=false, voltageSuspended=false;
+const voltageActive=()=>activeTab==='power'&&voltageVisible&&!document.hidden&&!voltageSuspended;
 let voltageChart = null, voltagePoints = [], voltageTimer = null, voltageController = null, voltageVersion = 0;
 function stopVoltage() {
   voltageVersion++;
@@ -527,11 +531,11 @@ function makeVoltageChart() {
   });
 }
 async function readVoltage(version) {
-  if(version!==voltageVersion || activeTab!=='voltage' || document.hidden)return;
+  if(version!==voltageVersion || !voltageActive())return;
   voltageController=new AbortController();
   try {
     const data=await getJSON('/api/voltage',voltageController.signal);
-    if(version!==voltageVersion || activeTab!=='voltage' || document.hidden)return;
+    if(version!==voltageVersion || !voltageActive())return;
     if(!Number.isFinite(data.ts)||!Number.isFinite(data.volts))throw new Error('Invalid voltage');
     const previous=voltagePoints[voltagePoints.length-1];
     if(!previous || data.ts>previous.x){
@@ -547,15 +551,30 @@ async function readVoltage(version) {
     $('voltageStatus').innerText='Updated '+new Date(data.ts).toLocaleTimeString();
   } catch(e) {
     if(version===voltageVersion && e.name!=='AbortError'){
-      $('voltageStatus').innerText='Voltage unavailable · retrying while this tab is open';
+      $('voltageStatus').innerText='Voltage unavailable · retrying while this section is visible';
       $('voltageValue').style.opacity='.55';
     }
   } finally {
-    if(version===voltageVersion && activeTab==='voltage' && !document.hidden){
+    if(version===voltageVersion && voltageActive()){
       voltageController=null;voltageTimer=setTimeout(()=>readVoltage(version),3000);
     }
   }
 }
+function refreshVoltage() {
+  stopVoltage();
+  if(voltageActive()) {
+    makeVoltageChart();voltageChart.resize();
+    $('voltageStatus').textContent='Requesting voltage…';readVoltage(voltageVersion);
+  } else {
+    $('voltageStatus').textContent=voltagePoints.length?'Paused · scroll here to resume':'Readings start when this section is visible.';
+  }
+}
+const voltageObserver=new IntersectionObserver(entries=>{
+  const visible=entries[0].isIntersecting&&entries[0].intersectionRatio>=.05;
+  if(visible===voltageVisible)return;
+  voltageVisible=visible;refreshVoltage();
+},{threshold:[0,.05]});
+voltageObserver.observe($('voltageSection'));
 function selectTab(name) {
   if(activeTab===name)return;
   activeTab=name;stopVoltage();stopJuwai();window.stopEwelink?.();
@@ -565,16 +584,12 @@ function selectTab(name) {
     $(view+'Tab').setAttribute('aria-selected',String(current));$(view+'Tab').tabIndex=current?0:-1;
     $(view+'Panel').hidden=!current;
   }
-  if(name==='voltage'){
-    generation++;controller?.abort();
-    makeVoltageChart();voltageChart.resize();
-    $('voltageStatus').innerText='Requesting voltage…';readVoltage(voltageVersion);
-  } else if(name==='ewelink') {
+  if(name==='ewelink') {
     window.startEwelink?.();
   } else if(name==='juwai') {
     makeJuwaiChart();juwaiChart.resize();readJuwai(juwaiVersion);
   } else {
-    chart.resize();donut.resize();lastHistory=0;
+    chart.resize();donut.resize();lastHistory=0;refreshVoltage();
     loadHistory().catch(e=>{if(e.name!=='AbortError')$('lastReading').innerText='Connection lost';});
   }
 }
@@ -637,11 +652,18 @@ function renderJuwai(data){
     $(id+'Voltage').textContent=number(device.values.voltage_v,'V',2);
     $(id+'Current').textContent=number(device.values.current_a,'A',3);
     $(id+'Card').dataset.stale=String(device.stale);
-    $(id+'Age').textContent=device.observed_at?(device.stale?'Reading delayed · ':'Updated ')+new Date(device.observed_at).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}):'Reading unavailable';
+    $(id+'State').textContent=device.stale?'Delayed':'Current';
+    $(id+'Age').textContent=device.observed_at?'Checked '+new Date(device.observed_at).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'No recorded sample';
+    if(device.observed_at)$(id+'Age').dateTime=new Date(device.observed_at).toISOString();
   }
   const valid=data.devices.filter(d=>['shed','garage'].includes(d.id)&&!d.stale&&Number.isFinite(d.values.power_w));
   $('totalPower').textContent=valid.length===2?valid.reduce((sum,d)=>sum+d.values.power_w,0).toLocaleString(undefined,{maximumFractionDigits:2})+' W':'— W';
   $('totalCard').dataset.stale=String(valid.length!==2);
+  $('totalState').textContent=valid.length===2?'Current':'Delayed';
+  const stamps=data.devices.filter(d=>['shed','garage'].includes(d.id)).map(d=>d.observed_at).filter(Number.isFinite);
+  const stamp=stamps.length===2?Math.min(...stamps):null;
+  $('totalAge').textContent=stamp?'Checked '+new Date(stamp).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'Waiting for readings';
+  if(stamp)$('totalAge').dateTime=new Date(stamp).toISOString();
   $('juwaiStatus').hidden=true;
 }
 async function readJuwai(version){
@@ -660,8 +682,8 @@ async function readJuwai(version){
     const results=await Promise.allSettled(tasks);
     if(version!==juwaiVersion||activeTab!=='juwai'||document.hidden)return;
     if(results[0].status==='rejected'){
-      $('juwaiStatus').hidden=false;$('juwaiStatus').textContent='Readings unavailable. Previous values may be out of date.';$('totalPower').textContent='— W';$('totalCard').dataset.stale='true';
-      for(const id of ['shed','garage']){$(id+'Card').dataset.stale='true';$(id+'Age').textContent='Update unavailable · previous sample';}
+      $('juwaiStatus').hidden=false;$('juwaiStatus').textContent='Readings unavailable. Previous values may be out of date.';$('totalPower').textContent='— W';$('totalCard').dataset.stale='true';$('totalState').textContent='Unavailable';
+      for(const id of ['shed','garage']){$(id+'Card').dataset.stale='true';$(id+'State').textContent='Unavailable';}
     }
     if(results[1]?.status==='rejected'){$('mobileCoverage').textContent='Generation history unavailable. Please try again.';$('mobileGenerationTotal').textContent='— kWh';$('juwaiHistoryNote').textContent='Generation history unavailable. Please try again.';for(const id of ['shed','garage','total'])$(id+'Energy').textContent='— kWh';}
   }finally{
@@ -834,7 +856,6 @@ async function loadHistory(){
   if(selected==='1d') calendarBounds={start:data.start,end:data.end};
   step=data.step_ms;points=data.points.map(p=>({x:p[0],y:p[1],low:p[2],high:p[3],n:p[4]}));
   updateLive(data.live);draw(data.end);updateEnergy(data.energy);lastHistory=Date.now();
-  $('historyNote').innerText=(points.length ? step<=3000?'Individual readings':`Average power in ${step<60000?Math.round(step/1000)+' second':step<3600000?Math.round(step/60000)+' minute':Math.round(step/3600000)+' hour'} groups; hover to see the range` : 'No readings in this period')+'. History builds from the start of local recording. Missing readings are left as gaps. Energy totals cover recorded intervals only.';
 }
 $('timeWindow').addEventListener('change',async()=>{
   const choice=$('timeWindow').value;
@@ -889,17 +910,14 @@ async function tick(){
   finally{setTimeout(tick,3000);}
 }
 document.addEventListener('visibilitychange',()=>{
-  stopVoltage();stopJuwai();
+  stopJuwai();refreshVoltage();
   if(!document.hidden){
-    if(activeTab==='voltage')readVoltage(voltageVersion);
-    else if(activeTab==='juwai')readJuwai(juwaiVersion);
-    else if(selected!=='custom')lastHistory=0;
-  } else if(activeTab==='voltage') {
-    $('voltageStatus').innerText='Paused while this page is hidden';$('voltageValue').style.opacity='.55';
+    if(activeTab==='juwai')readJuwai(juwaiVersion);
+    else if(activeTab==='power'&&selected!=='custom')lastHistory=0;
   }
 });
-window.addEventListener('pagehide',()=>{stopVoltage();stopJuwai();});
-window.addEventListener('pageshow',event=>{if(event.persisted&&!document.hidden){if(activeTab==='voltage')readVoltage(voltageVersion);else if(activeTab==='juwai')readJuwai(juwaiVersion);}});
+window.addEventListener('pagehide',()=>{voltageSuspended=true;stopVoltage();stopJuwai();});
+window.addEventListener('pageshow',event=>{voltageSuspended=false;refreshVoltage();if(event.persisted&&!document.hidden&&activeTab==='juwai')readJuwai(juwaiVersion);});
 tick();
 
       </script>
