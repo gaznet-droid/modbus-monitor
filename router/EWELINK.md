@@ -31,3 +31,15 @@ Production source backup: /etc/modbus-ewelink-backup-20261026-142338. The later 
 Account consent had succeeded but device selection was empty. Matched cards to 1000W Inverter, Garage inverter 100w, 600w inverter, Charger, and Fridge Freezer. UIID32 reports engineering-unit decimal strings. UIID190 reports power/voltage/current in hundredths, verified against SonoffLAN devices.py (XSensor100 = multiply 0.01). Added UIID-aware conversion and a regression test before storing any samples. Forty-nine tests pass; eighteen adapter tests also pass on Linux. No control commands sent.
 
 At first collection, all five were online: 1000 W inverter 3.35 W, garage 0 W/on, 600 W 0 W/off, charger 80.08 W, fridge 51.14 W. These are observations, not fixed values. History starts from activation; no older history is fabricated. Private activation backup: /etc/modbus-ewelink-activation-20261026-145223. Credentials, device IDs and raw vendor payloads are excluded from the repository.
+
+## Responsive layout — 26 October 2026
+
+Moved eWeLink inside the shared container (the detached section caused intrinsic-width shrinkage). Only the selected eWeLink view expands the container up to 1440px. Five equal cards at >=1100px, two columns on intermediate widths, compact single-column device rows at <=600px. Styling follows Juwai's group/cards and information order. The full-width graph shares the card grid's width; Juwai retains its existing 900px container.
+
+Shared period control now offers Live/past hour, Today, rolling/previous 24h, Yesterday, 7d and 30d. Desktop always retains lines; phone Live is a line, other periods use average-power bars (W): hourly for day ranges, UK calendar days for 7d, Monday-aligned UK weeks for 30d. Monthly bars drill into stored daily detail and back without fetching. These are mean recorded watts, not estimated kWh. Missing slots remain null/hatched; zero readings remain zero. Details include sample counts and incomplete-data indicators.
+
+History still reads the same USB samples and never contacts eWeLink; aggregation uses every valid online raw sample, rather than averaging pre-averaged chart groups. A single cached period per device bounds memory, expires after 60 seconds, and is invalidated on collection. No collector cadence, tokens, permissions, control endpoints or other providers changed.
+
+Validated: 51 Python/HTTP tests; JS syntax; pure-JS responsive harness covers desktop lines, mobile hourly/daily/weekly bars, null vs zero, bar selection, drill/back without fetch, resize without fetch, hidden-page pause and cached-only URLs. Real desktop browser confirmed five equal columns, 1234px graph, no horizontal overflow, actual readings, device/range changes and Juwai's preserved 900px width. Mobile visual preview was unavailable in the browser environment; do not claim a phone screenshot was inspected.
+
+Deployment backup: /etc/modbus-ewelink-responsive-20261026-154848 (ewelink.py, web/index.html, web/ewelink.js). Restore these three source files and restart only modbus-monitor for rollback; preserve all credentials and history. All seven period API responses plus latest and health verified on the router.

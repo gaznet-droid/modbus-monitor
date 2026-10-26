@@ -6,6 +6,7 @@ on exFAT or in the web root. Only cached, selected telemetry is public.
 OAuth initiation is a local administrator CLI action, never a public endpoint.
 """
 import argparse
+from bisect import bisect_right
 import base64
 import contextlib
 import fcntl
@@ -99,6 +100,7 @@ class Ewelink:
         self.budget_path = Path(str(config)+'.budget')
         self.lock = threading.RLock()
         self.read_lock = threading.RLock()
+        self.history_cache = {}
         self.transport = transport or self._transport
         self.last_request = 0
         self.status = 'Awaiting account authorisation'
@@ -256,6 +258,7 @@ class Ewelink:
                     db.execute('INSERT OR REPLACE INTO latest VALUES(?,?,?)',(slug,now,payload))
                 db.execute('DELETE FROM samples WHERE rowid IN (SELECT rowid FROM samples WHERE ts<? LIMIT 1000)',(now-30*86400000,))
             self.status = 'Connected'
+            with self.read_lock:self.history_cache.clear()
 
     def inventory(self):
         with self.exclusive():
@@ -284,21 +287,45 @@ class Ewelink:
             return dict(status=status,server_time=now,interval_seconds=INTERVAL,devices=devices)
 
     def history(self, slug, window):
-        if slug not in dict(DEVICES) or window not in ('24h','7d','30d'): raise ValueError('Invalid history query')
-        now = int(time.time()*1000); duration = {'24h':86400000,'7d':7*86400000,'30d':30*86400000}[window]
-        bucket = max(300000,duration//500)
-        with self.read_lock, self.database(readonly=True) as db:
-            rows = db.execute('SELECT ts,payload FROM samples WHERE device=? AND ts>=? AND ts<=? ORDER BY ts',(slug,now-duration,now))
-            bins = {}
-            for ts,payload in rows:
-                value = json.loads(payload)
-                if not value.get('online'): continue
-                power = value.get('power_w')
-                if power is None: continue
-                b = ts//bucket*bucket
-                total,count = bins.get(b,(0,0));bins[b] = (total+power,count+1)
-            points = [[ts,total/count] for ts,(total,count) in sorted(bins.items())]
-        return dict(device=slug,window=window,points=points,bucket_ms=bucket)
+        allowed=('live','today','24h','previous24h','yesterday','7d','30d')
+        if slug not in dict(DEVICES) or window not in allowed: raise ValueError('Invalid history query')
+        from tuya_cached import period_bounds, generation_bins
+        with self.read_lock:
+            self.guard()
+            now = int(time.time()*1000)
+            cached=self.history_cache.get(slug)
+            if cached and cached[0]==window and time.monotonic()<cached[1]:return cached[2]
+            start,end=period_bounds(window,now)
+            bucket=max(300000,(end-start)//500)
+            unit='week' if window=='30d' else 'day' if window=='7d' else 'hour'
+            def plan(unit):return [dict(start=b['start'],end=b['end'],mean_w=None,samples=0) for b in generation_bins(start,end,unit)]
+            plans={'bins':plan(unit)}
+            if window=='30d':plans['daily_bins']=plan('day')
+            edges={key:[b['end'] for b in rows] for key,rows in plans.items()}
+            totals={key:[0.0]*len(rows) for key,rows in plans.items()}
+            points={}
+            with self.database(readonly=True) as db:
+                rows=db.execute('SELECT ts,payload FROM samples WHERE device=? AND ts>=? AND ts<? ORDER BY ts',(slug,start,end))
+                for ts,payload in rows:
+                    value=json.loads(payload)
+                    power=number(value.get('power_w')) if value.get('online') else None
+                    if power is None:continue
+                    group=ts//bucket*bucket
+                    total,count=points.get(group,(0,0));points[group]=(total+power,count+1)
+                    for key,bins in plans.items():
+                        index=bisect_right(edges[key],ts)
+                        if index<len(bins):
+                            totals[key][index]+=power;bins[index]['samples']+=1
+            for key,bins in plans.items():
+                for i,b in enumerate(bins):
+                    if b['samples']:b['mean_w']=totals[key][i]/b['samples']
+                    b['partial']=b['samples']<max(1,int((b['end']-b['start'])/(INTERVAL*1000))-1)
+            result=dict(device=slug,window=window,start=start,end=end,
+                points=[[ts,total/count] for ts,(total,count) in sorted(points.items())],
+                bucket_ms=bucket,bucket_unit=unit,**plans)
+            # One cached period per device; browser reads never call the vendor.
+            self.history_cache[slug]=(window,time.monotonic()+60,result)
+            return result
 
     def poll(self):
         delay = 0

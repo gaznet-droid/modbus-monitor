@@ -80,6 +80,7 @@ class AdapterTests(unittest.TestCase):
         self.a.collect()
         data=self.a.history('fridge','24h');self.assertEqual(data['points'][0][1],42.5)
         with self.a.database() as db,db:db.execute("UPDATE samples SET payload=?",(json.dumps({'online':False,'power_w':99}),))
+        self.a.history_cache.clear()
         self.assertEqual(self.a.history('fridge','24h')['points'],[])
     def test_budget_prevents_transport(self):
         e.atomic_json(self.a.budget_path,dict(month=time.strftime('%Y-%m',time.gmtime()),day=time.strftime('%Y-%m-%d',time.gmtime()),daily=400,monthly=400))
@@ -106,5 +107,30 @@ class AdapterTests(unittest.TestCase):
     def test_powr3_uses_hundredths_and_powr2_uses_engineering_units(self):
         self.assertEqual(e.metrics({'power':4566,'voltage':23500,'current':27},190),{'power_w':45.66,'voltage_v':235.0,'current_a':0.27})
         self.assertEqual(e.metrics({'power':'80.05','voltage':'240.28','current':'0.54'},32),{'power_w':80.05,'voltage_v':240.28,'current_a':0.54})
+    def test_mobile_bins_distinguish_zero_missing_and_weight_samples(self):
+        now=int(time.time()*1000)
+        with self.a.database() as db,db:
+            for i,power in enumerate([0,10,20]):
+                db.execute('INSERT INTO samples VALUES(?,?,?)',('fridge',now-(i+1)*300000,json.dumps({'online':True,'power_w':power})))
+        result=self.a.history('fridge','30d')
+        self.assertEqual(result['bucket_unit'],'week')
+        present=[b for b in result['bins'] if b['samples']]
+        self.assertEqual(len(present),1);self.assertEqual(present[0]['mean_w'],10)
+        self.assertEqual(present[0]['samples'],3)
+        self.assertTrue(any(b['mean_w'] is None for b in result['daily_bins']))
+        with self.a.database() as db,db:db.execute('UPDATE samples SET payload=?',(json.dumps({'online':True,'power_w':0}),))
+        self.a.history_cache.clear()
+        result=self.a.history('fridge','24h')
+        self.assertTrue(any(b['mean_w']==0 for b in result['bins']))
+        self.assertTrue(any(b['mean_w'] is None for b in result['bins']))
+        self.assertFalse(self.calls)
+    def test_new_periods_are_bounded_and_do_not_contact_vendor(self):
+        with self.a.database():pass
+        for window in ['live','today','yesterday','previous24h','24h','7d','30d']:
+            data=self.a.history('fridge',window)
+            self.assertLessEqual(len(data['bins']),25)
+            self.assertLessEqual(len(data.get('daily_bins',[])),32)
+            self.assertLessEqual(len(data['points']),501)
+        self.assertFalse(self.calls)
 
 if __name__=='__main__':unittest.main()
