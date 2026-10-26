@@ -6,6 +6,7 @@
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Live Power Monitor · Dad</title>
       <script src="/chart.umd.min.js"></script>
+      <script src="/ewelink.js" defer></script>
       <style>
         :root {
           --bg-base: #090d16;
@@ -308,6 +309,21 @@
           #totalCard .juwai-power { font-size:1.25rem; margin:.2rem 0; }
           .mobile-generation-disclaimer { color:var(--text-muted); font-size:.75rem; margin:-.5rem 0 .8rem; }
         }
+
+        .tabs { overflow-x:auto; flex-shrink:0; }
+        .tabs button { flex-shrink:0; }
+        .ewelink-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem; }
+        .ewelink-heading { display:flex; justify-content:space-between; align-items:baseline; gap:.5rem; margin-bottom:1rem; }
+        .ewelink-heading h2 { font-size:1rem; overflow-wrap:anywhere; }
+        .ewelink-state { color:var(--export-color); font-size:.75rem; white-space:nowrap; }
+        .ewelink-card .stat { font-size:clamp(1.4rem,5vw,2.4rem); margin:.5rem 0 1rem; }
+        .ewelink-card dl { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; }
+        .ewelink-card dt { color:var(--text-muted); font-size:.75rem; margin-bottom:.3rem; }
+        .ewelink-card dd { font-size:.9rem; font-variant-numeric:tabular-nums; }
+        .ewelink-card time { display:block; color:var(--text-muted); font-size:.7rem; margin-top:1rem; }
+        .ewelink-card[data-stale="true"] :is(.stat,.ewelink-state) { color:var(--text-muted); }
+        .ewelink-title h1 { font-size:1.3rem; margin-bottom:.6rem; }
+        @media(max-width:600px) { .ewelink-card { padding:.8rem; } .ewelink-heading { flex-direction:column; gap:.4rem; } .ewelink-card dl { grid-template-columns:1fr; } .tabs button { padding:.75rem .8rem; } }
       </style>
     </head>
     <body>
@@ -316,6 +332,7 @@
           <button id="powerTab" type="button" role="tab" aria-selected="true" aria-controls="powerPanel">Power</button>
           <button id="voltageTab" type="button" role="tab" aria-selected="false" aria-controls="voltagePanel" tabindex="-1">Voltage</button>
           <button id="juwaiTab" type="button" role="tab" aria-selected="false" aria-controls="juwaiPanel" tabindex="-1">Juwai</button>
+          <button id="ewelinkTab" type="button" role="tab" aria-selected="false" aria-controls="ewelinkPanel" tabindex="-1">eWeLink</button>
         </nav>
         <section id="powerPanel" class="tab-panel" role="tabpanel" aria-labelledby="powerTab">
         <div class="card chart-card">
@@ -433,10 +450,11 @@
 <p class="period-note">Solar meter is not connected: Tuya permission is unresolved. Read-only monitoring.</p>
 </section>
       </div>
+<section id="ewelinkPanel" class="tab-panel" role="tabpanel" aria-labelledby="ewelinkTab" hidden><header class="ewelink-title"><h1>Inverters &amp; fridge</h1><p id="ewelinkStatus" class="period-note" role="status">Loading connection status…</p><p class="period-note">Readings refresh every 5 minutes. Device controls stay in eWeLink.</p></header><div class="ewelink-grid"><article id="ew-inverter-1000" class="card ewelink-card" data-stale="true"><div class="ewelink-heading"><h2>1000 watt inverter</h2><span class="ewelink-state" data-state>Not connected</span></div><div class="label">Power</div><div class="stat" data-power>— W</div><dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl><time>Waiting for account connection</time></article><article id="ew-garage-inverter" class="card ewelink-card" data-stale="true"><div class="ewelink-heading"><h2>Garage inverter</h2><span class="ewelink-state" data-state>Not connected</span></div><div class="label">Power</div><div class="stat" data-power>— W</div><dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl><time>Waiting for account connection</time></article><article id="ew-inverter-600" class="card ewelink-card" data-stale="true"><div class="ewelink-heading"><h2>600 watt inverter</h2><span class="ewelink-state" data-state>Not connected</span></div><div class="label">Power</div><div class="stat" data-power>— W</div><dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl><time>Waiting for account connection</time></article><article id="ew-charger-inverter" class="card ewelink-card" data-stale="true"><div class="ewelink-heading"><h2>Charger inverter</h2><span class="ewelink-state" data-state>Not connected</span></div><div class="label">Power</div><div class="stat" data-power>— W</div><dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl><time>Waiting for account connection</time></article><article id="ew-fridge" class="card ewelink-card" data-stale="true"><div class="ewelink-heading"><h2>Fridge</h2><span class="ewelink-state" data-state>Not connected</span></div><div class="label">Power</div><div class="stat" data-power>— W</div><dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl><time>Waiting for account connection</time></article></div><div class="card"><div class="juwai-controls"><label for="ewelinkDevice">Device <select id="ewelinkDevice"><option value="inverter-1000">1000 watt inverter</option><option value="garage-inverter">Garage inverter</option><option value="inverter-600">600 watt inverter</option><option value="charger-inverter">Charger inverter</option><option value="fridge">Fridge</option></select></label><label for="ewelinkPeriod">Period <select id="ewelinkPeriod"><option value="24h">24 hours</option><option value="7d">7 days</option><option value="30d">30 days</option></select></label></div><div class="juwai-chart"><canvas id="ewelinkChart" role="img" aria-label="Selected eWeLink device power history"></canvas></div><p id="ewelinkHistoryNote" class="period-note">History starts after connection.</p></div></section>
       <script>
 const $ = id => document.getElementById(id);
 let activeTab = 'power';
-const views = ['power','voltage','juwai'];
+const views = ['power','voltage','juwai','ewelink'];
 let voltageChart = null, voltagePoints = [], voltageTimer = null, voltageController = null, voltageVersion = 0;
 function stopVoltage() {
   voltageVersion++;
@@ -485,7 +503,7 @@ async function readVoltage(version) {
 }
 function selectTab(name) {
   if(activeTab===name)return;
-  activeTab=name;stopVoltage();stopJuwai();
+  activeTab=name;stopVoltage();stopJuwai();window.stopEwelink?.();
   if(name!=='power'){generation++;controller?.abort();}
   for(const view of views){
     const current=view===name;
@@ -496,6 +514,8 @@ function selectTab(name) {
     generation++;controller?.abort();
     makeVoltageChart();voltageChart.resize();
     $('voltageStatus').innerText='Requesting voltage…';readVoltage(voltageVersion);
+  } else if(name==='ewelink') {
+    window.startEwelink?.();
   } else if(name==='juwai') {
     makeJuwaiChart();juwaiChart.resize();readJuwai(juwaiVersion);
   } else {

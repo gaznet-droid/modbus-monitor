@@ -316,7 +316,7 @@ class Monitor:
                     self.meter_failed=True
             self.stop.wait(max(.2,3-(time.monotonic()-started)))
 
-def handler(store, web, voltage=None, tuya=None):
+def handler(store, web, voltage=None, tuya=None, ewelink=None):
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.0"
         def setup(self):
@@ -343,6 +343,28 @@ def handler(store, web, voltage=None, tuya=None):
                     return self.send(200,(web/"index.html").read_bytes(),"text/html; charset=utf-8")
                 if parsed.path=="/chart.umd.min.js":
                     return self.send(200,(web/"chart.umd.min.js").read_bytes(),"text/javascript; charset=utf-8")
+                if parsed.path=="/ewelink.js":
+                    return self.send(200,(web/"ewelink.js").read_bytes(),"text/javascript; charset=utf-8")
+                if parsed.path=="/api/integrations/ewelink/callback" and ewelink is not None:
+                    try:
+                        ewelink.callback(query)
+                    except (ValueError, OSError, RuntimeError, KeyError):
+                        return self.send(400,{"error":"Authorisation failed or expired. Start a new connection."})
+                    except Exception:
+                        return self.send(502,{"error":"eWeLink authorisation exchange failed. Start a new connection."})
+                    self.send_response(303)
+                    self.send_header("Location","/#ewelink")
+                    self.send_header("Cache-Control","no-store")
+                    self.send_header("Referrer-Policy","no-referrer")
+                    self.send_header("Content-Length","0")
+                    self.end_headers()
+                    return
+                if parsed.path=="/api/ewelink/latest" and ewelink is not None:
+                    if query: raise ValueError()
+                    return self.send(200,ewelink.latest())
+                if parsed.path=="/api/ewelink/history" and ewelink is not None:
+                    if set(query)!={"device","window"} or any(len(v)!=1 for v in query.values()): raise ValueError()
+                    return self.send(200,ewelink.history(query["device"][0],query["window"][0]))
                 if parsed.path=="/api/tuya/latest" and tuya is not None:
                     if query:
                         raise ValueError()
@@ -431,11 +453,16 @@ def main():
         voltage=VoltageReader(config["meter_host"],config.get("meter_port",8838))
         from tuya_cached import CachedTuya
         tuya=CachedTuya(modbus_usb.storage_directory,modbus_usb.check)
-        server=WebServer((config.get("bind","127.0.0.1"),config.get("port",8096)),handler(store,Path(__file__).parent/"web",voltage,tuya))
+        from ewelink import Ewelink
+        ewelink=Ewelink(modbus_usb.storage_directory,modbus_usb.check)
+        ewelink_thread=threading.Thread(target=ewelink.poll,daemon=True)
+        ewelink_thread.start()
+        server=WebServer((config.get("bind","127.0.0.1"),config.get("port",8096)),handler(store,Path(__file__).parent/"web",voltage,tuya,ewelink))
         server.daemon_threads=True
         thread=threading.Thread(target=monitor.poll,daemon=True)
         thread.start()
         def stop(*_):
+            ewelink.stop.set()
             monitor.stop.set()
             threading.Thread(target=server.shutdown,daemon=True).start()
         signal.signal(signal.SIGTERM,stop)
@@ -444,6 +471,7 @@ def main():
         try:
             server.serve_forever(poll_interval=.5)
         finally:
+            ewelink.stop.set()
             monitor.stop.set()
             thread.join(timeout=8)
             server.server_close()
