@@ -103,5 +103,8 @@ class AdapterTests(unittest.TestCase):
         other=e.Ewelink(None,None,self.a.config_path,self.a.transport)
         with self.a.exclusive():
             with self.assertRaises(RuntimeError):other.authorize()
+    def test_powr3_uses_hundredths_and_powr2_uses_engineering_units(self):
+        self.assertEqual(e.metrics({'power':4566,'voltage':23500,'current':27},190),{'power_w':45.66,'voltage_v':235.0,'current_a':0.27})
+        self.assertEqual(e.metrics({'power':'80.05','voltage':'240.28','current':'0.54'},32),{'power_w':80.05,'voltage_v':240.28,'current_a':0.54})
 
 if __name__=='__main__':unittest.main()

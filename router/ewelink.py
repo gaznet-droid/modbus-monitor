@@ -73,12 +73,14 @@ def number(value, low=None, high=None):
     if not math.isfinite(value) or (low is not None and value < low) or (high is not None and value > high): return None
     return value
 
-def metrics(params):
+def metrics(params, uiid=None):
     """Only documented engineering-unit scalar fields. Never guess raw scales."""
     out = {}
     for source, target, low, high in [('power','power_w',-1000000,1000000),
             ('voltage','voltage_v',0,1000), ('current','current_a',0,10000)]:
-        value = number(params.get(source), low, high)
+        value = number(params.get(source))
+        if value is not None and uiid==190:value/=100
+        value = number(value,low,high)
         if value is not None: out[target] = value
     switch = params.get('switch')
     if switch in ('on', 'off'): out['switch'] = switch
@@ -247,7 +249,8 @@ class Ewelink:
                 for slug,_ in DEVICES:
                     d = things.get(selected.get(slug,{}).get('id'))
                     if not d: continue # Preserve old sample with its original timestamp.
-                    value = dict(metrics(d.get('params',{})),online=d.get('online') is True)
+                    uiid=d.get('extra',{}).get('uiid',selected.get(slug,{}).get('uiid'))
+                    value = dict(metrics(d.get('params',{}),uiid),online=d.get('online') is True)
                     payload = json.dumps(value,separators=(',',':'),allow_nan=False)
                     db.execute('INSERT OR REPLACE INTO samples VALUES(?,?,?)',(slug,now,payload))
                     db.execute('INSERT OR REPLACE INTO latest VALUES(?,?,?)',(slug,now,payload))

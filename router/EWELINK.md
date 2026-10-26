@@ -2,7 +2,7 @@
 
 Deployed 26 October 2026. Dedicated eWeLink tab for 1000 watt inverter, Garage inverter, 600 watt inverter, Charger inverter and Fridge. No device-control routes or commands exist in the adapter.
 
-Status: page, cached endpoints and OAuth callback deployed and checked. No app secret, OAuth token, device mapping or genuine eWeLink samples have been installed yet. Secure cloud-browser sign-in could not be resumed; do not report the devices as connected.
+Status: activated and verified 26 October 2026 at 14:52 UTC. App Secret and valid EU OAuth tokens are installed privately. All five requested devices are explicitly mapped, online and returning genuine stored measurements. Public latest and five history endpoints verified. Modbus health remains good. Cloud polling is active on the existing 300-second schedule.
 
 Run on Gareth's Mac in Terminal:
 
@@ -25,3 +25,9 @@ UI: cached local latest request every 30 seconds only while eWeLink is selected/
 Validation: 48 Mac unit/HTTP tests pass; 17 new adapter tests also pass on Linux with /proc fd storage. Python compile and both inline/external JS syntax pass. Live browser AX confirmed all five cards and correct disconnected state. A secure-browser native-credential failure subsequently blocked screenshot/mobile inspection, so no mobile visual QA claim is made. Server deployment health and five-device latest verified. Full post-consent mapping, UIID/unit verification, live samples, history and refresh with the actual account remain pending.
 
 Production source backup: /etc/modbus-ewelink-backup-20261026-142338. The later cross-process locking update backs up ewelink.py under this directory. Rollback restores monitor.py and web/index.html from backup, removes only the two newly added source files ewelink.py and web/ewelink.js, and restarts only modbus-monitor. Preserve private credentials/tokens/budget/schedule files and USB history. Do not restart networking, tunnels or the Tuya collector.
+
+## Activation verification — 26 October 2026
+
+Account consent had succeeded but device selection was empty. Matched cards to 1000W Inverter, Garage inverter 100w, 600w inverter, Charger, and Fridge Freezer. UIID32 reports engineering-unit decimal strings. UIID190 reports power/voltage/current in hundredths, verified against SonoffLAN devices.py (XSensor100 = multiply 0.01). Added UIID-aware conversion and a regression test before storing any samples. Forty-nine tests pass; eighteen adapter tests also pass on Linux. No control commands sent.
+
+At first collection, all five were online: 1000 W inverter 3.35 W, garage 0 W/on, 600 W 0 W/off, charger 80.08 W, fridge 51.14 W. These are observations, not fixed values. History starts from activation; no older history is fabricated. Private activation backup: /etc/modbus-ewelink-activation-20261026-145223. Credentials, device IDs and raw vendor payloads are excluded from the repository.
