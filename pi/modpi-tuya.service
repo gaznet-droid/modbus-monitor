@@ -1,0 +1,26 @@
+[Unit]
+Description=ModPi read-only Tuya (Juwai) cloud collector
+Wants=network-online.target
+After=network-online.target modpi.service
+
+[Service]
+Type=simple
+User=modpi
+Group=modpi
+WorkingDirectory=/opt/modpi
+ExecStart=/usr/bin/python3 /opt/modpi/pi/tuya_run.py --config /var/lib/modpi/private/tuya.json --lock-file /var/lib/modpi/private/tuya.lock --run
+# Deliberately no automatic restart: a Tuya safety stop (quota, auth, rate limit) requires operator review.
+Restart=no
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/modpi
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+TasksMax=16
+
+[Install]
+WantedBy=multi-user.target

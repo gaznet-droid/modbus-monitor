@@ -1,0 +1,20 @@
+[Unit]
+Description=Cloudflare Tunnel for modbus.clockmillbarn.uk (origin http://127.0.0.1:8096)
+Wants=network-online.target
+After=network-online.target modpi.service
+
+[Service]
+Type=simple
+DynamicUser=yes
+# Token stays root-only on disk; systemd hands it to the unit without exposing it in argv.
+LoadCredential=token:/etc/cloudflared/modbus-tunnel.token
+ExecStart=/usr/bin/cloudflared tunnel --no-autoupdate --protocol http2 run --token-file %d/token
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

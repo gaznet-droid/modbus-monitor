@@ -353,7 +353,7 @@ def run_cloud(cloud, conf, store, stop):
             raise RuntimeError("Cloud authentication, quota or rate-limit failure; operator review required")
 
 
-def main():
+def main(storage_directory=None, guard=None):
     parser=argparse.ArgumentParser()
     parser.add_argument("--config",default="/etc/modbus-tuya.json")
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -368,11 +368,13 @@ def main():
     with process_lock(args.lock_file):
         if args.probe:
             raise SystemExit(0 if collect_once(cloud,conf["devices"]) == len(conf["devices"]) else 1)
-        sys.path.insert(0,"/usr/local/usr/lib/clockmill")
-        import modbus_usb
-        # Reuse the original Modbus USB mount/identity guard, with no disk fallback.
-        with modbus_usb.storage_directory() as fd:
-            store=USBStore("/proc/self/fd/"+str(fd)+"/tuya.sqlite3",modbus_usb.check)
+        if storage_directory is None:
+            sys.path.insert(0,"/usr/local/usr/lib/clockmill")
+            import modbus_usb
+            # Reuse the original Modbus USB mount/identity guard, with no disk fallback.
+            storage_directory, guard = modbus_usb.storage_directory, modbus_usb.check
+        with storage_directory() as fd:
+            store=USBStore("/proc/self/fd/"+str(fd)+"/tuya.sqlite3",guard)
             try:
                 if args.once:
                     store.metadata("collection_mode", "manual")

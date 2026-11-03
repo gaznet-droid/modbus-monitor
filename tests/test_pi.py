@@ -72,6 +72,28 @@ class PiTests(unittest.TestCase):
                 with patch("storage.Path.read_text", return_value=readonly_data), self.assertRaises(RuntimeError):
                     storage.check()
 
+    def test_tuya_collector_uses_injected_pi_storage(self):
+        sys.path.insert(0, str(PI.parent / "router"))
+        import tuya_collector as t
+        calls = []
+        @contextlib.contextmanager
+        def directory():
+            calls.append("directory")
+            yield 7
+        guard = Mock()
+        conf = {"client_id": "id", "client_secret": "secret", "devices": {"shed": "x"}}
+        with tempfile.TemporaryDirectory() as folder, \
+             patch.object(sys, "argv", ["tuya_run", "--once", "--lock-file", folder + "/tuya.lock"]), \
+             patch.object(t, "load_config", return_value=conf), \
+             patch.object(t, "TuyaCloud"), \
+             patch.object(t, "collect_once", return_value=1), \
+             patch.object(t, "USBStore") as store:
+            with self.assertRaises(SystemExit) as stopped:
+                t.main(directory, guard)
+        self.assertEqual(stopped.exception.code, 0)
+        self.assertEqual(calls, ["directory"])
+        store.assert_called_once_with("/proc/self/fd/7/tuya.sqlite3", guard)
+
     def test_startup_with_disabled_collectors_starts_no_polling_threads(self):
         with tempfile.TemporaryDirectory() as folder:
             config = Path(folder) / "config.json"
