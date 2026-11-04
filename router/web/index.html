@@ -329,9 +329,13 @@
         .ewelink-card[role="button"] { cursor:pointer; transition:border-color .2s; }
         .ewelink-card[role="button"]:hover { border-color:var(--text-muted); }
         .ewelink-card[role="button"]:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
-        .ewelink-card[aria-expanded="true"] { border-color:var(--import-color); }
+        .ewelink-card[role="button"][aria-expanded="true"] { grid-column:1/-1; border-color:var(--import-color); border-bottom-color:transparent; border-radius:16px 16px 0 0; }
+        @media(min-width:601px) { .ewelink-card[aria-expanded="true"] dl { grid-template-columns:repeat(3,max-content); column-gap:3rem; } }
         .ewelink-hint { margin-top:-.3rem; }
-        .ewelink-grid > .ewelink-chart-section { grid-column:1/-1; margin:0; padding:1rem; border:1px solid var(--import-color); border-radius:12px; background:#101828; }
+        /* The open graph continues the card above it: no gap, shared outline, one rounded shape */
+        .ewelink-grid > .ewelink-chart-section { grid-column:1/-1; margin:-1rem 0 0; padding:0 1rem 1rem; border:1px solid var(--import-color); border-top:0; border-radius:0 0 16px 16px; background:#101828; }
+        .ewelink-grid > .ewelink-chart-section h2 { padding-top:.9rem; border-top:1px solid var(--border); }
+        @media(max-width:600px) { .ewelink-grid > .ewelink-chart-section { margin-top:-.65rem; padding:0 .85rem .85rem; } }
         /* Keep tabs and the time-window menu on one row on phones; last so it wins over earlier tab rules. */
         @media(max-width:600px) { .tabs { gap:.25rem; } .tabs button { width:48px; height:48px; padding:0; } .tab-icon { width:24px; height:24px; } .tab-window { font-size:.8rem; padding:.5rem; max-width:7.5rem; } }
       </style>

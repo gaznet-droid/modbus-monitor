@@ -1,2 +1,2 @@
 
-- 2026-11-04 22:15: On the eWeLink tab, tapping a device now opens its power graph underneath for the selected period, and tapping again closes it. Only one graph is open at a time, and history is only fetched while a graph is open. Each card now has a status dot by Latest power, and the checked time appears once under the heading. This also fixes a bug from earlier today: opening the site straight on #ewelink didn't load the eWeLink data. It was a page-only change, with no restart.
+- 2026-11-04 22:20: An open eWeLink graph now joins its card as one outlined block, and on desktop the open card spans the full row. It was a page-only change, with no restart.
