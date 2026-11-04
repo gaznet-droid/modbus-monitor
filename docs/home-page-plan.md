@@ -148,7 +148,10 @@ mapping easy to change. eWeLink holds no room information for the switches and p
   id, kind, place, display name). It maps 23 devices. Discovery output is in
   ewelink-inventory.json next to it.
 - Placement, as decided by Gareth on 4 November (still to confirm with Dad):
-  - The door sensors follow the assumptions above.
+  - Door sensors: the plan's assumptions, except that Dad's test on 4 November showed
+    the two front sensors were the other way round. "Front Porch door" is the Front
+    Porch's outside door, and "Front door" is the Guest Bedroom to Front Porch door.
+    Both are confirmed by Dad.
   - The Freezer is shown in the Kitchen and the TV in the Lounge.
   - Outside, Loft and Garage are separate sections below the plan. The Garage section
     holds the garage door plus Socket 1, Socket 4, Reset meter, the 24 V switch,
