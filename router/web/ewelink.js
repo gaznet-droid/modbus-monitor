@@ -29,6 +29,13 @@
     el('ewelinkBucket').value=String(selectedBin);
     el('ewelinkDetails').textContent=binLabel(b,unit,true)+' · '+(b.samples?format(b.mean_w,'W')+' average · '+b.samples+' readings'+(b.partial?' · Partial data':''):'No recorded readings');
     el('ewelinkDrill').hidden=history.bucket_unit!=='week'||!!week;
+    highlightBin();
+  }
+  // The chosen bar stays bright and the rest dim, so picking from the list or tapping a bar shows on the chart.
+  function highlightBin(){
+    if(!chart||chart.config.type!=='bar')return;
+    chart.data.datasets[0].backgroundColor=shownBins.map((_,i)=>i===selectedBin?'#38bdf8':'rgba(56,189,248,.35)');
+    chart.update('none');
   }
   const coverage={id:'ewelinkCoverage',afterDatasetsDraw(c){
     if(c.config.type!=='bar')return;
@@ -67,6 +74,7 @@
         onClick:event=>{if(bars)showBin(Math.round(chart.scales.x.getValueForPixel(event.x)));},
         scales:{x:{type:bars?'category':'linear',grid:{display:!bars,color:'#222f49'},ticks:{color:'#94a3b8',maxTicksLimit:mobile.matches?5:8,maxRotation:0,callback:bars?undefined:v=>date(v,history.window==='live'||['today','24h','previous24h','yesterday'].includes(history.window)?{hour:'2-digit',minute:'2-digit'}:{day:'numeric',month:'short'})}},y:{beginAtZero:bars,grid:{color:'#222f49'},ticks:{color:'#94a3b8',callback:v=>v+' W'}}},
         plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>bars?binLabel(shownBins[items[0].dataIndex],unit,true):date(items[0].parsed.x),label:item=>format(item.parsed.y,'W')+(bars?' average':'')}}}}});
+    highlightBin();
     const count=history.points.length;
     el('ewelinkHistoryNote').textContent=bars?'Bars show average power in W. Hatched slots have no readings; select a bar for detail.':'Stored power readings · gaps indicate missing readings.';
     if(!count)el('ewelinkHistoryNote').textContent='No recorded power readings in this period.';
