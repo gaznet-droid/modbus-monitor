@@ -10,7 +10,7 @@ Active branch: raspberry-pi (production runs on ModPi). main holds the old FastA
 
 ## This week (before the Pi moves to Dad's)
 UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer page-only changes; collector changes need a modpi restart and a backup of the private files first.
-- Home tab requested by Dad: his floor plan redrawn as SVG in the site style, with eWeLink door sensors, switches and room temperatures on the plan, and Loft, Outside, Freezer and Garage door as cards below it. Old Bedroom 2 is now the Kitchen, the old Kitchen is the Guest Bedroom, and its porch is the Front Porch; no fittings. eWeLink scan done; placements are Gareth's assumptions until Dad confirms. Read-only. Full plan and open questions in docs/home-page-plan.md. Proof of concept: stays public for now, by decision on 4 Nov.
+- Home tab requested by Dad: his floor plan redrawn as SVG in the site style, with eWeLink door sensors, switches and room temperatures on the plan, and Loft, Outside, Freezer and Garage door as cards below it. Old Bedroom 2 is now the Kitchen, the old Kitchen is the Guest Bedroom, and its porch is the Front Porch; no fittings. eWeLink scan done; placements are Gareth's assumptions until Dad confirms. Read-only. Full plan and open questions in docs/home-page-plan.md. Proof of concept: stays public for now, by decision on 4 Nov. Step 1 (plan drawing) is live. Step 2 next: choose list-call vs batched collection (batch limit is 10 devices), confirm the door lock value meaning, extend the collector, restart modpi.
 
 ## Next
 - Shut the Pi down cleanly, check Dad's Wi-Fi details against his router, and move ModPi to Dad's house.
@@ -31,3 +31,4 @@ UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer pa
 - 4 Nov: Meter readings restored after Dad's public IP changed (new address set on the Pi only).
 - 4 Nov: Tuya local keys and MACs fetched and backed up on the Pi and the Mac.
 - 4 Nov: Full handoff in docs/handoff-2026-11-04.md.
+- 4 Nov: Home tab step 1 (floor plan and placeholder cards) and icon-box navigation live.
