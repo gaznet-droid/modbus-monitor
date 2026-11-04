@@ -148,13 +148,17 @@ mapping easy to change. eWeLink holds no room information for the switches and p
   id, kind, place, display name). It maps 23 devices. Discovery output is in
   ewelink-inventory.json next to it.
 - Placement, as decided by Gareth on 4 November (still to confirm with Dad):
-  - Door sensors: the plan's assumptions, except that Dad's test on 4 November showed
-    the two front sensors were the other way round. "Front Porch door" is the Front
-    Porch's outside door, and "Front door" is the Guest Bedroom to Front Porch door.
-    Both are confirmed by Dad.
+  - Porches (confirmed by Dad on 4 November, overriding the layout table's names): the
+    porch off the Hall is the **Front Porch**, and the porch off the Guest Bedroom is
+    labelled "Fuckin Porch" for now (a placeholder name, to be changed later).
+  - Door sensors (confirmed by Dad):
+    - "Front door" is on the door between the Hall and the Front Porch.
+    - "Front Porch door" is on the Front Porch's outside door.
+    - "Back Door" is on the outside door of the porch off the Guest Bedroom.
+    - "Conservatory door" is on the French doors.
+    - The Guest Bedroom to lower porch door has no sensor.
   - The Freezer is shown in the Kitchen and the TV in the Lounge.
-  - The "Front door porch Temperature" sensor is in the Porch off the Hall, not the
-    Front Porch (Dad, 4 November). It is labelled Porch on the plan.
+  - The "Front door porch Temperature" sensor is in the Front Porch, off the Hall.
   - Outside, Loft and Garage are separate sections below the plan. The Garage section
     holds the garage door plus Socket 1, Socket 4, Reset meter, the 24 V switch,
     MINI-DIM and Roborock.
