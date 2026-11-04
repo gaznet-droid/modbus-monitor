@@ -16,6 +16,7 @@ import json
 import math
 import os
 from pathlib import Path
+import re
 import secrets
 import sqlite3
 import threading
@@ -31,6 +32,10 @@ DEVICES = [('inverter-1000', '1000 watt inverter'), ('garage-inverter', 'Garage 
 HOSTS = {'eu':'https://eu-apia.coolkit.cc', 'us':'https://us-apia.coolkit.cc',
          'as':'https://as-apia.coolkit.cc', 'cn':'https://cn-apia.coolkit.cn'}
 INTERVAL = 300
+HUNDREDTHS = {190, 277, 7032}  # POWR3, MINI-DIM and the Roborock plug report power/voltage/current x100
+HOME_KINDS = {'temp', 'door', 'switch'}
+HOME_SLUG = re.compile(r'[a-z0-9-]{1,32}')
+HOME_PLACE = re.compile(r'(room|door|section):[a-z0-9-]{1,32}')
 SCHEMA = '''CREATE TABLE IF NOT EXISTS samples(
  device TEXT NOT NULL, ts INTEGER NOT NULL, payload TEXT NOT NULL,
  PRIMARY KEY(device,ts));
@@ -80,7 +85,7 @@ def metrics(params, uiid=None):
     for source, target, low, high in [('power','power_w',-1000000,1000000),
             ('voltage','voltage_v',0,1000), ('current','current_a',0,10000)]:
         value = number(params.get(source))
-        if value is not None and uiid==190:value/=100
+        if value is not None and uiid in HUNDREDTHS:value/=100
         value = number(value,low,high)
         if value is not None: out[target] = value
     switch = params.get('switch')
@@ -91,6 +96,23 @@ def metrics(params, uiid=None):
             out['switch'] = 'on' if 'on' in states else 'off'
     return out
 
+def home_metrics(params, uiid, kind):
+    """Home tab sensors: temperature/humidity arrive in hundredths; door lock 1 is open."""
+    out = {}
+    battery = number(params.get('battery'),0,100)
+    if battery is not None: out['battery_pct'] = battery
+    if kind == 'temp':
+        for source, target, low, high in [('temperature','temperature_c',-60,100), ('humidity','humidity_pct',0,100)]:
+            value = number(params.get(source))
+            value = number(value/100 if value is not None else None,low,high)
+            if value is not None: out[target] = round(value,2)
+    elif kind == 'door':
+        if params.get('lock') in (0,1) and not isinstance(params.get('lock'),bool):
+            out['door'] = 'open' if params['lock'] == 1 else 'closed'
+    elif kind == 'switch':
+        out.update(metrics(params,uiid))
+    return out
+
 class Ewelink:
     def __init__(self, storage_directory, guard, config='/etc/modbus-ewelink.json', transport=None):
         self.storage_directory, self.guard = storage_directory, guard
@@ -98,6 +120,7 @@ class Ewelink:
         self.tokens_path = Path(str(config)+'.tokens')
         self.pending_path = Path(str(config)+'.pending')
         self.budget_path = Path(str(config)+'.budget')
+        self.home_path = Path(str(config)+'.home')
         self.lock = threading.RLock()
         self.read_lock = threading.RLock()
         self.history_cache = {}
@@ -226,8 +249,21 @@ class Ewelink:
                 yield db
             finally: db.close()
 
+    def home_mapping(self):
+        """Private Home-tab mapping (slug -> id, kind, place, name); None when not configured."""
+        try: data = private_json(self.home_path)
+        except FileNotFoundError: return None
+        devices = data.get('devices')
+        if not isinstance(devices,dict) or not 1<=len(devices)<=30: raise RuntimeError('Invalid Home mapping')
+        for slug,d in devices.items():
+            if (not HOME_SLUG.fullmatch(slug) or not isinstance(d,dict) or not isinstance(d.get('id'),str) or not d['id']
+                    or d.get('kind') not in HOME_KINDS or not HOME_PLACE.fullmatch(str(d.get('place')))
+                    or not isinstance(d.get('name'),str) or not 1<=len(d['name'])<=40):
+                raise RuntimeError('Invalid Home mapping')
+        return devices
+
     def collect(self):
-        # A single shared batch per five minutes, independent of browser traffic.
+        # A single shared request per five minutes, independent of browser traffic.
         with self.exclusive():
             self.guard() # Do not consume API quota when USB is missing.
             config = self.config(); t = self.token()
@@ -237,22 +273,35 @@ class Ewelink:
             ids = list(dict.fromkeys(x.get('id') for x in selected.values()))
             if len(ids)>5 or any(not isinstance(x,str) or not x for x in ids): raise RuntimeError('Invalid device selection')
             if any(x.get('item_type') not in (1,2) for x in selected.values()): raise RuntimeError('Invalid device type')
+            try: home = self.home_mapping()
+            except (OSError,RuntimeError,ValueError): home = None # A bad Home mapping must not stop the existing devices.
             schedule_path = Path(str(self.config_path)+'.schedule')
             try: next_cycle = private_json(schedule_path)['next']
             except FileNotFoundError: next_cycle = 0
             if time.time()<next_cycle:
                 self.status = 'Connected';return
             atomic_json(schedule_path,{'next':time.time()+INTERVAL})
-            result = self.request(t['region'],'POST','/v2/device/thing',
-                                  {'thingList':[{'itemType':x['item_type'],'id':x['id']} for x in selected.values()]},t['accessToken'])
+            if home:
+                # The batch call takes at most 10 devices; one list call returns them all in one request.
+                ids += [d['id'] for d in home.values()]
+                result = self.request(t['region'],'GET','/v2/device/thing?num=30',token=t['accessToken'])
+            else:
+                result = self.request(t['region'],'POST','/v2/device/thing',
+                                      {'thingList':[{'itemType':x['item_type'],'id':x['id']} for x in selected.values()]},t['accessToken'])
             things = {x['itemData']['deviceid']:x['itemData'] for x in result.get('thingList',[]) if x.get('itemType') in (1,2) and isinstance(x.get('itemData'),dict) and x['itemData'].get('deviceid') in ids}
             now = int(time.time()*1000)
             with self.database() as db, db:
+                rows = []
                 for slug,_ in DEVICES:
                     d = things.get(selected.get(slug,{}).get('id'))
                     if not d: continue # Preserve old sample with its original timestamp.
                     uiid=d.get('extra',{}).get('uiid',selected.get(slug,{}).get('uiid'))
-                    value = dict(metrics(d.get('params',{}),uiid),online=d.get('online') is True)
+                    rows.append((slug,dict(metrics(d.get('params',{}),uiid),online=d.get('online') is True)))
+                for slug,h in (home or {}).items():
+                    d = things.get(h['id'])
+                    if not d: continue
+                    rows.append(('home:'+slug,dict(home_metrics(d.get('params',{}),d.get('extra',{}).get('uiid'),h['kind']),online=d.get('online') is True)))
+                for slug,value in rows:
                     payload = json.dumps(value,separators=(',',':'),allow_nan=False)
                     db.execute('INSERT OR REPLACE INTO samples VALUES(?,?,?)',(slug,now,payload))
                     db.execute('INSERT OR REPLACE INTO latest VALUES(?,?,?)',(slug,now,payload))
@@ -285,6 +334,25 @@ class Ewelink:
             status=self.status
             if status.startswith('Awaiting') and self.config_path.exists() and self.tokens_path.exists() and any(not x['stale'] for x in devices):status='Connected'
             return dict(status=status,server_time=now,interval_seconds=INTERVAL,devices=devices)
+
+    def home_latest(self):
+        """Public read for the Home tab: names, places and readings only, never device ids."""
+        with self.read_lock:
+            try: home = self.home_mapping()
+            except (OSError,RuntimeError,ValueError): home = None
+            now = int(time.time()*1000)
+            if not home: return dict(configured=False,server_time=now,interval_seconds=INTERVAL,devices=[])
+            rows = {}
+            try:
+                with self.database(readonly=True) as db:
+                    rows = {r[0]:(r[1],json.loads(r[2])) for r in db.execute("SELECT device,ts,payload FROM latest WHERE device LIKE 'home:%'")}
+            except (OSError,RuntimeError,sqlite3.Error): pass
+            devices = []
+            for slug,h in home.items():
+                ts,value = rows.get('home:'+slug,(None,{}))
+                devices.append(dict(id=slug,name=h['name'],kind=h['kind'],place=h['place'],ts=ts,
+                                    stale=ts is None or now-ts>900000,**value))
+            return dict(configured=True,server_time=now,interval_seconds=INTERVAL,devices=devices)
 
     def history(self, slug, window):
         allowed=('live','today','24h','previous24h','yesterday','7d','30d')

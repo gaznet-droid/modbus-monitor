@@ -1,7 +1,7 @@
 # Home page plan (floor plan with eWeLink overlays)
 
 Requested by Dad on 4 November 2026, planned in the Claude app for Claude Code to build.
-Status: planned, not started. Can be built this week while the Pi stays at Gareth's.
+Status: steps 1 to 3 live on 4 November 2026 (plan drawing, collection, overlays). Step 4 (history) not started.
 
 ## What Dad wants
 A new tab called **Home** (`#home`) showing a floor plan of his bungalow, redrawn in the
@@ -135,3 +135,24 @@ mapping easy to change. eWeLink holds no room information for the switches and p
 - Door states are readable without relying on colour.
 - eWeLink calls stay within the budget; existing five devices keep working.
 - No login is added in this build; the page stays public as a proof of concept.
+
+## Built (4 November 2026)
+- Collection: the batch status call accepts at most 10 devices, so when the private Home
+  mapping exists the collector makes one list call (GET /v2/device/thing?num=30) per
+  five-minute cycle and stores only mapped devices. Request use is unchanged at about 288 a
+  day. Without the mapping it falls back to the original batch call.
+- Formats: temperature and humidity arrive in hundredths. Door sensors report lock 1 for
+  open and 0 for closed (confirmed with the garage door open). POWR3, MINI-DIM and the
+  Roborock plug report power, voltage and current in hundredths.
+- Mapping: private, on the Pi only, in /var/lib/modpi/private/ewelink.json.home (device
+  id, kind, place, display name). It maps 23 devices. Discovery output is in
+  ewelink-inventory.json next to it.
+- Placement, as decided by Gareth on 4 November (still to confirm with Dad):
+  - The door sensors follow the assumptions above.
+  - The Freezer is shown in the Kitchen and the TV in the Lounge.
+  - Outside, Loft and Garage are separate sections below the plan. The Garage section
+    holds the garage door plus Socket 1, Socket 4, Reset meter, the 24 V switch,
+    MINI-DIM and Roborock.
+  - The ZBBridge and the five inverter and fridge plugs aren't shown on Home.
+- Public endpoint /api/home/latest returns names, places and readings only, never device ids.
+- Navigation tabs are icon boxes (lightning bolt, solar panel, plug, house).

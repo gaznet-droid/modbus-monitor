@@ -295,15 +295,29 @@
         .home-plan .swing { fill:none; stroke:var(--text-muted); stroke-width:1.4; stroke-dasharray:5 5; opacity:.8; }
         .home-plan .slide { stroke:var(--text-main); stroke-width:3; stroke-linecap:round; }
         .home-plan .room-labels text { fill:var(--text-muted); font-weight:700; letter-spacing:.08em; text-transform:uppercase; text-anchor:middle; dominant-baseline:middle; font-family:inherit; paint-order:stroke; stroke:var(--bg-base); stroke-width:6px; stroke-linejoin:round; }
-        .home-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1rem; }
+        .home-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1rem; align-items:start; }
+        .home-chip rect { fill:var(--card-bg); stroke:var(--border); stroke-width:2; }
+        .home-chip text { fill:var(--text-main); font-size:24px; font-weight:700; text-anchor:middle; dominant-baseline:middle; font-family:inherit; }
+        .home-chip[data-kind="temp"] text { fill:var(--import-color); }
+        .home-chip[data-state="open"] rect { stroke:#f59e0b; } .home-chip[data-state="open"] text { fill:#fbbf24; }
+        .home-chip[data-state="on"] text { fill:var(--export-color); }
+        .home-chip[data-state="stale"] { opacity:.5; }
+        .home-rows { display:flex; flex-direction:column; gap:.7rem; margin-top:.6rem; }
+        .home-row { display:flex; flex-wrap:wrap; justify-content:space-between; column-gap:.75rem; row-gap:.1rem; align-items:baseline; }
+        .home-row-name { color:var(--text-main); font-weight:600; min-width:0; }
+        .home-row-value { font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; color:var(--text-main); }
+        .home-row[data-kind="temp"] .home-row-value { color:var(--import-color); font-size:1.4rem; }
+        .home-row[data-state="open"] .home-row-value { color:#fbbf24; } .home-row[data-state="on"] .home-row-value { color:var(--export-color); }
+        .home-row[data-state="stale"] { opacity:.55; }
+        .home-row-detail { color:var(--text-muted); font-size:.75rem; margin-top:-.45rem; }
         .home-card h2 { font-size:.85rem; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); }
-        .home-card-value { font-size:1.6rem; font-weight:700; color:var(--text-muted); margin:.4rem 0 0; }
-        .home-card .period-note { margin:.2rem 0 0; }
         /* Icon tab boxes: names are in aria-label/title */
         .tabs button { display:inline-flex; align-items:center; justify-content:center; width:52px; height:52px; padding:0; }
         .tabs button[aria-selected="false"] { border-color:var(--border); }
         .tabs button[aria-selected="false"]:hover { color:var(--text-main); border-color:var(--text-muted); }
         .tab-icon { width:26px; height:26px; }
+        /* Home sections on phones: Garage spans the row and temperatures shrink to fit. */
+        @media(max-width:600px) { #homeSection-garage { grid-column:1/-1; } .home-row[data-kind="temp"] .home-row-value { font-size:1.15rem; } }
         /* Keep tabs and the time-window menu on one row on phones; last so it wins over earlier tab rules. */
         @media(max-width:600px) { .tabs { gap:.25rem; } .tabs button { width:48px; height:48px; padding:0; } .tab-icon { width:24px; height:24px; } .tab-window { font-size:.8rem; padding:.5rem; max-width:7.5rem; } }
       </style>
@@ -421,7 +435,7 @@
 </div></div></section>
 <section id="homePanel" class="tab-panel" role="tabpanel" aria-labelledby="homeTab" hidden>
 <div class="card home-plan-card">
-<div class="juwai-group-heading"><h1>Home</h1><span class="period-note home-plan-note">Floor plan · devices coming soon</span></div>
+<div class="juwai-group-heading"><h1>Home</h1><span id="homeStatus" class="period-note home-plan-note" role="status">Loading readings…</span></div>
 <svg class="home-plan" viewBox="80 40 830 1500" role="img" aria-labelledby="homePlanTitle">
 <title id="homePlanTitle">Floor plan of the bungalow: Conservatory at the rear, then Bedroom 1, Kitchen, Hall and Porch, Lounge, Shower Room, Guest Bedroom and Front Porch at the front</title>
 <g class="walls">
@@ -530,7 +544,7 @@
 </g><g class="room-labels">
 <text font-size="26"><tspan x="412" y="290">Conservatory</tspan></text>
 <text font-size="26"><tspan x="257" y="650">Bedroom 1</tspan></text>
-<text font-size="26"><tspan x="585" y="600">Kitchen</tspan></text>
+<text font-size="26"><tspan x="585" y="565">Kitchen</tspan></text>
 <text font-size="24"><tspan x="600" y="810">Hall</tspan></text>
 <text font-size="16"><tspan x="805" y="774">Porch</tspan></text>
 <text font-size="26"><tspan x="295" y="1130">Lounge</tspan></text>
@@ -538,9 +552,10 @@
 <text font-size="24"><tspan x="642" y="1276">Guest</tspan><tspan x="642" y="1304">Bedroom</tspan></text>
 <text font-size="15"><tspan x="842" y="1291">Front</tspan><tspan x="842" y="1309">Porch</tspan></text>
 </g>
+<g id="homeOverlays" class="home-overlays"></g>
 </svg>
 </div>
-<div class="home-cards"><article class="card home-card" data-state="unlinked"><h2>Loft</h2><p class="home-card-value">—</p><p class="period-note">Not linked yet</p></article><article class="card home-card" data-state="unlinked"><h2>Outside</h2><p class="home-card-value">—</p><p class="period-note">Not linked yet</p></article><article class="card home-card" data-state="unlinked"><h2>Freezer</h2><p class="home-card-value">—</p><p class="period-note">Not linked yet</p></article><article class="card home-card" data-state="unlinked"><h2>Garage door</h2><p class="home-card-value">—</p><p class="period-note">Not linked yet</p></article></div>
+<div class="home-cards"><article class="card home-card" id="homeSection-outside"><h2>Outside</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article><article class="card home-card" id="homeSection-loft"><h2>Loft</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article><article class="card home-card" id="homeSection-garage"><h2>Garage</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article></div>
 </section>
       </div>
 
@@ -551,7 +566,7 @@ const views = ['power','juwai','ewelink','home'];
 function connectionLost(){$('currentVal').style.opacity='.55';$('meterKwh').style.opacity='.55';}
 function selectTab(name) {
   if(activeTab===name)return;
-  activeTab=name;stopJuwai();window.stopEwelink?.();
+  activeTab=name;stopJuwai();stopHome();window.stopEwelink?.();
   $('timeWindow').hidden=name!=='power';
   if(location.hash!=='#'+name)history.replaceState(null,'','#'+name);
   if(name!=='power'){generation++;controller?.abort();}
@@ -564,6 +579,8 @@ function selectTab(name) {
     window.startEwelink?.();
   } else if(name==='juwai') {
     makeJuwaiChart();juwaiChart.resize();readJuwai(juwaiVersion);
+  } else if(name==='home') {
+    readHome(homeVersion);
   } else if(name==='power') {
     chart.resize();lastHistory=0;
     loadHistory().catch(e=>{if(e.name!=='AbortError')connectionLost();});
@@ -876,14 +893,78 @@ async function tick(){
   finally{setTimeout(tick,3000);}
 }
 document.addEventListener('visibilitychange',()=>{
-  stopJuwai();
+  stopJuwai();stopHome();
   if(!document.hidden){
     if(activeTab==='juwai')readJuwai(juwaiVersion);
+    else if(activeTab==='home')readHome(homeVersion);
     else if(activeTab==='power'&&selected!=='custom')lastHistory=0;
   }
 });
-window.addEventListener('pagehide',()=>{stopJuwai();});
+window.addEventListener('pagehide',()=>{stopJuwai();stopHome();});
 window.addEventListener('pageshow',event=>{if(event.persisted&&!document.hidden&&activeTab==='juwai')readJuwai(juwaiVersion);});
+// Home tab: read-only eWeLink overlays on the floor plan; placement comes from the Pi's private mapping.
+const homeAnchors={'room:conservatory':[412,340],'room:bedroom-1':[257,700],'room:kitchen':[600,612],'room:hall':[620,860],
+  'room:lounge':[295,1182],'room:shower-room':[662,1165],'room:guest-bedroom':[642,1462],'room:front-porch':[820,1352],
+  'door:conservatory':[412,190],'door:back-door':[807,1008],'door:front-door':[822,1455],'door:front-porch':[690,1342]};
+const homeRoomLabels={'room:conservatory':'Conservatory','room:bedroom-1':'Bedroom 1','room:kitchen':'Kitchen','room:hall':'Hall',
+  'room:lounge':'Lounge','room:shower-room':'Shower Room','room:guest-bedroom':'Guest Bedroom','room:front-porch':'Front Porch'};
+const homeCompact=new Set(['room:front-porch','room:shower-room']);
+let homeTimer=null,homeController=null,homeVersion=0;
+function svgEl(tag,attrs,text){const el=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,v);if(text!==undefined)el.textContent=text;return el;}
+function homeTime(ts){return new Date(ts).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});}
+function homeState(d){return d.ts==null||d.stale||d.online===false?'stale':d.kind==='door'?d.door:d.kind==='switch'?d.switch:'ok';}
+function homeValue(d){
+  if(d.ts==null)return '—';
+  if(d.online===false)return 'Offline';
+  if(d.kind==='temp')return Number.isFinite(d.temperature_c)?d.temperature_c.toFixed(1)+'°C':'—';
+  if(d.kind==='door')return d.door==='open'?'Open':d.door==='closed'?'Closed':'—';
+  return d.switch==='on'?'On':d.switch==='off'?'Off':'—';
+}
+function homeDetail(d){
+  const parts=[];
+  if(d.ts!=null&&d.online!==false){if(Number.isFinite(d.humidity_pct))parts.push(Math.round(d.humidity_pct)+'% humidity');if(Number.isFinite(d.power_w)&&d.switch==='on')parts.push(d.power_w.toFixed(1)+' W');}
+  parts.push(d.ts==null?'Not linked yet':(d.stale?'No update since ':'Updated ')+homeTime(d.ts));
+  if(Number.isFinite(d.battery_pct)&&d.battery_pct<=20)parts.push('Battery low ('+Math.round(d.battery_pct)+'%)');
+  return parts.join(' · ');
+}
+function homeChip(d,place,x,y){
+  let text=homeValue(d);
+  if(d.kind==='temp'&&!homeCompact.has(place)&&homeState(d)==='ok'&&Number.isFinite(d.humidity_pct))text+=' · '+Math.round(d.humidity_pct)+'%';
+  if(place.startsWith('room:')&&d.name!==homeRoomLabels[place])text=d.name+' '+text;
+  const w=text.length*13+30;
+  const g=svgEl('g',{class:'home-chip','data-kind':d.kind,'data-state':homeState(d),transform:`translate(${x},${y})`});
+  g.append(svgEl('title',{},d.name+' · '+homeDetail(d)),svgEl('rect',{x:-w/2,y:-19,width:w,height:38,rx:19}),svgEl('text',{x:0,y:1},text));
+  return g;
+}
+function renderHomeSection(key,devices){
+  const box=$('homeSection-'+key).querySelector('.home-rows');box.replaceChildren();
+  if(!devices.length){const p=document.createElement('p');p.className='period-note';p.textContent='Not linked yet';box.append(p);return;}
+  for(const d of devices){
+    const row=document.createElement('div');row.className='home-row';row.dataset.kind=d.kind;row.dataset.state=homeState(d);
+    const name=document.createElement('span');name.className='home-row-name';name.textContent=d.name;
+    const value=document.createElement('span');value.className='home-row-value';value.textContent=homeValue(d);
+    const detail=document.createElement('div');detail.className='home-row-detail';detail.textContent=homeDetail(d);
+    row.append(name,value);box.append(row,detail);
+  }
+}
+function renderHome(data){
+  const layer=$('homeOverlays');layer.replaceChildren();
+  const byPlace={};for(const d of data.devices||[])(byPlace[d.place]??=[]).push(d);
+  for(const [place,list] of Object.entries(byPlace)){
+    const anchor=homeAnchors[place];if(!anchor)continue;
+    list.forEach((d,i)=>layer.append(homeChip(d,place,anchor[0],anchor[1]+i*46)));
+  }
+  for(const key of ['outside','loft','garage'])renderHomeSection(key,byPlace['section:'+key]||[]);
+  $('homeStatus').textContent=data.configured?'Updated '+homeTime(data.server_time)+' · refreshes every minute':'Devices not linked yet';
+}
+function stopHome(){homeVersion++;clearTimeout(homeTimer);homeTimer=null;homeController?.abort();homeController=null;}
+async function readHome(version){
+  if(version!==homeVersion||activeTab!=='home'||document.hidden)return;
+  homeController=new AbortController();
+  try{const data=await getJSON('/api/home/latest',homeController.signal);if(version===homeVersion)renderHome(data);}
+  catch(e){if(e.name!=='AbortError'&&version===homeVersion)$('homeStatus').textContent='Readings unavailable · retrying';}
+  finally{if(version===homeVersion&&activeTab==='home'&&!document.hidden){homeController=null;homeTimer=setTimeout(()=>readHome(version),60000);}}
+}
 // Open the tab named in the URL (e.g. #home); default stays Power.
 function openHashTab(){const name=location.hash.slice(1);if(views.includes(name))selectTab(name);}
 window.addEventListener('hashchange',openHashTab);

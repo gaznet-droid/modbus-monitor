@@ -107,6 +107,44 @@ class AdapterTests(unittest.TestCase):
     def test_powr3_uses_hundredths_and_powr2_uses_engineering_units(self):
         self.assertEqual(e.metrics({'power':4566,'voltage':23500,'current':27},190),{'power_w':45.66,'voltage_v':235.0,'current_a':0.27})
         self.assertEqual(e.metrics({'power':'80.05','voltage':'240.28','current':'0.54'},32),{'power_w':80.05,'voltage_v':240.28,'current_a':0.54})
+    def test_home_metrics_scale_hundredths_and_door_lock(self):
+        self.assertEqual(e.home_metrics({'temperature':'1712','humidity':'9377','battery':50},1770,'temp'),
+                         {'temperature_c':17.12,'humidity_pct':93.77,'battery_pct':50.0})
+        self.assertEqual(e.home_metrics({'temperature':-1579,'humidity':9854},7052,'temp'),{'temperature_c':-15.79,'humidity_pct':98.54})
+        self.assertEqual(e.home_metrics({'lock':1,'battery':100},7003,'door'),{'door':'open','battery_pct':100.0})
+        self.assertEqual(e.home_metrics({'lock':0},3026,'door'),{'door':'closed'})
+        self.assertEqual(e.home_metrics({'lock':True},3026,'door'),{})
+        self.assertEqual(e.home_metrics({'switch':'off','power':21,'voltage':23341,'current':0},277,'switch'),
+                         {'switch':'off','power_w':0.21,'voltage_v':233.41,'current_a':0.0})
+        self.assertEqual(e.home_metrics({'temperature':'nan','humidity':'20000'},1770,'temp'),{})
+    def home_setup(self):
+        e.atomic_json(self.a.home_path,{'devices':{
+            'lounge-temp':{'id':'temp1','kind':'temp','place':'room:lounge','name':'Lounge'},
+            'garage-door':{'id':'door1','kind':'door','place':'section:garage','name':'Garage door'}}})
+        def transport(region,method,path,body,headers):
+            self.calls.append((region,method,path,json.loads(body) if body else None,headers))
+            item=lambda i,p,u:{'itemType':1,'itemData':{'deviceid':i,'online':True,'extra':{'uiid':u},'params':p}}
+            return {'thingList':[item('one',{'power':'42.5','switch':'on'},32),item('temp1',{'temperature':'1925','humidity':'7240'},1770),
+                                 item('door1',{'lock':1},7003),item('unmapped',{'temperature':'999'},1770)]}
+        self.a.transport=transport
+    def test_home_uses_one_list_request_and_hides_ids(self):
+        self.home_setup();self.a.collect();self.a.collect()
+        self.assertEqual([(c[1],c[2]) for c in self.calls],[('GET','/v2/device/thing?num=30')])
+        self.assertEqual(self.a.latest()['devices'][-1]['power_w'],42.5)
+        home=self.a.home_latest();text=json.dumps(home)
+        self.assertTrue(home['configured']);self.assertEqual(len(home['devices']),2)
+        lounge,door=home['devices']
+        self.assertEqual((lounge['temperature_c'],lounge['humidity_pct'],lounge['place']),(19.25,72.4,'room:lounge'))
+        self.assertEqual(door['door'],'open');self.assertFalse(door['stale'])
+        for secret in ('temp1','door1','unmapped','access'):self.assertNotIn(secret,text)
+        with self.a.database(readonly=True) as db:self.assertNotIn('home:unmapped',[r[0] for r in db.execute('SELECT device FROM latest')])
+    def test_bad_home_mapping_keeps_existing_batch(self):
+        e.atomic_json(self.a.home_path,{'devices':{'Bad Slug':{'id':'x','kind':'temp','place':'room:x','name':'X'}}})
+        self.a.collect()
+        self.assertEqual(self.calls[0][1:3],('POST','/v2/device/thing'))
+        self.assertFalse(self.a.home_latest()['configured'])
+    def test_home_latest_without_mapping_makes_no_calls(self):
+        self.assertEqual(self.a.home_latest()['devices'],[]);self.assertFalse(self.calls)
     def test_mobile_bins_distinguish_zero_missing_and_weight_samples(self):
         now=int(time.time()*1000)
         with self.a.database() as db,db:
