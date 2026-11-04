@@ -7,15 +7,15 @@
   const date=(ts,options={})=>new Date(ts).toLocaleString('en-GB',{timeZone:'Europe/London',...options});
   window.stopEwelink=()=>{version++;clearTimeout(timer);timer=null;controller?.abort();controller=null;};
   function draw(data){
-    el('ewelinkStatus').textContent=data.status;
+    const newest=Math.max(0,...data.devices.map(d=>d.ts||0));
+    el('ewelinkStatus').textContent=data.status+(newest?' · Checked '+date(newest,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'');
     for(const device of data.devices){
       const card=el('ew-'+device.id);if(!card)continue;
       card.dataset.stale=String(!device.ts||device.stale||!device.online);
-      card.querySelector('[data-state]').textContent=!device.ts?'Not connected':device.stale?'Old reading':device.online?'Online':'Offline';
+      const state=!device.ts?'Not connected':device.stale?'Old reading':device.online?'Online':'Offline';
+      card.querySelector('[data-state]').textContent=' · '+state;card.querySelector('.ewelink-latest .status-dot').title=state;
       for(const [field,key,unit] of [['power','power_w','W'],['voltage','voltage_v','V'],['current','current_a','A']])card.querySelector('[data-'+field+']').textContent=format(device[key],unit);
       card.querySelector('[data-switch]').textContent=device.switch==='on'?'On':device.switch==='off'?'Off':'Not reported';
-      card.querySelector('time').textContent=device.ts?'Checked '+date(device.ts,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'Waiting for account connection';
-      if(device.ts)card.querySelector('time').dateTime=new Date(device.ts).toISOString();
     }
   }
   function binLabel(b,unit,full=false){
@@ -46,7 +46,6 @@
     if(!history||!available())return;
     const bars=mobile.matches&&history.window!=='live';
     el('ewelinkBinControls').hidden=!bars;el('ewelinkBack').hidden=!bars||!week;
-    const name=el('ewelinkDevice').selectedOptions[0].textContent;
     let data,labels=[],unit=week?'day':history.bucket_unit;
     if(bars){
       shownBins=(week?history.daily_bins:history.bins).filter(b=>!week||b.start>=week.start&&b.end<=week.end);
@@ -60,7 +59,7 @@
         data.push({x:ts,y:value});previous=ts;
       }
     }
-    el('ewelinkChartHeading').textContent=name+' · '+(bars?'average power by '+unit:'power over time');
+    el('ewelinkChartHeading').textContent=bars?'Average power by '+unit:'Power over time';
     if(chart)chart.destroy();
     chart=new Chart(el('ewelinkChart'),{type:bars?'bar':'line',plugins:[coverage],
       data:{labels,datasets:[{label:bars?'Average power':'Power',data,parsing:bars?undefined:false,borderColor:'#38bdf8',backgroundColor:'#38bdf8',borderWidth:bars?0:2,borderRadius:bars?3:0,pointRadius:history.points.length===1?3:0,pointHitRadius:12,spanGaps:false,minBarLength:2,barPercentage:.8,categoryPercentage:.85}]},
@@ -79,6 +78,7 @@
     try{
       const data=await get('/api/ewelink/latest',aborter.signal);
       if(v!==version||!available())return;draw(data);
+      if(el('ewelinkChartSection').hidden)return; // History only while a device graph is open.
       const device=el('ewelinkDevice').value,period=el('ewelinkPeriod').value,key=device+period;
       if(historyKey!==key||Date.now()-historyAt>300000){
         try{
@@ -92,6 +92,19 @@
     finally{clearTimeout(timeout);if(v===version&&available()){controller=null;timer=setTimeout(()=>read(v),30000);}}
   }
   window.startEwelink=()=>{window.stopEwelink();read(version);};
+  // Tap a card to open its graph underneath; tap again (or another card) to close it.
+  function toggle(card){
+    const section=el('ewelinkChartSection'),wasOpen=card.getAttribute('aria-expanded')==='true';
+    document.querySelectorAll('.ewelink-card').forEach(c=>c.setAttribute('aria-expanded','false'));
+    if(chart){chart.destroy();chart=null;}
+    if(wasOpen){section.hidden=true;return;}
+    card.setAttribute('aria-expanded','true');card.after(section);section.hidden=false;
+    el('ewelinkDevice').value=card.id.slice(3);historyAt=0;week=null;window.startEwelink();
+  }
+  document.querySelectorAll('.ewelink-card').forEach(card=>{
+    card.addEventListener('click',()=>toggle(card));
+    card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle(card);}});
+  });
   for(const id of ['ewelinkDevice','ewelinkPeriod'])el(id).addEventListener('change',()=>{historyAt=0;week=null;window.startEwelink();});
   el('ewelinkBucket').addEventListener('change',event=>showBin(event.target.value));
   el('ewelinkDrill').addEventListener('click',()=>{week=shownBins[selectedBin];selectedBin=0;drawHistory();});
@@ -100,5 +113,6 @@
   document.addEventListener('visibilitychange',()=>{window.stopEwelink();if(available())window.startEwelink();});
   window.addEventListener('pagehide',window.stopEwelink);
   window.addEventListener('pageshow',event=>{if(event.persisted&&available())window.startEwelink();});
-  if(location.hash==='#ewelink')selectTab('ewelink');
+  // The page may already have opened #ewelink before this deferred script loaded.
+  if(location.hash==='#ewelink'){if(activeTab==='ewelink')window.startEwelink();else selectTab('ewelink');}
 })();
