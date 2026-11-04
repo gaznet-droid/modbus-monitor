@@ -1,30 +1,32 @@
-# ModPi preparation — 28 October 2026
+# ModPi — Raspberry Pi production host
 
 Target: Raspberry Pi 3 Model A+ (512 MB, Wi-Fi only), Raspberry Pi OS Lite **32-bit**.
-(Originally prepared for a Pi Zero W; the installer is unchanged.)
-Source: ewelink-monitoring commit 3b34786, isolated raspberry-pi branch/worktree.
+(Originally prepared for a Pi Zero W on 28 October; the installer is unchanged.)
+Source: raspberry-pi branch/worktree, based on ewelink-monitoring commit 3b34786.
 All application runtime code uses the Python standard library. Do not install
 the root requirements.txt: it is the old FastAPI deployment, unnecessary here.
 
-## Current state
-- Mac worktree: /Users/garethbrown/modbus-pi.
-- 3 November: Pi 3A+ running Raspberry Pi OS Lite 32-bit (Trixie, Python 3.13),
-  hostname modpi, operator account admin (SSH key only). Installed with
-  install.sh; modpi.service enabled, collectors off, survives reboot, tests pass.
-- Wi-Fi profiles: Clock Mill Barn (staging) and dad-bthub (untested until on site).
+## Current state (4 November 2026)
+- PRODUCTION RUNS ON THE PI. modbus.clockmillbarn.uk is served by modpi-tunnel; the
+  Mac, Slave and the RUTX12 are no longer involved. Full detail, including state not
+  in git: docs/handoff-2026-11-04.md.
+- Pi 3A+ on its own power supply at Gareth's house, Raspberry Pi OS Lite 32-bit
+  (Trixie, Python 3.13), hostname modpi, operator account admin (SSH key only).
+- Units enabled and running: modpi (dashboard, meter and eWeLink collectors),
+  modpi-tuya (Tuya cloud collector, no auto-restart by design) and modpi-tunnel.
+- Meter: read over Dad's public IP and router port-forward (meter_host updated at 09:39
+  on 4 November after his IP changed at 01:18; the value lives only in
+  /etc/modpi/monitor.json, never in this public repo). Moves to a LAN address on site.
+- Wi-Fi profiles: Clock Mill Barn (current) and dad-bthub (untested until on site).
 - Maintenance access: Tailscale (`ssh modpi-ts` from the Mac), key expiry disabled.
-- 4 November 09:12–09:15: PRODUCTION MOVED TO THE PI. Mac supervisor on Slave stopped;
-  monitor, Tuya and eWeLink databases copied with SQLite .backup; private eWeLink/Tuya
-  files and the tunnel token copied. modpi, modpi-tuya and modpi-tunnel are enabled.
-  Slave's ModbusRecovery copy is untouched and is the rollback/recovery copy.
-- Do NOT run Start-Modbus.command on Slave: it would start duplicate collectors and
-  rotate the same eWeLink tokens. Rollback = stop the three Pi units, copy
+- Tuya local keys and MACs for both Juwai meters: /var/lib/modpi/private/tuya-local-keys.json,
+  with a second copy on the Mac in ~/Developer/modbus-private/. Re-pairing changes them.
+- Slave's ModbusRecovery copy is untouched and is the rollback copy. Do NOT run
+  Start-Modbus.command on Slave: it would start duplicate collectors and rotate the
+  same eWeLink tokens. Rollback = stop the three Pi units, copy
   /var/lib/modpi/private/ewelink.json.* back to Slave's config, then start the supervisor.
-- Meter endpoint has been unreachable since about 01:18 on 4 November (also from the
-  Mac), likely a changed public IP at Dad's; readings resume when it is reachable.
-- Pi adapter uses existing dashboard, SQLite schemas, retention and APIs.
-- Default flags disable Modbus and eWeLink collectors. No Tuya cloud worker.
-- No production source, service, tunnel, credentials or database was changed.
+- monitor.example.json still ships with collectors disabled; production flags live only
+  in /etc/modpi/monitor.json on the Pi.
 - Local Juwai access is still unproven. Do not promise working local collection.
 
 ## Image the card
