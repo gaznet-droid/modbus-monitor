@@ -18,7 +18,11 @@ UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer pa
 - Job 2: test local reads of the two Juwai meters with the saved local keys; if they work, replace Tuya cloud polling before 23 November.
 
 ## Later
-- Add simple authentication for Dad (for example Cloudflare Access) once the Home tab and other proofs of concept settle, so door, switch and temperature states aren't public.
+- Add a seamless login for Dad once the Home tab and other proofs of concept settle, so door, switch and temperature states aren't public. No Cloudflare Access, and he shouldn't have to keep logging in. Built into the Pi app, allowlisted users only, long-lived sessions renewed on each visit. Order of preference (decided 4 Nov):
+  1. Passkeys (Face ID or fingerprint). Enrol each device through a one-time link. Signature checks need ES256: python3-cryptography 43 (Debian package) is already on the Pi, which would be the first non-stdlib runtime dependency, so decide that deliberately.
+  2. Remember-this-device links: a one-time link per device sets a long-lived cookie. Also the fallback if passkeys don't work on one of Dad's devices.
+  3. Sign in with Google (allowlisted emails), as the last fallback.
+  Keep the eWeLink OAuth callback and /health reachable without login. Decide whether it covers the whole site or only the Home tab.
 - Investigate the meter dropping out most evenings around 17:45–18:30 (seen 28–31 Oct) while eWeLink stayed online.
 - Confirm Dad's broadband: his Wi-Fi is a BT Hub, but the meter's public IP is TalkTalk.
 - Optionally make Live Net Power and the Combined Meter Reading follow the time window (average power; meter reading at window end needs meter history).
