@@ -904,11 +904,11 @@ window.addEventListener('pagehide',()=>{stopJuwai();stopHome();});
 window.addEventListener('pageshow',event=>{if(event.persisted&&!document.hidden&&activeTab==='juwai')readJuwai(juwaiVersion);});
 // Home tab: read-only eWeLink overlays on the floor plan; placement comes from the Pi's private mapping.
 const homeAnchors={'room:conservatory':[412,340],'room:bedroom-1':[257,700],'room:kitchen':[600,612],'room:hall':[620,860],
-  'room:lounge':[295,1182],'room:shower-room':[662,1165],'room:guest-bedroom':[642,1462],'room:front-porch':[820,1352],
+  'room:lounge':[295,1182],'room:shower-room':[662,1165],'room:guest-bedroom':[642,1462],'room:front-porch':[820,1352],'room:porch':[805,876],
   'door:conservatory':[412,190],'door:back-door':[807,1008],'door:front-door':[822,1455],'door:front-porch':[690,1342]};
 const homeRoomLabels={'room:conservatory':'Conservatory','room:bedroom-1':'Bedroom 1','room:kitchen':'Kitchen','room:hall':'Hall',
-  'room:lounge':'Lounge','room:shower-room':'Shower Room','room:guest-bedroom':'Guest Bedroom','room:front-porch':'Front Porch'};
-const homeCompact=new Set(['room:front-porch','room:shower-room']);
+  'room:lounge':'Lounge','room:shower-room':'Shower Room','room:guest-bedroom':'Guest Bedroom','room:front-porch':'Front Porch','room:porch':'Porch'};
+const homeCompact=new Set(['room:front-porch','room:porch','room:shower-room']);
 let homeTimer=null,homeController=null,homeVersion=0;
 function svgEl(tag,attrs,text){const el=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,v);if(text!==undefined)el.textContent=text;return el;}
 function homeTime(ts){return new Date(ts).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});}

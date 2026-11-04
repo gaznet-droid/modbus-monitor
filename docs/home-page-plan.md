@@ -153,6 +153,8 @@ mapping easy to change. eWeLink holds no room information for the switches and p
     Porch's outside door, and "Front door" is the Guest Bedroom to Front Porch door.
     Both are confirmed by Dad.
   - The Freezer is shown in the Kitchen and the TV in the Lounge.
+  - The "Front door porch Temperature" sensor is in the Porch off the Hall, not the
+    Front Porch (Dad, 4 November). It is labelled Porch on the plan.
   - Outside, Loft and Garage are separate sections below the plan. The Garage section
     holds the garage door plus Socket 1, Socket 4, Reset meter, the 24 V switch,
     MINI-DIM and Roborock.
