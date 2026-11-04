@@ -161,3 +161,6 @@ mapping easy to change. eWeLink holds no room information for the switches and p
   - The ZBBridge and the five inverter and fridge plugs aren't shown on Home.
 - Public endpoint /api/home/latest returns names, places and readings only, never device ids.
 - Navigation tabs are icon boxes (lightning bolt, solar panel, plug, house).
+- Room colour: each room on the plan is tinted by its own temperature sensor (12 °C blue
+  to 25 °C+ red), with doorways matching the room they open into. Rooms without a fresh
+  reading stay plain.

@@ -287,9 +287,9 @@
         .home-plan-note { width:auto; margin:0; }
         .home-plan { width:100%; max-width:640px; height:auto; max-height:82vh; display:block; }
         .home-plan .walls > * { fill:#3b4a63; stroke:#3b4a63; stroke-width:20; stroke-linejoin:miter; }
-        .home-plan .rooms > * { fill:var(--bg-base); }
+        .home-plan .rooms > * { fill:var(--bg-base); transition:fill .6s; }
         .home-plan .cupboards > * { fill:var(--border); }
-        .home-plan .opening { fill:var(--bg-base); }
+        .home-plan .opening { fill:var(--bg-base); transition:fill .6s; }
         .home-plan .glass { stroke:var(--import-color); stroke-width:1.6; opacity:.85; }
         .home-plan .leaf { stroke:var(--text-main); stroke-width:3; stroke-linecap:round; }
         .home-plan .swing { fill:none; stroke:var(--text-muted); stroke-width:1.4; stroke-dasharray:5 5; opacity:.8; }
@@ -302,6 +302,10 @@
         .home-chip[data-state="open"] rect { stroke:#f59e0b; } .home-chip[data-state="open"] text { fill:#fbbf24; }
         .home-chip[data-state="on"] text { fill:var(--export-color); }
         .home-chip[data-state="stale"] { opacity:.5; }
+        .home-legend { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:.4rem 1rem; margin-top:.8rem; color:var(--text-muted); font-size:.75rem; }
+        .home-legend-scale { display:inline-flex; align-items:center; gap:.5rem; }
+        .home-legend-bar { width:140px; height:10px; border-radius:5px; border:1px solid var(--border);
+          background:linear-gradient(to right,hsl(215 45% 32%),hsl(165 45% 32%),hsl(113 45% 32%),hsl(62 45% 32%),hsl(10 45% 32%)); }
         .home-rows { display:flex; flex-direction:column; gap:.7rem; margin-top:.6rem; }
         .home-row { display:flex; flex-wrap:wrap; justify-content:space-between; column-gap:.75rem; row-gap:.1rem; align-items:baseline; }
         .home-row-name { color:var(--text-main); font-weight:600; min-width:0; }
@@ -554,6 +558,7 @@
 </g>
 <g id="homeOverlays" class="home-overlays"></g>
 </svg>
+<div class="home-legend"><span>Room colour shows temperature</span><span class="home-legend-scale" aria-hidden="true"><span>12°C</span><span class="home-legend-bar"></span><span>25°C+</span></span></div>
 </div>
 <div class="home-cards"><article class="card home-card" id="homeSection-outside"><h2>Outside</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article><article class="card home-card" id="homeSection-loft"><h2>Loft</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article><article class="card home-card" id="homeSection-garage"><h2>Garage</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article></div>
 </section>
@@ -908,6 +913,13 @@ const homeAnchors={'room:conservatory':[412,340],'room:bedroom-1':[257,700],'roo
   'door:conservatory':[412,190],'door:back-door':[807,1008],'door:front-door':[822,1455],'door:front-porch':[690,1342]};
 const homeRoomLabels={'room:conservatory':'Conservatory','room:bedroom-1':'Bedroom 1','room:kitchen':'Kitchen','room:hall':'Hall',
   'room:lounge':'Lounge','room:shower-room':'Shower Room','room:guest-bedroom':'Guest Bedroom','room:front-porch':'Front Porch','room:porch':'Porch'};
+const homePlaceByLabel=Object.fromEntries(Object.entries(homeRoomLabels).map(([place,label])=>[label,place]));
+// Room tint: blue at 12°C through green to red at 25°C and above; dark enough to keep labels readable.
+// Each doorway takes the colour of the room its door opens into, so tinted rooms have no dark gaps.
+const homeDoorRooms={'Conservatory French doors':'Conservatory','Bedroom 1 to Conservatory':'Bedroom 1','Bedroom 1 to Hall':'Hall','Kitchen to Hall':'Kitchen',
+  'Hall to Lounge':'Lounge','Hall to Shower Room':'Shower Room','Hall to Porch':'Porch','Porch outside door':'Porch',
+  'Lounge to Guest Bedroom':'Guest Bedroom','Guest Bedroom to Front Porch':'Front Porch','Front Porch outside door':'Front Porch'};
+function homeTint(c){const t=Math.max(0,Math.min(1,(c-12)/13));return `hsl(${Math.round(215-205*t)} 45% 17%)`;}
 const homeCompact=new Set(['room:front-porch','room:porch','room:shower-room']);
 let homeTimer=null,homeController=null,homeVersion=0;
 function svgEl(tag,attrs,text){const el=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,v);if(text!==undefined)el.textContent=text;return el;}
@@ -954,6 +966,10 @@ function renderHome(data){
     const anchor=homeAnchors[place];if(!anchor)continue;
     list.forEach((d,i)=>layer.append(homeChip(d,place,anchor[0],anchor[1]+i*46)));
   }
+  const fills={};
+  for(const d of data.devices||[])if(d.kind==='temp'&&d.name===homeRoomLabels[d.place]&&homeState(d)==='ok'&&Number.isFinite(d.temperature_c))fills[d.place]=homeTint(d.temperature_c);
+  document.querySelectorAll('.home-plan .rooms polygon').forEach(room=>{room.style.fill=fills[homePlaceByLabel[room.querySelector('title')?.textContent]]||'';});
+  document.querySelectorAll('.home-plan .doors > g').forEach(door=>{const gap=door.querySelector('.opening');if(gap)gap.style.fill=fills[homePlaceByLabel[homeDoorRooms[door.getAttribute('aria-label')]]]||'';});
   for(const key of ['outside','loft','garage'])renderHomeSection(key,byPlace['section:'+key]||[]);
   $('homeStatus').textContent=data.configured?'Updated '+homeTime(data.server_time)+' · refreshes every minute':'Devices not linked yet';
 }
