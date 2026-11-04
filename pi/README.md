@@ -13,6 +13,15 @@ the root requirements.txt: it is the old FastAPI deployment, unnecessary here.
   install.sh; modpi.service enabled, collectors off, survives reboot, tests pass.
 - Wi-Fi profiles: Clock Mill Barn (staging) and dad-bthub (untested until on site).
 - Maintenance access: Tailscale (`ssh modpi-ts` from the Mac), key expiry disabled.
+- 4 November 09:12–09:15: PRODUCTION MOVED TO THE PI. Mac supervisor on Slave stopped;
+  monitor, Tuya and eWeLink databases copied with SQLite .backup; private eWeLink/Tuya
+  files and the tunnel token copied. modpi, modpi-tuya and modpi-tunnel are enabled.
+  Slave's ModbusRecovery copy is untouched and is the rollback/recovery copy.
+- Do NOT run Start-Modbus.command on Slave: it would start duplicate collectors and
+  rotate the same eWeLink tokens. Rollback = stop the three Pi units, copy
+  /var/lib/modpi/private/ewelink.json.* back to Slave's config, then start the supervisor.
+- Meter endpoint has been unreachable since about 01:18 on 4 November (also from the
+  Mac), likely a changed public IP at Dad's; readings resume when it is reachable.
 - Pi adapter uses existing dashboard, SQLite schemas, retention and APIs.
 - Default flags disable Modbus and eWeLink collectors. No Tuya cloud worker.
 - No production source, service, tunnel, credentials or database was changed.
