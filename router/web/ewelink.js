@@ -30,10 +30,10 @@
     el('ewelinkDrill').hidden=history.bucket_unit!=='week'||!!week;
     highlightBin();
   }
-  // The chosen bar stays bright and the rest dim, so picking from the list or tapping a bar shows on the chart.
+  // The tapped bar turns white and the rest stay full colour, so the selection shows on the chart.
   function highlightBin(){
     if(!chart||chart.config.type!=='bar')return;
-    chart.data.datasets[0].backgroundColor=shownBins.map((_,i)=>i===selectedBin?'#38bdf8':'rgba(56,189,248,.35)');
+    chart.data.datasets[0].backgroundColor=shownBins.map((_,i)=>i===selectedBin?'#f8fafc':'#38bdf8');
     chart.update('none');
   }
   const coverage={id:'ewelinkCoverage',afterDatasetsDraw(c){
