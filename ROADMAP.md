@@ -22,6 +22,7 @@ UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer pa
   1. Passkeys (Face ID or fingerprint). Enrol each device through a one-time link. Signature checks need ES256: python3-cryptography 43 (Debian package) is already on the Pi, which would be the first non-stdlib runtime dependency, so decide that deliberately.
   2. Remember-this-device links: a one-time link per device sets a long-lived cookie. Also the fallback if passkeys don't work on one of Dad's devices.
   3. Sign in with Google (allowlisted emails), as the last fallback.
+  One login covers the whole site, but signed-in state lives in each browser, so Dad signs in once on each phone, tablet or computer he uses and then stays signed in. Passkeys sync across devices on the same Apple or Google account, so after the first setup another device is one Face ID tap; device links need one link per device; Google is one tap where he's already signed in.
   Keep the eWeLink OAuth callback and /health reachable without login. Decide whether it covers the whole site or only the Home tab.
 - Investigate the meter dropping out most evenings around 17:45–18:30 (seen 28–31 Oct) while eWeLink stayed online.
 - Confirm Dad's broadband: his Wi-Fi is a BT Hub, but the meter's public IP is TalkTalk.
