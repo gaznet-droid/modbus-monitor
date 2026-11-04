@@ -43,11 +43,6 @@
         .tabs button[aria-selected="true"] { color: var(--import-color); background: #141c2e; border-color: var(--border); }
         .tabs button:focus-visible { outline: 2px solid var(--import-color); outline-offset: 2px; }
         .tab-panel { display: flex; flex-direction: column; gap: 1.25rem; }
-        .voltage-heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; }
-        .voltage-heading > div { flex-shrink: 0; }
-        .voltage-heading .stat { font-size: clamp(1.5rem,6vw,3rem); white-space: nowrap; }
-        .voltage-mode { color: var(--text-muted); font-size: .75rem; text-align: right; }
-        #voltageStatus { min-height: 1.5em; }
 
         .card {
           background: var(--card-bg);
@@ -94,15 +89,15 @@
           font-variant-numeric: tabular-nums;
         }
 
-        .controls-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 0.5rem;
-        }
+        .energy-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: .5rem; padding: .85rem 0; margin-bottom: .75rem; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .energy-export { text-align: right; }
+        .energy-value { font-size: clamp(1.05rem,4.4vw,2rem); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; white-space: nowrap; margin-top: .35rem; }
+
+        .tabs { align-items: center; flex-wrap: wrap; }
+        .tab-window { margin-left: auto; min-height: 44px; font-size: .85rem; padding: .5rem .75rem; }
 
         .time-select {
-          max-width: 65%;
+          max-width: 100%;
           min-width: 0;
           background: #1e293b;
           color: var(--text-main);
@@ -123,90 +118,12 @@
         .custom-range input:focus-visible, .custom-range button:focus-visible, .time-select:focus-visible { outline: 2px solid var(--import-color); outline-offset: 2px; }
         #rangeError { grid-column: 1 / -1; color: #fda4af; font-size: .8rem; }
         .period-note { color: var(--text-muted); font-size: .75rem; line-height: 1.5; margin: .6rem 0; width: 100%; }
-        .donut-header { flex-wrap: wrap; gap: .6rem; }
-        #selectedPeriod { font-size: .75rem; color: var(--text-muted); }
         @media (max-width: 600px) { .custom-range { grid-template-columns: minmax(0,1fr); } .custom-range input { width: 100%; box-sizing: border-box; } }
         .chart-wrapper {
           position: relative;
           flex: 1;
           width: 100%;
           min-height: 220px;
-        }
-
-        .donut-card {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-
-        .donut-header {
-          width: 100%;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 1rem;
-        }
-
-        .reset-btn {
-          background: transparent;
-          color: var(--text-muted);
-          border: 1px solid var(--border);
-          border-radius: 6px;
-          padding: 0.2rem 0.5rem;
-          font-size: 0.65rem;
-          text-transform: uppercase;
-          font-weight: 600;
-          cursor: pointer;
-        }
-        .reset-btn:hover { color: var(--text-main); border-color: var(--text-muted); }
-
-        .donut-container {
-          display: flex;
-          flex-direction: row;
-          align-items: center;
-          justify-content: space-around;
-          width: 100%;
-          gap: 1rem;
-        }
-
-        .donut-chart-box {
-          position: relative;
-          width: 160px;
-          height: 160px;
-        }
-
-        .legend-box {
-          display: flex;
-          flex-direction: column;
-          gap: 0.75rem;
-        }
-
-        .legend-item {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .legend-label {
-          font-size: 0.75rem;
-          color: var(--text-muted);
-          text-transform: uppercase;
-          font-weight: 600;
-          display: flex;
-          align-items: center;
-          gap: 0.35rem;
-        }
-
-        .indicator {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          display: inline-block;
-        }
-
-        .legend-val {
-          font-size: 1.15rem;
-          font-weight: 700;
-          font-variant-numeric: tabular-nums;
         }
 
         @media (min-width: 600px) {
@@ -222,12 +139,9 @@
         .custom-range input:focus-visible, .custom-range button:focus-visible, .time-select:focus-visible { outline: 2px solid var(--import-color); outline-offset: 2px; }
         #rangeError { grid-column: 1 / -1; color: #fda4af; font-size: .8rem; }
         .period-note { color: var(--text-muted); font-size: .75rem; line-height: 1.5; margin: .6rem 0; width: 100%; }
-        .donut-header { flex-wrap: wrap; gap: .6rem; }
-        #selectedPeriod { font-size: .75rem; color: var(--text-muted); }
         @media (max-width: 600px) { .custom-range { grid-template-columns: minmax(0,1fr); } .custom-range input { width: 100%; box-sizing: border-box; } }
         .mode-badge { font-size: 0.85rem; padding: 0.45rem 1rem; }
           .chart-wrapper { min-height: 280px; }
-          .donut-chart-box { width: 190px; height: 190px; }
         }
 
         .juwai-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
@@ -367,6 +281,8 @@
         @keyframes connection-pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
         @media(prefers-reduced-motion:reduce) { [data-stale="false"] .status-dot { animation:none; } }
         @media(max-width:600px) { .ewelink-card .device-update { grid-column:1/-1; margin:0; } .device-icon { width:20px; height:20px; } }
+        /* Keep tabs and the time-window menu on one row on phones; last so it wins over earlier tab rules. */
+        @media(max-width:600px) { .tabs { gap:.25rem; } .tabs button { padding:.6rem .65rem; } .tab-window { font-size:.8rem; padding:.5rem; max-width:7.5rem; } }
       </style>
     </head>
     <body>
@@ -375,6 +291,18 @@
           <button id="powerTab" type="button" role="tab" aria-selected="true" aria-controls="powerPanel">Power</button>
           <button id="juwaiTab" type="button" role="tab" aria-selected="false" aria-controls="juwaiPanel" tabindex="-1">Juwai</button>
           <button id="ewelinkTab" type="button" role="tab" aria-selected="false" aria-controls="ewelinkPanel" tabindex="-1">eWeLink</button>
+          <select id="timeWindow" class="time-select tab-window" aria-label="Time window">
+            <option value="15m" selected>15 Mins</option>
+            <option value="30m">30 Mins</option>
+            <option value="1h">1 Hour</option>
+            <option value="2h">2 Hours</option>
+            <option value="4h">4 Hours</option>
+            <option value="8h">8 Hours</option>
+<option value="1d">Today (00:00–24:00)</option><option value="24h">24 Hours</option><option value="7d">1 Week</option>
+<option value="30d">1 Month (30 days)</option><option value="90d">3 Months (90 days)</option>
+<option value="365d">1 Year (365 days)</option>
+<option value="custom">Custom dates…</option>
+          </select>
         </nav>
         <section id="powerPanel" class="tab-panel" role="tabpanel" aria-labelledby="powerTab">
         <div class="card chart-card">
@@ -382,29 +310,22 @@
             <div class="reading-column">
               <div class="label">Live Net Power</div>
               <div class="stat" id="currentVal">-- W</div>
-              <div id="lastReading" class="period-note" aria-live="off">Waiting for readings</div>
             </div>
             <div class="reading-column meter-reading" aria-label="Combined meter reading">
               <div class="label">Combined meter reading</div>
               <div id="meterKwh" class="meter-value">— kWh</div>
-              <div id="meterUpdated" class="period-note">Waiting for meter reading</div>
             </div>
           </div>
-          
-          <div class="controls-row">
-            <span class="label">Time Window</span>
-            <select id="timeWindow" class="time-select">
-              <option value="15m" selected>15 Mins</option>
-              <option value="30m">30 Mins</option>
-              <option value="1h">1 Hour</option>
-              <option value="2h">2 Hours</option>
-              <option value="4h">4 Hours</option>
-              <option value="8h">8 Hours</option>
-<option value="1d">Today (00:00–24:00)</option><option value="24h">24 Hours</option><option value="7d">1 Week</option>
-<option value="30d">1 Month (30 days)</option><option value="90d">3 Months (90 days)</option>
-<option value="365d">1 Year (365 days)</option>
-<option value="custom">Custom dates…</option>
-            </select>
+
+          <div class="energy-row" aria-label="Energy for the selected time window">
+            <div>
+              <div class="label">Imported</div>
+              <div id="totalImportVal" class="energy-value" style="color: var(--import-color)">— Wh</div>
+            </div>
+            <div class="energy-export">
+              <div class="label">Exported</div>
+              <div id="totalExportVal" class="energy-value" style="color: var(--export-color)">— Wh</div>
+            </div>
           </div>
 
           <form id="customRange" class="custom-range" hidden novalidate>
@@ -419,38 +340,6 @@
           </div>
         </div>
 
-        <div class="card donut-card">
-          <div class="donut-header">
-            <div class="label">Selected Period Energy</div>
-            <span id="selectedPeriod">Loading period…</span>
-          </div>
-          <p id="energyNote" class="period-note" aria-live="polite">Loading recorded energy…</p>
-          <div class="donut-container">
-            <div class="donut-chart-box">
-              <canvas id="donutChart" role="img" aria-label="Recorded imported and exported energy"></canvas>
-            </div>
-            <div class="legend-box">
-              <div class="legend-item">
-                <span class="legend-label">
-                  <span class="indicator" style="background: var(--import-color)"></span> Imported
-                </span>
-                <span class="legend-val" id="totalImportVal" style="color: var(--import-color)">0 Wh</span>
-              </div>
-              <div class="legend-item">
-                <span class="legend-label">
-                  <span class="indicator" style="background: var(--export-color)"></span> Exported
-                </span>
-                <span class="legend-val" id="totalExportVal" style="color: var(--export-color)">0.00 Wh</span>
-              </div>
-            </div>
-          </div>
-        </div>
-<section id="voltageSection" class="card chart-card" aria-labelledby="voltageHeading">
-<div class="voltage-heading"><div><h2 id="voltageHeading" class="label">Live voltage</h2><div id="voltageValue" class="stat">— V</div></div><span class="voltage-mode">Past 15 minutes<br>This session</span></div>
-<p id="voltageStatus" class="period-note" role="status">Readings start when this section is visible.</p>
-<div class="chart-wrapper"><canvas id="voltageChart" role="img" aria-label="Voltage readings collected while this section is visible"></canvas></div>
-<p class="period-note">Updates while this section is visible. Missing readings are left as gaps.</p>
-</section>
         </section>
 <section id="juwaiPanel" class="tab-panel" role="tabpanel" aria-labelledby="juwaiTab" hidden>
 <div class="card juwai-group">
@@ -512,72 +401,11 @@
 const $ = id => document.getElementById(id);
 let activeTab = 'power';
 const views = ['power','juwai','ewelink'];
-let voltageVisible=false, voltageSuspended=false;
-const voltageActive=()=>activeTab==='power'&&voltageVisible&&!document.hidden&&!voltageSuspended;
-let voltageChart = null, voltagePoints = [], voltageTimer = null, voltageController = null, voltageVersion = 0;
-function stopVoltage() {
-  voltageVersion++;
-  clearTimeout(voltageTimer);voltageTimer=null;
-  voltageController?.abort();voltageController=null;
-}
-function makeVoltageChart() {
-  if(voltageChart)return;
-  voltageChart = new Chart($('voltageChart'),{
-    type:'line',data:{datasets:[{label:'Voltage',data:[],parsing:false,borderColor:'#38bdf8',borderWidth:2,pointRadius:2,pointHitRadius:12,spanGaps:false,tension:0}]},
-    options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,
-      scales:{x:{type:'linear',grid:{color:'#1e293b'},ticks:{color:'#94a3b8',maxTicksLimit:5,callback:v=>new Date(v).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}},
-        y:{grid:{color:'#1e293b'},ticks:{color:'#94a3b8',callback:v=>v.toLocaleString()+' V'},suggestedMin:230,suggestedMax:240}},
-      plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleTimeString(),label:ctx=>ctx.parsed.y.toFixed(2)+' V'}}}}
-  });
-}
-async function readVoltage(version) {
-  if(version!==voltageVersion || !voltageActive())return;
-  voltageController=new AbortController();
-  try {
-    const data=await getJSON('/api/voltage',voltageController.signal);
-    if(version!==voltageVersion || !voltageActive())return;
-    if(!Number.isFinite(data.ts)||!Number.isFinite(data.volts))throw new Error('Invalid voltage');
-    const previous=voltagePoints[voltagePoints.length-1];
-    if(!previous || data.ts>previous.x){
-      if(previous && data.ts-previous.x>12000)voltagePoints.push({x:previous.x+3000,y:null});
-      voltagePoints.push({x:data.ts,y:data.volts});
-    }
-    const end=Date.now();
-    voltagePoints=voltagePoints.filter(p=>p.x>=end-900000).slice(-600);
-    voltageChart.data.datasets[0].data=voltagePoints;
-    voltageChart.options.scales.x.min=end-900000;voltageChart.options.scales.x.max=end;
-    voltageChart.update('none');
-    $('voltageValue').innerText=data.volts.toFixed(2)+' V';$('voltageValue').style.opacity='1';
-    $('voltageStatus').innerText='Updated '+new Date(data.ts).toLocaleTimeString();
-  } catch(e) {
-    if(version===voltageVersion && e.name!=='AbortError'){
-      $('voltageStatus').innerText='Voltage unavailable · retrying while this section is visible';
-      $('voltageValue').style.opacity='.55';
-    }
-  } finally {
-    if(version===voltageVersion && voltageActive()){
-      voltageController=null;voltageTimer=setTimeout(()=>readVoltage(version),3000);
-    }
-  }
-}
-function refreshVoltage() {
-  stopVoltage();
-  if(voltageActive()) {
-    makeVoltageChart();voltageChart.resize();
-    $('voltageStatus').textContent='Requesting voltage…';readVoltage(voltageVersion);
-  } else {
-    $('voltageStatus').textContent=voltagePoints.length?'Paused · scroll here to resume':'Readings start when this section is visible.';
-  }
-}
-const voltageObserver=new IntersectionObserver(entries=>{
-  const visible=entries[0].isIntersecting&&entries[0].intersectionRatio>=.05;
-  if(visible===voltageVisible)return;
-  voltageVisible=visible;refreshVoltage();
-},{threshold:[0,.05]});
-voltageObserver.observe($('voltageSection'));
+function connectionLost(){$('currentVal').style.opacity='.55';$('meterKwh').style.opacity='.55';}
 function selectTab(name) {
   if(activeTab===name)return;
-  activeTab=name;stopVoltage();stopJuwai();window.stopEwelink?.();
+  activeTab=name;stopJuwai();window.stopEwelink?.();
+  $('timeWindow').hidden=name!=='power';
   if(name!=='power'){generation++;controller?.abort();}
   for(const view of views){
     const current=view===name;
@@ -589,8 +417,8 @@ function selectTab(name) {
   } else if(name==='juwai') {
     makeJuwaiChart();juwaiChart.resize();readJuwai(juwaiVersion);
   } else {
-    chart.resize();donut.resize();lastHistory=0;refreshVoltage();
-    loadHistory().catch(e=>{if(e.name!=='AbortError')$('lastReading').innerText='Connection lost';});
+    chart.resize();lastHistory=0;
+    loadHistory().catch(e=>{if(e.name!=='AbortError')connectionLost();});
   }
 }
 for(const view of views){
@@ -810,32 +638,22 @@ const chart = new Chart($('lineChart'), {
     plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),
       label:ctx=>{const p=ctx.raw;return [`${p.y<0?'Exporting':'Importing'}: ${Math.abs(p.y).toLocaleString()} W`, ...(p.low!==p.high?[`Range: ${p.low.toLocaleString()} to ${p.high.toLocaleString()} W`]:[])];}}}}}
 });
-const donut = new Chart($('donutChart'),{type:'doughnut',data:{labels:['Imported','Exported'],datasets:[{data:[0,0],backgroundColor:['#38bdf8','#34d399'],borderColor:'#141c2e',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,animation:false,cutout:'70%',plugins:{legend:{display:false}}}});
 function energy(value) {return value>=1000?(value/1000).toLocaleString(undefined,{maximumFractionDigits:2})+' kWh':value.toLocaleString(undefined,{maximumFractionDigits:2})+' Wh';}
 function updateLive(data) {
   const meter=data.meter;
   $('meterKwh').innerText=meter ? meter.kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:false})+' kWh' : '— kWh';
-  $('meterUpdated').innerText=meter ? (meter.stale?'Reading unavailable · last update ':'Updated ')+new Date(meter.ts).toLocaleTimeString() : 'Waiting for meter reading';
   $('meterKwh').style.opacity=meter?.stale?'.55':'1';
   const latest=data.latest;
-  if(!latest){$('lastReading').innerText='Waiting for meter';return;}
+  if(!latest)return;
   const val=latest.value;
   $('currentVal').innerText=(val>0?'+':'')+val.toLocaleString(undefined,{maximumFractionDigits:2})+' W';
   $('currentVal').style.color=val<0?'#34d399':'#38bdf8';
   $('currentVal').style.opacity=data.stale?'.55':'1';
-  $('lastReading').innerText=(data.stale?'Reading unavailable · last update ':'Last reading ')+new Date(latest.ts).toLocaleTimeString();
   cursor=latest.ts;
 }
 function updateEnergy(summary) {
   $('totalImportVal').innerText=energy(summary.import_wh);
   $('totalExportVal').innerText=energy(summary.export_wh);
-  donut.data.datasets[0].data=[summary.import_wh,summary.export_wh];donut.update('none');
-  const fmt = timestamp => new Date(timestamp).toLocaleString(undefined,{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',...(selected==='1d'?{timeZone:'Europe/London'}:{})});
-  $('selectedPeriod').innerText=fmt(displayStart)+' – '+fmt(displayEnd);
-  $('energyNote').innerText=summary.coverage_s>0 ? 'Energy recorded during the selected period.' : 'No recorded energy intervals in this period.';
-  if(selected==='1d') $('energyNote').innerText+=' Today, midnight to midnight (UK time). Totals build through the day and reset at midnight.';
-  else if(selected!=='custom') $('energyNote').innerText+=' Rolling period: totals can decrease as older readings leave the window.';
-  if(summary.resolution_s>1) $('energyNote').innerText+=' Older boundaries use complete minute groups.';
 }
 function draw(end=Date.now()) {
   displayEnd=selected==='custom'?customBounds.end:selected==='1d'?calendarBounds.end:end;
@@ -863,7 +681,7 @@ $('timeWindow').addEventListener('change',async()=>{
   $('dateFrom').max=$('dateTo').max=localInput(Date.now());
   if(choice==='custom') return;
   selected=choice;localStorage.setItem('modbus-window',selected);
-  try{await loadHistory();}catch(e){if(e.name!=='AbortError')$('lastReading').innerText='Connection lost';}
+  try{await loadHistory();}catch(e){if(e.name!=='AbortError')connectionLost();}
 });
 $('customRange').addEventListener('submit',async event=>{
   event.preventDefault();
@@ -906,18 +724,18 @@ async function tick(){
         }
       }
     }
-  } catch(e){if(e.name!=='AbortError'){$('lastReading').innerText='Connection lost';$('currentVal').style.opacity='.55';}}
+  } catch(e){if(e.name!=='AbortError')connectionLost();}
   finally{setTimeout(tick,3000);}
 }
 document.addEventListener('visibilitychange',()=>{
-  stopJuwai();refreshVoltage();
+  stopJuwai();
   if(!document.hidden){
     if(activeTab==='juwai')readJuwai(juwaiVersion);
     else if(activeTab==='power'&&selected!=='custom')lastHistory=0;
   }
 });
-window.addEventListener('pagehide',()=>{voltageSuspended=true;stopVoltage();stopJuwai();});
-window.addEventListener('pageshow',event=>{voltageSuspended=false;refreshVoltage();if(event.persisted&&!document.hidden&&activeTab==='juwai')readJuwai(juwaiVersion);});
+window.addEventListener('pagehide',()=>{stopJuwai();});
+window.addEventListener('pageshow',event=>{if(event.persisted&&!document.hidden&&activeTab==='juwai')readJuwai(juwaiVersion);});
 tick();
 
       </script>
