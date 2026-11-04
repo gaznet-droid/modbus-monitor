@@ -150,7 +150,7 @@ mapping easy to change. eWeLink holds no room information for the switches and p
 - Placement, as decided by Gareth on 4 November (still to confirm with Dad):
   - Porches (confirmed by Dad on 4 November, overriding the layout table's names): the
     porch off the Hall is the **Front Porch**, and the porch off the Guest Bedroom is
-    labelled "Fuckin Porch" for now (a placeholder name, to be changed later).
+    labelled "Back Fuckin Porch" for now (a placeholder name, to be changed later).
   - Door sensors (confirmed by Dad):
     - "Front door" is on the door between the Hall and the Front Porch.
     - "Front Porch door" is on the Front Porch's outside door.
