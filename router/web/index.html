@@ -281,6 +281,24 @@
         @keyframes connection-pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
         @media(prefers-reduced-motion:reduce) { [data-stale="false"] .status-dot { animation:none; } }
         @media(max-width:600px) { .ewelink-card .device-update { grid-column:1/-1; margin:0; } .device-icon { width:20px; height:20px; } }
+        /* Home tab: floor plan drawn from docs/home-page-plan.md */
+        .home-plan-card { display:flex; flex-direction:column; align-items:center; }
+        .home-plan-card .juwai-group-heading { width:100%; }
+        .home-plan-note { width:auto; margin:0; }
+        .home-plan { width:100%; max-width:640px; height:auto; max-height:82vh; display:block; }
+        .home-plan .walls > * { fill:#3b4a63; stroke:#3b4a63; stroke-width:20; stroke-linejoin:miter; }
+        .home-plan .rooms > * { fill:var(--bg-base); }
+        .home-plan .cupboards > * { fill:var(--border); }
+        .home-plan .opening { fill:var(--bg-base); }
+        .home-plan .glass { stroke:var(--import-color); stroke-width:1.6; opacity:.85; }
+        .home-plan .leaf { stroke:var(--text-main); stroke-width:3; stroke-linecap:round; }
+        .home-plan .swing { fill:none; stroke:var(--text-muted); stroke-width:1.4; stroke-dasharray:5 5; opacity:.8; }
+        .home-plan .slide { stroke:var(--text-main); stroke-width:3; stroke-linecap:round; }
+        .home-plan .room-labels text { fill:var(--text-muted); font-weight:700; letter-spacing:.08em; text-transform:uppercase; text-anchor:middle; dominant-baseline:middle; font-family:inherit; paint-order:stroke; stroke:var(--bg-base); stroke-width:6px; stroke-linejoin:round; }
+        .home-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1rem; }
+        .home-card h2 { font-size:.85rem; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); }
+        .home-card-value { font-size:1.6rem; font-weight:700; color:var(--text-muted); margin:.4rem 0 0; }
+        .home-card .period-note { margin:.2rem 0 0; }
         /* Keep tabs and the time-window menu on one row on phones; last so it wins over earlier tab rules. */
         @media(max-width:600px) { .tabs { gap:.25rem; } .tabs button { padding:.6rem .65rem; } .tab-window { font-size:.8rem; padding:.5rem; max-width:7.5rem; } }
       </style>
@@ -291,6 +309,7 @@
           <button id="powerTab" type="button" role="tab" aria-selected="true" aria-controls="powerPanel">Power</button>
           <button id="juwaiTab" type="button" role="tab" aria-selected="false" aria-controls="juwaiPanel" tabindex="-1">Juwai</button>
           <button id="ewelinkTab" type="button" role="tab" aria-selected="false" aria-controls="ewelinkPanel" tabindex="-1">eWeLink</button>
+          <button id="homeTab" type="button" role="tab" aria-selected="false" aria-controls="homePanel" tabindex="-1">Home</button>
           <select id="timeWindow" class="time-select tab-window" aria-label="Time window">
             <option value="15m" selected>15 Mins</option>
             <option value="30m">30 Mins</option>
@@ -395,17 +414,141 @@
 <p id="ewelinkHistoryNote" class="period-note">Loading recorded readings…</p>
 <p class="period-note">Readings are checked every 5 minutes. Dates and times use UK time.</p>
 </div></div></section>
+<section id="homePanel" class="tab-panel" role="tabpanel" aria-labelledby="homeTab" hidden>
+<div class="card home-plan-card">
+<div class="juwai-group-heading"><h1>Home</h1><span class="period-note home-plan-note">Floor plan · devices coming soon</span></div>
+<svg class="home-plan" viewBox="80 40 830 1500" role="img" aria-labelledby="homePlanTitle">
+<title id="homePlanTitle">Floor plan of the bungalow: Conservatory at the rear, then Bedroom 1, Kitchen, Hall and Porch, Lounge, Shower Room, Guest Bedroom and Front Porch at the front</title>
+<g class="walls">
+<polygon points="150,150 675,150 675,415 150,415"/>
+<polygon points="100,435 415,435 415,850 100,850"/>
+<polygon points="425,435 745,435 745,745 425,745"/>
+<polygon points="425,755 745,755 745,950 500,950 500,850 425,850"/>
+<polygon points="755,755 855,755 855,970 755,970"/>
+<polygon points="100,860 490,860 490,1385 100,1385"/>
+<polygon points="580,960 745,960 745,1185 580,1185"/>
+<polygon points="500,1195 745,1195 745,1425 765,1425 765,1510 520,1510 520,1425 500,1425"/>
+<polygon points="755,1275 885,1275 885,1415 755,1415"/>
+<rect x="500" y="960" width="70" height="75"/>
+<rect x="500" y="1045" width="70" height="65"/>
+<rect x="500" y="1120" width="70" height="65"/>
+</g><g class="rooms">
+<polygon points="150,150 675,150 675,415 150,415"><title>Conservatory</title></polygon>
+<polygon points="100,435 415,435 415,850 100,850"><title>Bedroom 1</title></polygon>
+<polygon points="425,435 745,435 745,745 425,745"><title>Kitchen</title></polygon>
+<polygon points="425,755 745,755 745,950 500,950 500,850 425,850"><title>Hall</title></polygon>
+<polygon points="755,755 855,755 855,970 755,970"><title>Porch</title></polygon>
+<polygon points="100,860 490,860 490,1385 100,1385"><title>Lounge</title></polygon>
+<polygon points="580,960 745,960 745,1185 580,1185"><title>Shower Room</title></polygon>
+<polygon points="500,1195 745,1195 745,1425 765,1425 765,1510 520,1510 520,1425 500,1425"><title>Guest Bedroom</title></polygon>
+<polygon points="755,1275 885,1275 885,1415 755,1415"><title>Front Porch</title></polygon>
+</g><g class="cupboards">
+<rect x="500" y="960" width="70" height="75"/>
+<rect x="500" y="1045" width="70" height="65"/>
+<rect x="500" y="1120" width="70" height="65"/>
+</g><g class="windows">
+<rect class="opening" x="165" y="139" width="155" height="12"/>
+<line class="glass" x1="165" y1="143.0" x2="320" y2="143.0"/>
+<line class="glass" x1="165" y1="147.0" x2="320" y2="147.0"/>
+<rect class="opening" x="505" y="139" width="155" height="12"/>
+<line class="glass" x1="505" y1="143.0" x2="660" y2="143.0"/>
+<line class="glass" x1="505" y1="147.0" x2="660" y2="147.0"/>
+<rect class="opening" x="139" y="165" width="12" height="235"/>
+<line class="glass" x1="143.0" y1="165" x2="143.0" y2="400"/>
+<line class="glass" x1="147.0" y1="165" x2="147.0" y2="400"/>
+<rect class="opening" x="674" y="165" width="12" height="235"/>
+<line class="glass" x1="678.0" y1="165" x2="678.0" y2="400"/>
+<line class="glass" x1="682.0" y1="165" x2="682.0" y2="400"/>
+<rect class="opening" x="470" y="414" width="160" height="22"/>
+<line class="glass" x1="470" y1="421.0" x2="630" y2="421.0"/>
+<line class="glass" x1="470" y1="429.0" x2="630" y2="429.0"/>
+<rect class="opening" x="770" y="744" width="70" height="12"/>
+<line class="glass" x1="770" y1="748.0" x2="840" y2="748.0"/>
+<line class="glass" x1="770" y1="752.0" x2="840" y2="752.0"/>
+<rect class="opening" x="854" y="775" width="12" height="125"/>
+<line class="glass" x1="858.0" y1="775" x2="858.0" y2="900"/>
+<line class="glass" x1="862.0" y1="775" x2="862.0" y2="900"/>
+<rect class="opening" x="170" y="1384" width="210" height="12"/>
+<line class="glass" x1="170" y1="1388.0" x2="380" y2="1388.0"/>
+<line class="glass" x1="170" y1="1392.0" x2="380" y2="1392.0"/>
+<rect class="opening" x="744" y="990" width="12" height="160"/>
+<line class="glass" x1="748.0" y1="990" x2="748.0" y2="1150"/>
+<line class="glass" x1="752.0" y1="990" x2="752.0" y2="1150"/>
+<rect class="opening" x="540" y="1509" width="205" height="12"/>
+<line class="glass" x1="540" y1="1513.0" x2="745" y2="1513.0"/>
+<line class="glass" x1="540" y1="1517.0" x2="745" y2="1517.0"/>
+<rect class="opening" x="509" y="1435" width="12" height="65"/>
+<line class="glass" x1="513.0" y1="1435" x2="513.0" y2="1500"/>
+<line class="glass" x1="517.0" y1="1435" x2="517.0" y2="1500"/>
+<rect class="opening" x="764" y="1435" width="12" height="65"/>
+<line class="glass" x1="768.0" y1="1435" x2="768.0" y2="1500"/>
+<line class="glass" x1="772.0" y1="1435" x2="772.0" y2="1500"/>
+<rect class="opening" x="770" y="1264" width="100" height="12"/>
+<line class="glass" x1="770" y1="1268.0" x2="870" y2="1268.0"/>
+<line class="glass" x1="770" y1="1272.0" x2="870" y2="1272.0"/>
+<rect class="opening" x="884" y="1290" width="12" height="110"/>
+<line class="glass" x1="888.0" y1="1290" x2="888.0" y2="1400"/>
+<line class="glass" x1="892.0" y1="1290" x2="892.0" y2="1400"/>
+</g><g class="doors">
+<g aria-label="Conservatory French doors"><title>Conservatory French doors</title><rect class="opening" x="332" y="139" width="160" height="12"/>
+<line class="leaf" x1="332" y1="140" x2="332" y2="60"/><path class="swing" d="M332,60 A80,80 0 0 1 412,140"/><line class="leaf" x1="492" y1="140" x2="492" y2="60"/><path class="swing" d="M492,60 A80,80 0 0 0 412,140"/>
+</g>
+<g aria-label="Bedroom 1 to Hall"><title>Bedroom 1 to Hall</title><rect class="opening" x="414" y="765" width="12" height="75"/>
+<line class="leaf" x1="425" y1="765" x2="500" y2="765"/><path class="swing" d="M500,765 A75,75 0 0 1 425,840"/>
+</g>
+<g aria-label="Kitchen to Hall"><title>Kitchen to Hall</title><rect class="opening" x="440" y="744" width="80" height="12"/>
+<line class="leaf" x1="440" y1="745" x2="440" y2="665"/><path class="swing" d="M440,665 A80,80 0 0 1 520,745"/>
+</g>
+<g aria-label="Hall to Lounge"><title>Hall to Lounge</title><rect class="opening" x="428" y="849" width="60" height="12"/>
+<line class="leaf" x1="428" y1="860" x2="428" y2="920"/><path class="swing" d="M428,920 A60,60 0 0 0 488,860"/>
+</g>
+<g aria-label="Hall to Shower Room"><title>Hall to Shower Room</title><rect class="opening" x="600" y="949" width="75" height="12"/>
+<line class="leaf" x1="600" y1="960" x2="600" y2="1035"/><path class="swing" d="M600,1035 A75,75 0 0 0 675,960"/>
+</g>
+<g aria-label="Hall to Porch"><title>Hall to Porch</title><rect class="opening" x="744" y="790" width="12" height="80"/>
+<line class="leaf" x1="755" y1="790" x2="835" y2="790"/><path class="swing" d="M835,790 A80,80 0 0 1 755,870"/>
+</g>
+<g aria-label="Porch outside door"><title>Porch outside door</title><rect class="opening" x="770" y="969" width="75" height="12"/>
+<line class="leaf" x1="770" y1="970" x2="770" y2="895"/><path class="swing" d="M770,895 A75,75 0 0 1 845,970"/>
+</g>
+<g aria-label="Lounge to Guest Bedroom"><title>Lounge to Guest Bedroom</title><rect class="opening" x="489" y="1290" width="12" height="80"/>
+<line class="leaf" x1="500" y1="1370" x2="580" y2="1370"/><path class="swing" d="M580,1370 A80,80 0 0 0 500,1290"/>
+</g>
+<g aria-label="Guest Bedroom to Front Porch"><title>Guest Bedroom to Front Porch</title><rect class="opening" x="744" y="1300" width="12" height="70"/>
+<line class="leaf" x1="755" y1="1370" x2="825" y2="1370"/><path class="swing" d="M825,1370 A70,70 0 0 0 755,1300"/>
+</g>
+<g aria-label="Front Porch outside door"><title>Front Porch outside door</title><rect class="opening" x="785" y="1414" width="75" height="12"/>
+<line class="leaf" x1="860" y1="1415" x2="860" y2="1340"/><path class="swing" d="M860,1340 A75,75 0 0 0 785,1415"/>
+</g>
+<g aria-label="Bedroom 1 to Conservatory"><title>Bedroom 1 to Conservatory</title><rect class="opening" x="200" y="414" width="180" height="22"/>
+<line class="slide" x1="200" y1="422.0" x2="308" y2="422.0"/><line class="slide" x1="272" y1="428.0" x2="380" y2="428.0"/></g>
+</g><g class="room-labels">
+<text font-size="26"><tspan x="412" y="290">Conservatory</tspan></text>
+<text font-size="26"><tspan x="257" y="650">Bedroom 1</tspan></text>
+<text font-size="26"><tspan x="585" y="600">Kitchen</tspan></text>
+<text font-size="24"><tspan x="600" y="810">Hall</tspan></text>
+<text font-size="16"><tspan x="805" y="774">Porch</tspan></text>
+<text font-size="26"><tspan x="295" y="1130">Lounge</tspan></text>
+<text font-size="22"><tspan x="662" y="1097">Shower</tspan><tspan x="662" y="1123">Room</tspan></text>
+<text font-size="24"><tspan x="642" y="1276">Guest</tspan><tspan x="642" y="1304">Bedroom</tspan></text>
+<text font-size="15"><tspan x="842" y="1291">Front</tspan><tspan x="842" y="1309">Porch</tspan></text>
+</g>
+</svg>
+</div>
+<div class="home-cards"><article class="card home-card" data-state="unlinked"><h2>Loft</h2><p class="home-card-value">—</p><p class="period-note">Not linked yet</p></article><article class="card home-card" data-state="unlinked"><h2>Outside</h2><p class="home-card-value">—</p><p class="period-note">Not linked yet</p></article><article class="card home-card" data-state="unlinked"><h2>Freezer</h2><p class="home-card-value">—</p><p class="period-note">Not linked yet</p></article><article class="card home-card" data-state="unlinked"><h2>Garage door</h2><p class="home-card-value">—</p><p class="period-note">Not linked yet</p></article></div>
+</section>
       </div>
 
       <script>
 const $ = id => document.getElementById(id);
 let activeTab = 'power';
-const views = ['power','juwai','ewelink'];
+const views = ['power','juwai','ewelink','home'];
 function connectionLost(){$('currentVal').style.opacity='.55';$('meterKwh').style.opacity='.55';}
 function selectTab(name) {
   if(activeTab===name)return;
   activeTab=name;stopJuwai();window.stopEwelink?.();
   $('timeWindow').hidden=name!=='power';
+  if(location.hash!=='#'+name)history.replaceState(null,'','#'+name);
   if(name!=='power'){generation++;controller?.abort();}
   for(const view of views){
     const current=view===name;
@@ -416,7 +559,7 @@ function selectTab(name) {
     window.startEwelink?.();
   } else if(name==='juwai') {
     makeJuwaiChart();juwaiChart.resize();readJuwai(juwaiVersion);
-  } else {
+  } else if(name==='power') {
     chart.resize();lastHistory=0;
     loadHistory().catch(e=>{if(e.name!=='AbortError')connectionLost();});
   }
@@ -736,6 +879,10 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('pagehide',()=>{stopJuwai();});
 window.addEventListener('pageshow',event=>{if(event.persisted&&!document.hidden&&activeTab==='juwai')readJuwai(juwaiVersion);});
+// Open the tab named in the URL (e.g. #home); default stays Power.
+function openHashTab(){const name=location.hash.slice(1);if(views.includes(name))selectTab(name);}
+window.addEventListener('hashchange',openHashTab);
+openHashTab();
 tick();
 
       </script>
