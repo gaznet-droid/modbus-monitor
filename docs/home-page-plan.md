@@ -152,8 +152,8 @@ mapping easy to change. eWeLink holds no room information for the switches and p
     porch off the Hall is the **Front Porch**, and the porch off the Guest Bedroom is
     labelled "Back Fuckin Porch" for now (a placeholder name, to be changed later).
   - Door sensors (confirmed by Dad):
-    - "Front door" is on the door between the Hall and the Front Porch.
-    - "Front Porch door" is on the Front Porch's outside door.
+    - "Front door" is on the Front Porch's outside door.
+    - "Front Porch door" is on the door between the Hall and the Front Porch.
     - "Back Door" is on the outside door of the porch off the Guest Bedroom.
     - "Conservatory door" is on the French doors.
     - The Guest Bedroom to lower porch door has no sensor.
