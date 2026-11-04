@@ -8,12 +8,17 @@ Active branch: raspberry-pi (production runs on ModPi). main holds the old FastA
 - Tuya cloud trial ends 23 November; local Juwai access is still unproven.
 - Dad's Wi-Fi profile on the Pi is untested; the Pi has no Ethernet, so a wrong password needs a site visit.
 
+## This week (before the Pi moves to Dad's)
+UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer page-only changes; collector changes need a modpi restart and a backup of the private files first.
+- Home tab requested by Dad: his floor plan redrawn as SVG in the site style, with eWeLink door sensors, switches and room temperatures on the plan, and Loft, Outside, Freezer and Garage door as cards below it. Old Bedroom 2 is now the Kitchen, the old Kitchen is the Guest Bedroom, and its porch is the Front Porch; no fittings. eWeLink scan done; placements are Gareth's assumptions until Dad confirms. Read-only. Full plan and open questions in docs/home-page-plan.md. Proof of concept: stays public for now, by decision on 4 Nov.
+
 ## Next
 - Shut the Pi down cleanly, check Dad's Wi-Fi details against his router, and move ModPi to Dad's house.
 - Job 1: find the meter on Dad's LAN, switch the Pi to the local address, then remove the port-forward and add a DHCP reservation.
 - Job 2: test local reads of the two Juwai meters with the saved local keys; if they work, replace Tuya cloud polling before 23 November.
 
 ## Later
+- Add simple authentication for Dad (for example Cloudflare Access) once the Home tab and other proofs of concept settle, so door, switch and temperature states aren't public.
 - Investigate the meter dropping out most evenings around 17:45–18:30 (seen 28–31 Oct) while eWeLink stayed online.
 - Confirm Dad's broadband: his Wi-Fi is a BT Hub, but the meter's public IP is TalkTalk.
 - Optionally make Live Net Power and the Combined Meter Reading follow the time window (average power; meter reading at window end needs meter history).
