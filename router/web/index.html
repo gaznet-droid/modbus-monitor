@@ -6,7 +6,7 @@
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Live Power Monitor · Dad</title>
       <script src="/chart.umd.min.js"></script>
-      <script src="/ewelink.js?v=card-graphs-2" defer></script>
+      <script src="/ewelink.js?v=card-graphs-3" defer></script>
       <style>
         :root {
           --bg-base: #090d16;
@@ -243,8 +243,7 @@
         .ewelink-chart-section { min-width:0; margin-top:1.5rem; padding-top:1.25rem; border-top:1px solid var(--border); }
         .ewelink-chart-section h2 { font-size:1rem; margin-bottom:1rem; }
         .ewelink-chart { position:relative; width:100%; min-width:0; height:340px; }
-        #ewelinkBinControls label { display:flex; align-items:center; gap:.6rem; font-size:.8rem; color:var(--text-muted); margin:.75rem 0; }
-        #ewelinkBucket { flex:1; min-width:0; }
+        #ewelinkDetails { margin-top:.75rem; }
         .ewelink-chart-section :is(select,button) { min-height:44px; max-width:100%; padding:.6rem; border:1px solid var(--border); border-radius:8px; background:#1e293b; color:var(--text-main); font:inherit; font-size:.85rem; color-scheme:dark; }
         .ewelink-chart-section button { cursor:pointer; margin:.5rem 0; }
         .ewelink-chart-section :is(select,button):focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
@@ -447,7 +446,7 @@
 <div id="ewelinkChartSection" class="ewelink-chart-section" hidden><h2 id="ewelinkChartHeading">Power history</h2><div class="juwai-controls" hidden><label for="ewelinkDevice">Device <select id="ewelinkDevice"><option value="inverter-1000">1000 watt inverter</option><option value="garage-inverter">Garage inverter</option><option value="inverter-600">600 watt inverter</option><option value="charger-inverter">Charger inverter</option><option value="fridge">Fridge</option></select></label></div>
 <button id="ewelinkBack" type="button" hidden>← All weeks</button>
 <div class="ewelink-chart"><canvas id="ewelinkChart" role="img" aria-label="Selected device power history; use the details selector below for bar values"></canvas></div>
-<div id="ewelinkBinControls" hidden><label for="ewelinkBucket">Details for <select id="ewelinkBucket"></select></label><div id="ewelinkDetails" class="mobile-bucket-details" role="status" aria-live="polite"></div><button id="ewelinkDrill" type="button" hidden>View daily detail</button></div>
+<div id="ewelinkBinControls" hidden><div id="ewelinkDetails" class="mobile-bucket-details" role="status" aria-live="polite"></div><button id="ewelinkDrill" type="button" hidden>View daily detail</button></div>
 <p id="ewelinkHistoryNote" class="period-note">Loading recorded readings…</p>
 <p class="period-note">Readings are checked every 5 minutes. Dates and times use UK time.</p>
 </div></div></section>

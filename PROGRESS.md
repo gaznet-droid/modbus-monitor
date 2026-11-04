@@ -1,2 +1,2 @@
 
-- 2026-11-04 22:30: On phone bar graphs on the eWeLink tab, the chosen hour now stays bright and the other bars dim, whether it's picked from the Details list or by tapping a bar. Before, only the small details box changed. It was a page-only change.
+- 2026-11-04 22:40: The Details list was removed from the eWeLink phone bar graphs. Now you tap a bar to highlight it and see its average and number of readings in the box below. It was a page-only change.

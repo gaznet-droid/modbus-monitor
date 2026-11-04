@@ -26,7 +26,6 @@
     if(!shownBins.length)return;
     selectedBin=Math.max(0,Math.min(shownBins.length-1,Number(index)||0));
     const b=shownBins[selectedBin],unit=week?'day':history.bucket_unit;
-    el('ewelinkBucket').value=String(selectedBin);
     el('ewelinkDetails').textContent=binLabel(b,unit,true)+' · '+(b.samples?format(b.mean_w,'W')+' average · '+b.samples+' readings'+(b.partial?' · Partial data':''):'No recorded readings');
     el('ewelinkDrill').hidden=history.bucket_unit!=='week'||!!week;
     highlightBin();
@@ -57,7 +56,6 @@
     if(bars){
       shownBins=(week?history.daily_bins:history.bins).filter(b=>!week||b.start>=week.start&&b.end<=week.end);
       labels=shownBins.map(b=>binLabel(b,unit));data=shownBins.map(b=>b.mean_w);
-      el('ewelinkBucket').replaceChildren(...shownBins.map((b,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=binLabel(b,unit,true);return o;}));
       showBin(selectedBin);
     }else{
       data=[];let previous=null;
@@ -76,7 +74,7 @@
         plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>bars?binLabel(shownBins[items[0].dataIndex],unit,true):date(items[0].parsed.x),label:item=>format(item.parsed.y,'W')+(bars?' average':'')}}}}});
     highlightBin();
     const count=history.points.length;
-    el('ewelinkHistoryNote').textContent=bars?'Bars show average power in W. Hatched slots have no readings; select a bar for detail.':'Stored power readings · gaps indicate missing readings.';
+    el('ewelinkHistoryNote').textContent=bars?'Bars show average power in W. Hatched slots have no readings. Tap a bar for its details.':'Stored power readings · gaps indicate missing readings.';
     if(!count)el('ewelinkHistoryNote').textContent='No recorded power readings in this period.';
   }
   async function get(url,signal){const r=await fetch(url,{signal,cache:'no-store'});if(!r.ok)throw Error('Unavailable');return r.json();}
@@ -114,7 +112,6 @@
     card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle(card);}});
   });
   for(const id of ['ewelinkDevice','ewelinkPeriod'])el(id).addEventListener('change',()=>{historyAt=0;week=null;window.startEwelink();});
-  el('ewelinkBucket').addEventListener('change',event=>showBin(event.target.value));
   el('ewelinkDrill').addEventListener('click',()=>{week=shownBins[selectedBin];selectedBin=0;drawHistory();});
   el('ewelinkBack').addEventListener('click',()=>{week=null;selectedBin=0;drawHistory();});
   mobile.addEventListener('change',()=>{if(available())drawHistory();});
