@@ -19,6 +19,6 @@ systemd-analyze verify /etc/systemd/system/modpi-deploy.service /etc/systemd/sys
 # Clear a blocked marker so the next run re-checks against what is now installed.
 rm -f /var/lib/modpi-deploy/blocked
 systemctl enable --now modpi-deploy.timer
-echo "Auto-deploy enabled. First run in about 3 minutes, then every 5."
+echo "Auto-deploy enabled. Checks GitHub daily at about 03:30."
 echo "Watch it:  journalctl -u modpi-deploy -f"
 echo "Run now:   sudo systemctl start modpi-deploy"

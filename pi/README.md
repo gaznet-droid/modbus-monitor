@@ -100,9 +100,10 @@ Mac tests use fixtures and mocks. They do not prove Pi boot, Linux storage,
 systemd behavior, real Juwai compatibility or successful credential migration.
 
 ## Auto-deploy from GitHub
-GitHub `main` is the source of truth. The Pi checks it every 5 minutes
+GitHub `main` is the source of truth. The Pi checks it once a day at about 03:30
 (modpi-deploy.timer) and deploys new commits by itself, so no Mac is needed.
-Push from any device and it goes live within about 5 minutes.
+Push from any device and it goes live the next morning. If the Pi was off at
+03:30, it checks as soon as it is back on.
 
 What `/usr/local/sbin/modpi-autodeploy` (pi/autodeploy.sh) does with a new commit:
 1. Pulls main anonymously over HTTPS (public repo, no credentials on the Pi).

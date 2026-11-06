@@ -1,5 +1,5 @@
 #!/bin/sh
-# ModPi auto-deploy. Run as root by modpi-deploy.timer every few minutes.
+# ModPi auto-deploy. Run as root by modpi-deploy.timer once a day (about 03:30).
 #
 # Pulls main from GitHub (public, read-only, no credentials on the Pi), runs the
 # test suite, copies the app into /opt/modpi, restarts only what changed, checks
