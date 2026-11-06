@@ -14,7 +14,6 @@ UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer pa
 - eWeLink page (Inverters & fridge) refreshed 6 Nov at Dad's request and live on ModPi: removed the connection/last-checked line and the "tap a device" hint; each device icon now shows status (green and pulsing when on, amber when off, grey when offline) and the old flashing dot is gone; added cumulative energy used over the selected period under the latest power on every card; on web the cards are a list with one graph on the right and the 1000 watt inverter preselected, while mobile is unchanged (tap a device to open its graph). Page-only change. Remaining: Dad to eyeball it.
 
 ## Next
-- Add the GitHub webhook (it was never created): payload URL /api/deploy-hook, JSON, push events, the Pi's deploy secret. Needs the Mac. Then confirm a push deploys on its own.
 - Shut the Pi down cleanly, check Dad's Wi-Fi details against his router, and move ModPi to Dad's house.
 - Job 1: find the meter on Dad's LAN, switch the Pi to the local address, then remove the port-forward and add a DHCP reservation. Once the Pi is on Dad's network no port-forward is needed at all: the website goes out through the Cloudflare tunnel and maintenance through Tailscale, both outbound. Removing it also stops the meter's Modbus port being open to the internet.
 - Job 2: test local reads of the two Juwai meters with the saved local keys; if they work, replace Tuya cloud polling before 23 November.

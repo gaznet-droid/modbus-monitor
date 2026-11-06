@@ -1,10 +1,12 @@
 [Unit]
-Description=Check GitHub for a new ModPi commit once a day, early morning
+Description=Check GitHub for a new ModPi commit every two minutes
 
 [Timer]
-OnCalendar=*-*-* 03:30:00
-Persistent=true
-RandomizedDelaySec=10min
+# Polling replaces the GitHub webhook as the main trigger: nothing inbound, no secret.
+# A check with no new commit is one small read-only fetch and changes nothing.
+OnBootSec=1min
+OnUnitInactiveSec=2min
+RandomizedDelaySec=15s
 
 [Install]
 WantedBy=timers.target

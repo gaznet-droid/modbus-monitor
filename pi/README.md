@@ -100,14 +100,16 @@ Mac tests use fixtures and mocks. They do not prove Pi boot, Linux storage,
 systemd behavior, real Juwai compatibility or successful credential migration.
 
 ## Auto-deploy from GitHub
-GitHub `main` is the source of truth. Push from any device and it goes live within about a minute, with no Mac needed:
-GitHub sends a signed push webhook to https://modbus.clockmillbarn.uk/api/deploy-hook
-through the existing Cloudflare tunnel. The site checks the HMAC signature against
-/var/lib/modpi/private/deploy-hook.secret (shared only with GitHub's webhook settings)
-and touches /var/lib/modpi/deploy-request; modpi-deploy.path then starts the deploy.
-The hook can only make the Pi pull main from GitHub. As a backup, modpi-deploy.timer
-also checks once a day at about 03:30, or as soon as the Pi is back on if it was off.
-Webhook deliveries and their responses are listed in the repo's GitHub settings.
+GitHub `main` is the source of truth. Push from any device and it goes live within about
+two minutes, with no Mac needed: modpi-deploy.timer checks main every two minutes (and a
+minute after boot). A check with no new commit is one small anonymous, read-only fetch.
+Nothing reaches in from outside, so there is no webhook or secret to set up.
+
+Optional, not set up as of 6 Nov: a signed GitHub push webhook to
+https://modbus.clockmillbarn.uk/api/deploy-hook would deploy a little sooner. The site checks
+the HMAC signature against /var/lib/modpi/private/deploy-hook.secret and touches
+/var/lib/modpi/deploy-request; modpi-deploy.path then starts the deploy. It can only make
+the Pi pull main. Adding it means pasting that secret into the repo's webhook settings.
 
 What `/usr/local/sbin/modpi-autodeploy` (pi/autodeploy.sh) does with a new commit:
 1. Pulls main anonymously over HTTPS (public repo, no credentials on the Pi).
@@ -128,5 +130,6 @@ Check what is live from anywhere: https://modbus.clockmillbarn.uk/version
 (commit, time and subject; also shows FAILED, ROLLED BACK or BLOCKED).
 On the Pi: `journalctl -u modpi-deploy`, state in /var/lib/modpi-deploy.
 Run now: `sudo systemctl start modpi-deploy`. Pause: `sudo systemctl stop modpi-deploy.timer`.
+Journal noise: each empty check adds a couple of systemd lines; that is expected.
 
 One-time setup on the Pi (from a checkout of main): `sudo sh pi/install-autodeploy.sh`.

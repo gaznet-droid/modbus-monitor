@@ -16,7 +16,7 @@ for unit in modpi-deploy.service modpi-deploy.timer modpi-deploy.path; do
 done
 systemctl daemon-reload
 systemd-analyze verify /etc/systemd/system/modpi-deploy.service /etc/systemd/system/modpi-deploy.timer /etc/systemd/system/modpi-deploy.path
-# Webhook secret, shared only with GitHub. Created once; never printed.
+# Optional webhook secret, shared only with GitHub. Created once; never printed.
 SECRET=/var/lib/modpi/private/deploy-hook.secret
 if [ ! -s "$SECRET" ]; then
     (umask 077; head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$SECRET")
@@ -26,6 +26,6 @@ fi
 # Clear a blocked marker so the next run re-checks against what is now installed.
 rm -f /var/lib/modpi-deploy/blocked
 systemctl enable --now modpi-deploy.timer modpi-deploy.path
-echo "Auto-deploy enabled: on each GitHub push, plus a daily check at about 03:30."
+echo "Auto-deploy enabled: checks GitHub main every two minutes (and on a signed webhook, if set up)."
 echo "Watch it:  journalctl -u modpi-deploy -f"
 echo "Run now:   sudo systemctl start modpi-deploy"
