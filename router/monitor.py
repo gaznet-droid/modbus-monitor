@@ -326,6 +326,16 @@ class Monitor:
                     self.meter_failed=True
             self.stop.wait(max(.2,3-(time.monotonic()-started)))
 
+ICON_FILES={
+    "/favicon.svg":"image/svg+xml",
+    "/favicon.ico":"image/x-icon",
+    "/apple-touch-icon.png":"image/png",
+    "/icon-192.png":"image/png",
+    "/icon-512.png":"image/png",
+    "/icon-maskable-512.png":"image/png",
+    "/site.webmanifest":"application/manifest+json",
+}
+
 def handler(store, web, voltage=None, tuya=None, ewelink=None):
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.0"
@@ -388,6 +398,8 @@ def handler(store, web, voltage=None, tuya=None, ewelink=None):
                     return self.send(200,(web/"index.html").read_bytes(),"text/html; charset=utf-8")
                 if parsed.path=="/chart.umd.min.js":
                     return self.send(200,(web/"chart.umd.min.js").read_bytes(),"text/javascript; charset=utf-8")
+                if parsed.path in ICON_FILES:
+                    return self.send(200,(web/parsed.path[1:]).read_bytes(),ICON_FILES[parsed.path])
                 if parsed.path=="/ewelink.js":
                     return self.send(200,(web/"ewelink.js").read_bytes(),"text/javascript; charset=utf-8")
                 if parsed.path=="/api/integrations/ewelink/callback" and ewelink is not None:
