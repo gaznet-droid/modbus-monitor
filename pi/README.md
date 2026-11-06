@@ -114,8 +114,10 @@ What `/usr/local/sbin/modpi-autodeploy` (pi/autodeploy.sh) does with a new commi
 5. Checks the dashboard answers on port 8096 within a minute. If not, it restores the
    previous copy and restarts again.
 6. A failed commit is not retried. Push a fix and the next run picks it up.
-7. Commits that change systemd units, installers or autodeploy.sh are BLOCKED and must
-   be applied by hand on the Pi (Tailscale SSH), then `sudo sh pi/install-autodeploy.sh`.
+7. If main's systemd units or autodeploy.sh differ from those installed on the Pi, the
+   deploy is BLOCKED until they are applied by hand over Tailscale SSH: copy main to
+   the Pi and run `sudo sh pi/install-autodeploy.sh` (app units: copy them to
+   /etc/systemd/system and `sudo systemctl daemon-reload` first).
 
 Check what is live from anywhere: https://modbus.clockmillbarn.uk/version
 (commit, time and subject; also shows FAILED, ROLLED BACK or BLOCKED).

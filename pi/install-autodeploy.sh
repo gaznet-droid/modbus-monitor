@@ -16,10 +16,8 @@ for unit in modpi-deploy.service modpi-deploy.timer; do
 done
 systemctl daemon-reload
 systemd-analyze verify /etc/systemd/system/modpi-deploy.service /etc/systemd/system/modpi-deploy.timer
-# If this checkout is a git commit, clear any blocked or failed marker for it.
-if git -C "$ROOT" rev-parse HEAD >/dev/null 2>&1; then
-    rm -f /var/lib/modpi-deploy/blocked /var/lib/modpi-deploy/failed
-fi
+# Clear a blocked marker so the next run re-checks against what is now installed.
+rm -f /var/lib/modpi-deploy/blocked
 systemctl enable --now modpi-deploy.timer
 echo "Auto-deploy enabled. First run in about 3 minutes, then every 5."
 echo "Watch it:  journalctl -u modpi-deploy -f"

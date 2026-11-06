@@ -48,16 +48,18 @@ write_version() {  # $1 commit, $2 note
     mv "$LIVE/VERSION.json.tmp" "$LIVE/VERSION.json"
 }
 
-# Which files changed in git? Used only to spot unit or installer changes.
-# Unknown history (first run or a force-push) = treat all as changed.
-if [ "$OLD" != none ] && CHANGED=$(git -C "$SRC" diff --name-only "$OLD" "$NEW" 2>/dev/null); then :; else
-    CHANGED=$(git -C "$SRC" ls-files)
-fi
-
-# On the first run the installer has just put this commit's units in place, so skip the check.
-if [ "$OLD" != none ] && echo "$CHANGED" | grep -Eq '^pi/(.*\.service|.*\.timer|install.*\.sh|autodeploy\.sh)$'; then
+# Units and this script are never changed automatically. If the repo's copies differ
+# from what is installed on this Pi, stop and ask for a manual install.
+UNITDIR=${MODPI_UNITDIR:-/etc/systemd/system}
+SELF=${MODPI_SELF:-/usr/local/sbin/modpi-autodeploy}
+PENDING=""
+cmp -s "$SRC/pi/autodeploy.sh" "$SELF" || PENDING="autodeploy.sh"
+for unit in modpi.service modpi-tuya.service modpi-tunnel.service modpi-deploy.service modpi-deploy.timer; do
+    cmp -s "$SRC/pi/$unit" "$UNITDIR/$unit" || PENDING="$PENDING $unit"
+done
+if [ -n "$PENDING" ]; then
     echo "$NEW" > "$STATE/blocked"
-    log "BLOCKED: $NEW changes systemd units or installers; apply by hand (see pi/README.md, Auto-deploy)"
+    log "BLOCKED: $NEW changes$PENDING; apply by hand (see pi/README.md, Auto-deploy)"
     write_version "$(cat "$STATE/deployed" 2>/dev/null || echo unknown)" "BLOCKED: $SUBJECT needs a manual install"
     exit 1
 fi
@@ -65,7 +67,7 @@ fi
 # What actually differs between the new checkout and the live copy on this Pi.
 # Comparing files (not git history) is right on the first run and after a rollback.
 APP=$( {
-    rsync -rlcn --delete --out-format='router/%n' "$SRC/router/" "$LIVE/router/" | sed 's#^deleting #router/#'
+    rsync -rlcn --delete --exclude=__pycache__ --out-format='router/%n' "$SRC/router/" "$LIVE/router/" | sed 's#^deleting #router/#'
     for f in run.py storage.py tuya_run.py; do cmp -s "$SRC/pi/$f" "$LIVE/pi/$f" || echo "pi/$f"; done
 } | grep -v '/$' || true)
 if [ -z "$APP" ]; then
@@ -94,7 +96,7 @@ fi
 RESTART=no; RESTART_TUYA=no
 if echo "$APP" | grep -q '\.py$'; then
     RESTART=yes
-    if echo "$APP" | grep -Eq 'tuya|storage\.py' && systemctl is-active --quiet modpi-tuya.service; then
+    if echo "$APP" | grep -Eq '(tuya[^/]*|storage)\.py$' && systemctl is-active --quiet modpi-tuya.service; then
         RESTART_TUYA=yes
     fi
 fi
@@ -108,7 +110,7 @@ rm -rf "$PREV"
 cp -a "$LIVE" "$PREV"
 
 copy_app() {  # $1 = source root
-    rsync -rlt --delete "$1/router/" "$LIVE/router/"
+    rsync -rlt --delete --exclude=__pycache__ "$1/router/" "$LIVE/router/"
     install -m 0644 "$1/pi/run.py" "$1/pi/storage.py" "$1/pi/tuya_run.py" "$LIVE/pi/"
     chown -R root:root "$LIVE"
     chmod -R go-w "$LIVE"
