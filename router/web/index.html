@@ -1,0 +1,1006 @@
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Live Power Monitor · Dad</title>
+      <script src="/chart.umd.min.js"></script>
+      <script src="/ewelink.js?v=card-graphs-5" defer></script>
+      <style>
+        :root {
+          --bg-base: #090d16;
+          --card-bg: #141c2e;
+          --border: #222f49;
+          --text-main: #f8fafc;
+          --text-muted: #94a3b8;
+          --import-color: #38bdf8;
+          --export-color: #34d399;
+          --amber-zero: #f59e0b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          background: var(--bg-base);
+          color: var(--text-main);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 1rem;
+          min-height: 100vh;
+        }
+
+        .container {
+          width: 100%;
+          max-width: 900px;
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+        }
+        .tabs { display: flex; gap: .5rem; border-bottom: 1px solid var(--border); padding-bottom: .5rem; }
+        .tabs button { background: transparent; color: var(--text-muted); border: 1px solid transparent; border-radius: 8px; padding: .75rem 1.25rem; font: inherit; font-weight: 600; cursor: pointer; min-height: 44px; }
+        .tabs button[aria-selected="true"] { color: var(--import-color); background: #141c2e; border-color: var(--border); }
+        .tabs button:focus-visible { outline: 2px solid var(--import-color); outline-offset: 2px; }
+        .tab-panel { display: flex; flex-direction: column; gap: 1.25rem; }
+
+        .card {
+          background: var(--card-bg);
+          border: 1px solid var(--border);
+          border-radius: 16px;
+          padding: 1.25rem;
+          box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+        }
+
+        .chart-card {
+          display: flex;
+          flex-direction: column;
+          min-height: 48vh;
+        }
+
+        .header-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 0.75rem;
+          gap: 0.5rem;
+        }
+
+        .label {
+          font-size: 0.75rem;
+          letter-spacing: 0.06em;
+          color: var(--text-muted);
+          text-transform: uppercase;
+          font-weight: 700;
+        }
+
+        .reading-column { min-width: 0; }
+        .meter-reading { text-align: right; }
+        .meter-value { color: var(--text-main); font-size: clamp(1.05rem,4.4vw,2.2rem); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; white-space: nowrap; }
+        .header-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-items: start; }
+        .header-row .label { min-height: 1.7rem; }
+        .header-row .stat { font-size: clamp(1.2rem,5.4vw,3rem); white-space: nowrap; }
+        @media (max-width: 600px) { .header-row .label { min-height: 2.6em; } .header-row .period-note { font-size: .65rem; } }
+        .stat {
+          font-size: 2.2rem;
+          font-weight: 700;
+          color: var(--import-color);
+          line-height: 1.1;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .energy-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: .5rem; padding: .85rem 0; margin-bottom: .75rem; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .energy-export { text-align: right; }
+        .energy-value { font-size: clamp(1.05rem,4.4vw,2rem); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; white-space: nowrap; margin-top: .35rem; }
+
+        .tabs { align-items: center; flex-wrap: wrap; }
+        .tab-window { margin-left: auto; min-height: 44px; font-size: .85rem; padding: .5rem .75rem; }
+
+        .time-select {
+          max-width: 100%;
+          min-width: 0;
+          background: #1e293b;
+          color: var(--text-main);
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          padding: 0.3rem 0.6rem;
+          font-size: 0.75rem;
+          font-weight: 600;
+          outline: none;
+        }
+
+        [hidden] { display: none !important; }
+        .custom-range { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto; gap: .65rem; margin: .8rem 0; align-items: end; }
+        .custom-range label { display: flex; flex-direction: column; gap: .4rem; min-width: 0; color: var(--text-muted); font-size: .75rem; }
+        .custom-range input, .custom-range button { min-width: 0; max-width: 100%; background: #1e293b; color: var(--text-main); border: 1px solid var(--border); border-radius: 8px; padding: .65rem; font: inherit; color-scheme: dark; }
+        .custom-range button { cursor: pointer; font-size: .8rem; font-weight: 600; }
+        .custom-range button:disabled { opacity: .5; }
+        .custom-range input:focus-visible, .custom-range button:focus-visible, .time-select:focus-visible { outline: 2px solid var(--import-color); outline-offset: 2px; }
+        #rangeError { grid-column: 1 / -1; color: #fda4af; font-size: .8rem; }
+        .period-note { color: var(--text-muted); font-size: .75rem; line-height: 1.5; margin: .6rem 0; width: 100%; }
+        @media (max-width: 600px) { .custom-range { grid-template-columns: minmax(0,1fr); } .custom-range input { width: 100%; box-sizing: border-box; } }
+        .chart-wrapper {
+          position: relative;
+          flex: 1;
+          width: 100%;
+          min-height: 220px;
+        }
+
+        @media (min-width: 600px) {
+          body { padding: 2rem; }
+          .stat { font-size: 3rem; }
+          .label { font-size: 0.85rem; }
+          [hidden] { display: none !important; }
+        .custom-range { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto; gap: .65rem; margin: .8rem 0; align-items: end; }
+        .custom-range label { display: flex; flex-direction: column; gap: .4rem; min-width: 0; color: var(--text-muted); font-size: .75rem; }
+        .custom-range input, .custom-range button { min-width: 0; max-width: 100%; background: #1e293b; color: var(--text-main); border: 1px solid var(--border); border-radius: 8px; padding: .65rem; font: inherit; color-scheme: dark; }
+        .custom-range button { cursor: pointer; font-size: .8rem; font-weight: 600; }
+        .custom-range button:disabled { opacity: .5; }
+        .custom-range input:focus-visible, .custom-range button:focus-visible, .time-select:focus-visible { outline: 2px solid var(--import-color); outline-offset: 2px; }
+        #rangeError { grid-column: 1 / -1; color: #fda4af; font-size: .8rem; }
+        .period-note { color: var(--text-muted); font-size: .75rem; line-height: 1.5; margin: .6rem 0; width: 100%; }
+        @media (max-width: 600px) { .custom-range { grid-template-columns: minmax(0,1fr); } .custom-range input { width: 100%; box-sizing: border-box; } }
+        .mode-badge { font-size: 0.85rem; padding: 0.45rem 1rem; }
+          .chart-wrapper { min-height: 280px; }
+        }
+
+        .juwai-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+        .juwai-card h2 { font-size:1rem; margin-bottom:.9rem; }
+        .juwai-power { font-size:clamp(1.8rem,6vw,3rem); font-weight:700; color:var(--import-color); margin:.3rem 0 1rem; }
+        .juwai-metrics { display:flex; gap:2rem; margin-bottom:1rem; }
+        .juwai-metrics dt { color:var(--text-muted); font-size:.8rem; margin-bottom:.35rem; }
+        .juwai-metrics dd { font-size:1.2rem; font-variant-numeric:tabular-nums; }
+        .juwai-card[data-stale="true"] .juwai-power { color:var(--text-muted); }
+        .juwai-controls { display:flex; flex-wrap:wrap; align-items:center; gap:1rem; margin-bottom:1rem; }
+        .juwai-controls label { display:flex; align-items:center; gap:.5rem; font-size:.85rem; color:var(--text-muted); }
+        .juwai-controls select { min-height:44px; background:#1e293b; color:var(--text-main); border:1px solid var(--border); border-radius:8px; padding:.5rem .6rem; font:inherit; color-scheme:dark; }
+        .juwai-controls select:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        .juwai-chart { position:relative; height:280px; }
+        @media(max-width:600px) { .juwai-grid { grid-template-columns:1fr; } .tabs { gap:.2rem; } .tabs button { padding:.75rem 1rem; } }
+
+        .juwai-group { padding:clamp(.8rem,3vw,1.5rem); }
+        .juwai-group-heading { display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1.2rem; flex-wrap:wrap; }
+        .juwai-group-heading h1 { font-size:1.2rem; }
+        .juwai-group-heading label { display:flex; gap:.6rem; align-items:center; color:var(--text-muted); font-size:.85rem; }
+        .juwai-group-heading select { min-height:44px; max-width:100%; background:#1e293b; color:var(--text-main); border:1px solid var(--border); border-radius:8px; padding:.5rem; font:inherit; color-scheme:dark; }
+        .juwai-group-heading select:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        .juwai-group .juwai-card { box-shadow:none; background:#101828; padding:1rem; }
+        .juwai-card-values { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:.7rem; }
+        .juwai-card-values .label { font-size:.65rem; min-height:2.4em; }
+        .juwai-power, .juwai-kwh { font-size:clamp(1.15rem,3vw,1.9rem); line-height:1.2; font-variant-numeric:tabular-nums; font-weight:700; margin:.35rem 0 .5rem; overflow-wrap:anywhere; }
+        .juwai-energy { text-align:right; }
+        .juwai-kwh { color:var(--export-color); }
+        #totalCard { grid-column:1 / -1; border-color:#345046; }
+        #totalCard .juwai-kwh { color:var(--export-color); }
+        .juwai-chart-section { margin-top:1.3rem; padding-top:1.2rem; border-top:1px solid var(--border); }
+        .juwai-period { margin:0; }
+
+        .juwai-mobile-only { display:none; }
+        @media(max-width:600px) {
+          .juwai-desktop-chart, #juwaiHistoryNote { display:none; }
+          .juwai-mobile-only { display:block; }
+          .juwai-group { padding:.75rem; }
+          .juwai-grid { gap:.65rem; }
+          .juwai-group .juwai-card { padding:.8rem; }
+          .juwai-group .juwai-card h2 { margin-bottom:.5rem; }
+          .juwai-group .juwai-metrics { margin:.6rem 0; }
+          .juwai-group .juwai-card > .period-note { margin:.3rem 0; }
+          .mobile-generation-summary { display:flex; flex-direction:column; gap:.3rem; margin-bottom:1.25rem; color:var(--text-muted); font-size:.85rem; }
+          .mobile-generation-summary strong { font-size:2rem; color:var(--export-color); font-variant-numeric:tabular-nums; }
+          #mobileGenerationSplit { margin-top:.3rem; color:var(--text-main); }
+          #mobileChartHeading { font-size:1rem; margin-bottom:.8rem; }
+          .mobile-meter-buttons { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.25rem; margin-bottom:.8rem; }
+          .mobile-meter-buttons button, #mobileWeekBack, #mobileWeekDrill { min-height:44px; border:1px solid var(--border); border-radius:8px; background:#1e293b; color:var(--text-main); font:inherit; font-size:.8rem; padding:.5rem; cursor:pointer; }
+          .mobile-meter-buttons button[aria-pressed="true"] { color:var(--import-color); border-color:var(--import-color); }
+          .mobile-chart { position:relative; height:300px; margin:0 -.4rem; }
+          #mobileBinControls label { display:flex; align-items:center; gap:.6rem; font-size:.8rem; color:var(--text-muted); margin:.6rem 0; }
+          #mobileBucketChoice { min-width:0; flex:1; min-height:44px; padding:.4rem; border:1px solid var(--border); border-radius:8px; background:#1e293b; color:var(--text-main); font:inherit; color-scheme:dark; }
+          .mobile-bucket-details { padding:.8rem; border:1px solid var(--border); border-radius:8px; font-size:.85rem; line-height:1.7; white-space:pre-line; }
+          .mobile-calculation summary { min-height:44px; padding:.6rem 0; cursor:pointer; font-size:.8rem; color:var(--text-muted); }
+          .juwai-mobile-only :is(button,select,summary):focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        }
+
+        @media(max-width:600px) {
+          .juwai-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem; }
+          .juwai-group .juwai-card { padding:.7rem; min-width:0; }
+          .juwai-card h2 { font-size:1rem; }
+          #shedCard .juwai-card-values, #garageCard .juwai-card-values { display:flex; flex-direction:column; gap:.6rem; }
+          #shedCard .juwai-energy, #garageCard .juwai-energy { text-align:left; }
+          .juwai-card .juwai-kwh { font-size:clamp(1.125rem,4.6vw,1.25rem); margin:.2rem 0; }
+          #shedCard .juwai-power, #garageCard .juwai-power { font-size:1.125rem; margin:.2rem 0; }
+          .juwai-card-values .label { min-height:0; }
+          .juwai-energy .label { font-size:0; }
+          .juwai-energy .label::after { content:'Generated'; font-size:.7rem; }
+          #shedCard .juwai-card-values > div:first-child .label, #garageCard .juwai-card-values > div:first-child .label { font-size:0; }
+          #shedCard .juwai-card-values > div:first-child .label::after, #garageCard .juwai-card-values > div:first-child .label::after { content:'Latest power'; font-size:.7rem; }
+          .juwai-card .juwai-period { display:none; }
+          .juwai-group .juwai-metrics { display:grid; grid-template-columns:1fr; gap:.4rem; margin:.8rem 0; }
+          .juwai-metrics > div { display:flex; justify-content:space-between; flex-wrap:wrap; align-items:baseline; gap:.2rem; }
+          .juwai-metrics dt { font-size:.75rem; margin:0; }
+          .juwai-metrics dd { font-size:.875rem; }
+          .juwai-card > .period-note { font-size:.7rem; }
+          #totalCard { grid-column:1 / -1; }
+          #totalCard .juwai-power { font-size:1.25rem; margin:.2rem 0; }
+          .mobile-generation-disclaimer { color:var(--text-muted); font-size:.75rem; margin:-.5rem 0 .8rem; }
+        }
+
+        .tabs { overflow-x:auto; flex-shrink:0; }
+        .tabs button { flex-shrink:0; }
+        body:has(#ewelinkPanel:not([hidden])) > .container { max-width:1440px; }
+        #ewelinkPanel { width:100%; min-width:0; align-self:stretch; }
+        .ewelink-group { width:100%; }
+        .ewelink-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+        .ewelink-card { min-width:0; background:#101828; box-shadow:none; padding:1rem; }
+        .ewelink-heading { display:flex; flex-direction:column; gap:.4rem; margin-bottom:1rem; }
+        .ewelink-heading h2 { font-size:1rem; line-height:1.4; min-height:2.8em; overflow-wrap:anywhere; }
+        .ewelink-state { color:var(--export-color); font-size:.75rem; }
+        .ewelink-power { color:var(--import-color); font-size:clamp(1.5rem,2.4vw,2rem); font-weight:700; font-variant-numeric:tabular-nums; line-height:1.3; margin:.3rem 0 1rem; overflow-wrap:anywhere; }
+        .ewelink-card dl { display:grid; grid-template-columns:1fr 1fr; gap:.75rem .5rem; }
+        .ewelink-card dt { color:var(--text-muted); font-size:.75rem; margin-bottom:.3rem; }
+        .ewelink-card dd { font-size:.9rem; font-variant-numeric:tabular-nums; }
+        .ewelink-card time { display:block; color:var(--text-muted); font-size:.7rem; line-height:1.4; margin-top:1rem; }
+        .ewelink-card[data-stale="true"] :is(.ewelink-power,.ewelink-state) { color:var(--text-muted); }
+        .ewelink-chart-section { min-width:0; margin-top:1.5rem; padding-top:1.25rem; border-top:1px solid var(--border); }
+        .ewelink-chart-section h2 { font-size:1rem; margin-bottom:1rem; }
+        .ewelink-chart { position:relative; width:100%; min-width:0; height:340px; }
+        #ewelinkDetails { margin-top:.75rem; }
+        .ewelink-chart-section :is(select,button) { min-height:44px; max-width:100%; padding:.6rem; border:1px solid var(--border); border-radius:8px; background:#1e293b; color:var(--text-main); font:inherit; font-size:.85rem; color-scheme:dark; }
+        .ewelink-chart-section button { cursor:pointer; margin:.5rem 0; }
+        .ewelink-chart-section :is(select,button):focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        @media(min-width:1100px) { .ewelink-grid { grid-template-columns:repeat(5,minmax(0,1fr)); } }
+        @media(max-width:600px) {
+          .ewelink-grid { grid-template-columns:1fr; gap:.65rem; }
+          .ewelink-group { padding:.75rem; }
+          .ewelink-card { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.65rem 1rem; padding:.85rem; }
+          .ewelink-heading { margin:0; gap:.25rem; }
+          .ewelink-heading h2 { min-height:0; font-size:1rem; }
+          .ewelink-reading { text-align:right; min-width:80px; }
+          .ewelink-reading .label { font-size:.65rem; }
+          .ewelink-power { font-size:1.4rem; white-space:nowrap; margin:.2rem 0 0; }
+          .ewelink-card dl { grid-column:1/-1; display:flex; flex-wrap:wrap; justify-content:space-between; gap:.5rem 1rem; }
+          .ewelink-card dl > div { display:flex; align-items:baseline; gap:.35rem; }
+          .ewelink-card dt { font-size:.7rem; margin:0; }
+          .ewelink-card dd { font-size:.8rem; }
+          .ewelink-card time { grid-column:1/-1; margin:0; }
+          .ewelink-chart { height:300px; }
+          .ewelink-chart-section { margin-top:1rem; }
+          .tabs button { padding:.75rem .8rem; }
+        }
+        .device-title { display:flex; align-items:center; gap:.5rem; }
+        .device-title span { min-width:0; }
+        .device-icon { width:22px; height:22px; flex-shrink:0; color:var(--import-color); }
+        .ewelink-heading { margin-bottom:.65rem; }
+        .ewelink-heading h2 { min-height:0; }
+        .device-update { display:flex; align-items:center; flex-wrap:wrap; gap:.35rem .6rem; margin-top:1rem; color:var(--text-muted); font-size:.7rem; line-height:1.5; }
+        .device-connection { display:inline-flex; align-items:center; gap:.35rem; }
+        .device-update time { display:inline; margin:0; font-size:inherit; }
+        .device-update .ewelink-state { color:inherit; font-size:inherit; }
+        .status-dot { width:6px; height:6px; border-radius:50%; background:#f59e0b; flex-shrink:0; }
+        [data-stale="false"] .status-dot { background:#34d399; animation:connection-pulse 2.4s ease-in-out infinite; }
+        @keyframes connection-pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+        @media(prefers-reduced-motion:reduce) { [data-stale="false"] .status-dot { animation:none; } }
+        @media(max-width:600px) { .ewelink-card .device-update { grid-column:1/-1; margin:0; } .device-icon { width:20px; height:20px; } }
+        /* Home tab: floor plan drawn from docs/home-page-plan.md */
+        .home-plan-card { display:flex; flex-direction:column; align-items:center; }
+        .home-plan-card .juwai-group-heading { width:100%; }
+        .home-plan-note { width:auto; margin:0; }
+        .home-plan { width:100%; max-width:640px; height:auto; max-height:82vh; display:block; }
+        .home-plan .walls > * { fill:#3b4a63; stroke:#3b4a63; stroke-width:20; stroke-linejoin:miter; }
+        .home-plan .rooms > * { fill:var(--bg-base); transition:fill .6s; }
+        .home-plan .cupboards > * { fill:var(--border); }
+        .home-plan .opening { fill:var(--bg-base); transition:fill .6s; }
+        .home-plan .glass { stroke:var(--import-color); stroke-width:1.6; opacity:.85; }
+        .home-plan .leaf { stroke:var(--text-main); stroke-width:3; stroke-linecap:round; }
+        .home-plan .swing { fill:none; stroke:var(--text-muted); stroke-width:1.4; stroke-dasharray:5 5; opacity:.8; }
+        .home-plan .slide { stroke:var(--text-main); stroke-width:3; stroke-linecap:round; }
+        .home-plan .room-labels text { fill:var(--text-muted); font-weight:700; letter-spacing:.08em; text-transform:uppercase; text-anchor:middle; dominant-baseline:middle; font-family:inherit; paint-order:stroke; stroke:var(--bg-base); stroke-width:6px; stroke-linejoin:round; }
+        .home-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1rem; align-items:start; }
+        .home-chip rect { fill:var(--card-bg); stroke:var(--border); stroke-width:2; }
+        .home-chip text { fill:var(--text-main); font-size:24px; font-weight:700; text-anchor:middle; dominant-baseline:middle; font-family:inherit; }
+        .home-chip[data-kind="temp"] text { fill:var(--import-color); }
+        .home-chip[data-state="open"] rect { stroke:#f59e0b; } .home-chip[data-state="open"] text { fill:#fbbf24; }
+        .home-chip[data-state="on"] text { fill:var(--export-color); }
+        .home-chip[data-state="stale"] { opacity:.5; }
+        .home-legend { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:.4rem 1rem; margin-top:.8rem; color:var(--text-muted); font-size:.75rem; }
+        .home-legend-scale { display:inline-flex; align-items:center; gap:.5rem; }
+        .home-legend-bar { width:140px; height:10px; border-radius:5px; border:1px solid var(--border);
+          background:linear-gradient(to right,hsl(215 45% 32%),hsl(165 45% 32%),hsl(113 45% 32%),hsl(62 45% 32%),hsl(10 45% 32%)); }
+        .home-rows { display:flex; flex-direction:column; gap:.7rem; margin-top:.6rem; }
+        .home-row { display:flex; flex-wrap:wrap; justify-content:space-between; column-gap:.75rem; row-gap:.1rem; align-items:baseline; }
+        .home-row-name { color:var(--text-main); font-weight:600; min-width:0; }
+        .home-row-value { font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; color:var(--text-main); }
+        .home-row[data-kind="temp"] .home-row-value { color:var(--import-color); font-size:1.4rem; }
+        .home-row[data-state="open"] .home-row-value { color:#fbbf24; } .home-row[data-state="on"] .home-row-value { color:var(--export-color); }
+        .home-row[data-state="stale"] { opacity:.55; }
+        .home-row-detail { color:var(--text-muted); font-size:.75rem; margin-top:-.45rem; }
+        .home-card h2 { font-size:.85rem; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); }
+        /* Icon tab boxes: names are in aria-label/title */
+        .tabs button { display:inline-flex; align-items:center; justify-content:center; width:52px; height:52px; padding:0; }
+        .tabs button[aria-selected="false"] { border-color:var(--border); }
+        .tabs button[aria-selected="false"]:hover { color:var(--text-main); border-color:var(--text-muted); }
+        .tab-icon { width:26px; height:26px; }
+        /* Home sections on phones: Garage spans the row and temperatures shrink to fit. */
+        @media(max-width:600px) { #homeSection-garage { grid-column:1/-1; } .home-row[data-kind="temp"] .home-row-value { font-size:1.15rem; } }
+        /* eWeLink cards open their power graph underneath; one at a time */
+        .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+        .ewelink-latest { display:inline-flex; align-items:center; gap:.4rem; }
+        .ewelink-latest .status-dot { width:8px; height:8px; }
+        .ewelink-card[role="button"] { cursor:pointer; transition:border-color .2s; }
+        .ewelink-card[role="button"]:hover { border-color:var(--text-muted); }
+        .ewelink-card[role="button"]:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        .ewelink-card[role="button"][aria-expanded="true"] { grid-column:1/-1; border-color:var(--import-color); border-bottom-color:transparent; border-radius:16px 16px 0 0; }
+        @media(min-width:601px) { .ewelink-card[aria-expanded="true"] dl { grid-template-columns:repeat(3,max-content); column-gap:3rem; } }
+        .ewelink-hint { margin-top:-.3rem; }
+        /* The open graph continues the card above it: no gap, shared outline, one rounded shape */
+        .ewelink-grid > .ewelink-chart-section { grid-column:1/-1; margin:-1rem 0 0; padding:0 1rem 1rem; border:1px solid var(--import-color); border-top:0; border-radius:0 0 16px 16px; background:#101828; }
+        .ewelink-grid > .ewelink-chart-section h2 { padding-top:.9rem; border-top:1px solid var(--border); }
+        @media(max-width:600px) { .ewelink-grid > .ewelink-chart-section { margin-top:-.65rem; padding:0 .85rem .85rem; } }
+        /* Keep tabs and the time-window menu on one row on phones; last so it wins over earlier tab rules. */
+        @media(max-width:600px) { .tabs { gap:.25rem; } .tabs button { width:48px; height:48px; padding:0; } .tab-icon { width:24px; height:24px; } .tab-window { font-size:.8rem; padding:.5rem; max-width:7.5rem; } }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <nav class="tabs" role="tablist" aria-label="Meter view">
+          <button id="powerTab" type="button" role="tab" aria-selected="true" aria-controls="powerPanel" aria-label="Power" title="Power"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2z"/></svg></button>
+          <button id="juwaiTab" type="button" role="tab" aria-selected="false" aria-controls="juwaiPanel" aria-label="Juwai" title="Juwai" tabindex="-1"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3.5 14 6.5 4h14l-3 10h-14z"/><path d="M5 9h14M11 4l-3 10M15.5 4l-3 10M10.5 14v4M6.5 21h8M10.5 18v3"/></svg></button>
+          <button id="ewelinkTab" type="button" role="tab" aria-selected="false" aria-controls="ewelinkPanel" aria-label="eWeLink" title="eWeLink" tabindex="-1"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 2v5M15 2v5M6 7h12v4a6 6 0 0 1-12 0V7zM12 17v5"/></svg></button>
+          <button id="homeTab" type="button" role="tab" aria-selected="false" aria-controls="homePanel" aria-label="Home" title="Home" tabindex="-1"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5.5v-6h-5v6H4a1 1 0 0 1-1-1v-9.5z"/></svg></button>
+          <select id="timeWindow" class="time-select tab-window" aria-label="Time window">
+            <option value="15m" selected>15 Mins</option>
+            <option value="30m">30 Mins</option>
+            <option value="1h">1 Hour</option>
+            <option value="2h">2 Hours</option>
+            <option value="4h">4 Hours</option>
+            <option value="8h">8 Hours</option>
+<option value="1d">Today (00:00–24:00)</option><option value="24h">24 Hours</option><option value="7d">1 Week</option>
+<option value="30d">1 Month (30 days)</option><option value="90d">3 Months (90 days)</option>
+<option value="365d">1 Year (365 days)</option>
+<option value="custom">Custom dates…</option>
+          </select>
+        </nav>
+        <section id="powerPanel" class="tab-panel" role="tabpanel" aria-labelledby="powerTab">
+        <div class="card chart-card">
+          <div class="header-row">
+            <div class="reading-column">
+              <div class="label">Live Net Power</div>
+              <div class="stat" id="currentVal">-- W</div>
+            </div>
+            <div class="reading-column meter-reading" aria-label="Combined meter reading">
+              <div class="label">Combined meter reading</div>
+              <div id="meterKwh" class="meter-value">— kWh</div>
+            </div>
+          </div>
+
+          <div class="energy-row" aria-label="Energy for the selected time window">
+            <div>
+              <div class="label">Imported</div>
+              <div id="totalImportVal" class="energy-value" style="color: var(--import-color)">— Wh</div>
+            </div>
+            <div class="energy-export">
+              <div class="label">Exported</div>
+              <div id="totalExportVal" class="energy-value" style="color: var(--export-color)">— Wh</div>
+            </div>
+          </div>
+
+          <form id="customRange" class="custom-range" hidden novalidate>
+            <label for="dateFrom">From<input id="dateFrom" type="datetime-local" required></label>
+            <label for="dateTo">To<input id="dateTo" type="datetime-local" required></label>
+            <button id="applyRange" type="submit">Apply period</button>
+            <p id="rangeError" role="alert"></p>
+            <p class="period-note" style="grid-column:1 / -1">Your local time. Choose up to 365 days.</p>
+          </form>
+          <div class="chart-wrapper">
+            <canvas id="lineChart" role="img" aria-label="Net power over the selected time period"></canvas>
+          </div>
+        </div>
+
+        </section>
+<section id="juwaiPanel" class="tab-panel" role="tabpanel" aria-labelledby="juwaiTab" hidden>
+<div class="card juwai-group">
+<div class="juwai-group-heading"><h1>Generation</h1><label for="juwaiWindow">Period <select id="juwaiWindow"><option value="live">Live · past hour</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
+<p class="juwai-mobile-only mobile-generation-disclaimer">Generation totals are estimates.</p>
+<p id="juwaiStatus" class="period-note" role="status" hidden></p>
+<div class="juwai-grid"><article class="card juwai-card" id="shedCard" data-stale="true">
+<h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m2 10 10-7 10 7M5 9v12h14V9M9 21v-8h6v8"/></svg><span>Shed</span></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="shedPower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="shedEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
+<dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="shedVoltage">— V</dd></div><div><dt>Current</dt><dd id="shedCurrent">— A</dd></div></dl><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="shedState">Loading…</span></span><time id="shedAge">Waiting for readings</time></div></article><article class="card juwai-card" id="garageCard" data-stale="true">
+<h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m2 9 10-6 10 6M4 8v13h16V8M7 21V11h10v10M7 14h10M7 17h10"/></svg><span>Garage</span></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="garagePower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="garageEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
+<dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="garageVoltage">— V</dd></div><div><dt>Current</dt><dd id="garageCurrent">— A</dd></div></dl><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="garageState">Loading…</span></span><time id="garageAge">Waiting for readings</time></div></article><article class="card juwai-card" id="totalCard" data-stale="true">
+<h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2" y="4" width="8" height="8" rx="1"/><rect x="14" y="4" width="8" height="8" rx="1"/><path d="M6 15v4h12v-4m-6 1v6"/></svg><span>Shed and garage total</span></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="totalPower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="totalEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
+<div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="totalState">Loading…</span></span><time id="totalAge">Waiting for readings</time></div></article></div>
+<div class="juwai-chart-section"><div class="juwai-controls"><label for="juwaiMetric">Chart <select id="juwaiMetric"><option value="power_w">Power (W)</option><option value="voltage_v">Voltage (V)</option><option value="current_a">Current (A)</option></select></label></div>
+<div class="juwai-mobile-only" id="mobileGenerationView">
+<div class="mobile-generation-summary"><span id="mobileGenerationPeriod">Today</span><strong id="mobileGenerationTotal">— kWh</strong><span>estimated generation</span><div id="mobileGenerationSplit"></div></div>
+<h3 id="mobileChartHeading">Generation by hour</h3>
+<div class="mobile-meter-buttons" id="mobileMeterButtons" role="group" aria-label="Chart meter"><button type="button" data-meter="total" aria-pressed="true">Total</button><button type="button" data-meter="shed" aria-pressed="false">Shed</button><button type="button" data-meter="garage" aria-pressed="false">Garage</button><button type="button" data-meter="compare" aria-pressed="false">Compare</button></div>
+<button type="button" id="mobileWeekBack" hidden>← All weeks</button>
+<div class="mobile-chart"><canvas id="mobileJuwaiChart" role="img" aria-label="Generation chart; use the period details selector below for values"></canvas></div>
+<div id="mobileBinControls"><label for="mobileBucketChoice">Details for <select id="mobileBucketChoice"></select></label><div id="mobileBucketDetails" class="mobile-bucket-details" role="status" aria-live="polite"></div><button type="button" id="mobileWeekDrill" hidden>View daily detail</button></div>
+<p id="mobileCoverage" class="period-note"></p>
+<details class="mobile-calculation"><summary>How this is calculated</summary><p class="period-note">Generation is estimated from power readings collected every 15 minutes. Reverse flow contributes no generation. Gaps over 30 minutes are excluded. Bars with incomplete readings show recorded generation only. Grey hatched slots mean no data, not zero generation. Days use UK time.</p></details>
+</div>
+<div class="juwai-chart juwai-desktop-chart"><canvas id="juwaiChart" role="img" aria-label="Shed, Garage and combined power for the selected period"></canvas></div>
+<p id="juwaiHistoryNote" class="period-note" aria-live="polite">Loading generation…</p></div>
+</div>
+<p class="period-note">Solar meter is not connected: Tuya permission is unresolved. Read-only monitoring.</p>
+</section>
+<section id="ewelinkPanel" class="tab-panel" role="tabpanel" aria-labelledby="ewelinkTab" hidden>
+<div class="card juwai-group ewelink-group"><div class="juwai-group-heading"><h1>Inverters &amp; fridge</h1><label for="ewelinkPeriod">Period <select id="ewelinkPeriod"><option value="live">Live · past hour</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
+<p id="ewelinkStatus" class="period-note" role="status">Loading connection status…</p><p class="period-note ewelink-hint">Tap a device to show its power graph for the selected period.</p>
+<div class="ewelink-grid"><article id="ew-inverter-1000" class="card ewelink-card" data-stale="true" role="button" tabindex="0" aria-expanded="false" aria-controls="ewelinkChartSection">
+<div class="ewelink-heading"><h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m13 6-4 6h6l-4 6M1 8h3m-3 8h3m16-8h3m-3 8h3"/></svg><span>1000 watt inverter</span></h2></div>
+<div class="ewelink-reading"><div class="label ewelink-latest"><span class="status-dot" aria-hidden="true"></span>Latest power<span class="visually-hidden" data-state>Loading…</span></div><div class="ewelink-power" data-power>— W</div></div>
+<dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl></article><article id="ew-garage-inverter" class="card ewelink-card" data-stale="true" role="button" tabindex="0" aria-expanded="false" aria-controls="ewelinkChartSection">
+<div class="ewelink-heading"><h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m13 6-4 6h6l-4 6M1 8h3m-3 8h3m16-8h3m-3 8h3"/></svg><span>Garage inverter</span></h2></div>
+<div class="ewelink-reading"><div class="label ewelink-latest"><span class="status-dot" aria-hidden="true"></span>Latest power<span class="visually-hidden" data-state>Loading…</span></div><div class="ewelink-power" data-power>— W</div></div>
+<dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl></article><article id="ew-inverter-600" class="card ewelink-card" data-stale="true" role="button" tabindex="0" aria-expanded="false" aria-controls="ewelinkChartSection">
+<div class="ewelink-heading"><h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m13 6-4 6h6l-4 6M1 8h3m-3 8h3m16-8h3m-3 8h3"/></svg><span>600 watt inverter</span></h2></div>
+<div class="ewelink-reading"><div class="label ewelink-latest"><span class="status-dot" aria-hidden="true"></span>Latest power<span class="visually-hidden" data-state>Loading…</span></div><div class="ewelink-power" data-power>— W</div></div>
+<dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl></article><article id="ew-charger-inverter" class="card ewelink-card" data-stale="true" role="button" tabindex="0" aria-expanded="false" aria-controls="ewelinkChartSection">
+<div class="ewelink-heading"><h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="6" width="17" height="14" rx="2"/><path d="M8 3v3m7-3v3m-4 3-3 5h6l-3 4"/></svg><span>Charger inverter</span></h2></div>
+<div class="ewelink-reading"><div class="label ewelink-latest"><span class="status-dot" aria-hidden="true"></span>Latest power<span class="visually-hidden" data-state>Loading…</span></div><div class="ewelink-power" data-power>— W</div></div>
+<dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl></article><article id="ew-fridge" class="card ewelink-card" data-stale="true" role="button" tabindex="0" aria-expanded="false" aria-controls="ewelinkChartSection">
+<div class="ewelink-heading"><h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M5 9h14M8 5v1m0 7v3"/></svg><span>Fridge</span></h2></div>
+<div class="ewelink-reading"><div class="label ewelink-latest"><span class="status-dot" aria-hidden="true"></span>Latest power<span class="visually-hidden" data-state>Loading…</span></div><div class="ewelink-power" data-power>— W</div></div>
+<dl><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl></article></div>
+<div id="ewelinkChartSection" class="ewelink-chart-section" hidden><h2 id="ewelinkChartHeading">Power history</h2><div class="juwai-controls" hidden><label for="ewelinkDevice">Device <select id="ewelinkDevice"><option value="inverter-1000">1000 watt inverter</option><option value="garage-inverter">Garage inverter</option><option value="inverter-600">600 watt inverter</option><option value="charger-inverter">Charger inverter</option><option value="fridge">Fridge</option></select></label></div>
+<button id="ewelinkBack" type="button" hidden>← All weeks</button>
+<div class="ewelink-chart"><canvas id="ewelinkChart" role="img" aria-label="Selected device power history; use the details selector below for bar values"></canvas></div>
+<div id="ewelinkBinControls" hidden><div id="ewelinkDetails" class="mobile-bucket-details" role="status" aria-live="polite"></div><button id="ewelinkDrill" type="button" hidden>View daily detail</button></div>
+<p id="ewelinkHistoryNote" class="period-note">Loading recorded readings…</p>
+<p class="period-note">Readings are checked every 5 minutes. Dates and times use UK time.</p>
+</div></div></section>
+<section id="homePanel" class="tab-panel" role="tabpanel" aria-labelledby="homeTab" hidden>
+<div class="card home-plan-card">
+<div class="juwai-group-heading"><h1>Home</h1><span id="homeStatus" class="period-note home-plan-note" role="status">Loading readings…</span></div>
+<svg class="home-plan" viewBox="80 40 830 1500" role="img" aria-labelledby="homePlanTitle">
+<title id="homePlanTitle">Floor plan of the bungalow: Conservatory at the rear, then Bedroom 1, Kitchen, Hall and Front Porch, Lounge, Shower Room, Guest Bedroom and a second porch at the front</title>
+<g class="walls">
+<polygon points="150,150 675,150 675,415 150,415"/>
+<polygon points="100,435 415,435 415,850 100,850"/>
+<polygon points="425,435 745,435 745,745 425,745"/>
+<polygon points="425,755 745,755 745,950 500,950 500,850 425,850"/>
+<polygon points="755,755 855,755 855,970 755,970"/>
+<polygon points="100,860 490,860 490,1385 100,1385"/>
+<polygon points="580,960 745,960 745,1185 580,1185"/>
+<polygon points="500,1195 745,1195 745,1425 765,1425 765,1510 520,1510 520,1425 500,1425"/>
+<polygon points="755,1275 885,1275 885,1415 755,1415"/>
+<rect x="500" y="960" width="70" height="75"/>
+<rect x="500" y="1045" width="70" height="65"/>
+<rect x="500" y="1120" width="70" height="65"/>
+</g><g class="rooms">
+<polygon points="150,150 675,150 675,415 150,415"><title>Conservatory</title></polygon>
+<polygon points="100,435 415,435 415,850 100,850"><title>Bedroom 1</title></polygon>
+<polygon points="425,435 745,435 745,745 425,745"><title>Kitchen</title></polygon>
+<polygon points="425,755 745,755 745,950 500,950 500,850 425,850"><title>Hall</title></polygon>
+<polygon points="755,755 855,755 855,970 755,970"><title>Front Porch</title></polygon>
+<polygon points="100,860 490,860 490,1385 100,1385"><title>Lounge</title></polygon>
+<polygon points="580,960 745,960 745,1185 580,1185"><title>Shower Room</title></polygon>
+<polygon points="500,1195 745,1195 745,1425 765,1425 765,1510 520,1510 520,1425 500,1425"><title>Guest Bedroom</title></polygon>
+<polygon points="755,1275 885,1275 885,1415 755,1415"><title>Back Fuckin Porch</title></polygon>
+</g><g class="cupboards">
+<rect x="500" y="960" width="70" height="75"/>
+<rect x="500" y="1045" width="70" height="65"/>
+<rect x="500" y="1120" width="70" height="65"/>
+</g><g class="windows">
+<rect class="opening" x="165" y="139" width="155" height="12"/>
+<line class="glass" x1="165" y1="143.0" x2="320" y2="143.0"/>
+<line class="glass" x1="165" y1="147.0" x2="320" y2="147.0"/>
+<rect class="opening" x="505" y="139" width="155" height="12"/>
+<line class="glass" x1="505" y1="143.0" x2="660" y2="143.0"/>
+<line class="glass" x1="505" y1="147.0" x2="660" y2="147.0"/>
+<rect class="opening" x="139" y="165" width="12" height="235"/>
+<line class="glass" x1="143.0" y1="165" x2="143.0" y2="400"/>
+<line class="glass" x1="147.0" y1="165" x2="147.0" y2="400"/>
+<rect class="opening" x="674" y="165" width="12" height="235"/>
+<line class="glass" x1="678.0" y1="165" x2="678.0" y2="400"/>
+<line class="glass" x1="682.0" y1="165" x2="682.0" y2="400"/>
+<rect class="opening" x="470" y="414" width="160" height="22"/>
+<line class="glass" x1="470" y1="421.0" x2="630" y2="421.0"/>
+<line class="glass" x1="470" y1="429.0" x2="630" y2="429.0"/>
+<rect class="opening" x="770" y="744" width="70" height="12"/>
+<line class="glass" x1="770" y1="748.0" x2="840" y2="748.0"/>
+<line class="glass" x1="770" y1="752.0" x2="840" y2="752.0"/>
+<rect class="opening" x="854" y="775" width="12" height="125"/>
+<line class="glass" x1="858.0" y1="775" x2="858.0" y2="900"/>
+<line class="glass" x1="862.0" y1="775" x2="862.0" y2="900"/>
+<rect class="opening" x="170" y="1384" width="210" height="12"/>
+<line class="glass" x1="170" y1="1388.0" x2="380" y2="1388.0"/>
+<line class="glass" x1="170" y1="1392.0" x2="380" y2="1392.0"/>
+<rect class="opening" x="744" y="990" width="12" height="160"/>
+<line class="glass" x1="748.0" y1="990" x2="748.0" y2="1150"/>
+<line class="glass" x1="752.0" y1="990" x2="752.0" y2="1150"/>
+<rect class="opening" x="540" y="1509" width="205" height="12"/>
+<line class="glass" x1="540" y1="1513.0" x2="745" y2="1513.0"/>
+<line class="glass" x1="540" y1="1517.0" x2="745" y2="1517.0"/>
+<rect class="opening" x="509" y="1435" width="12" height="65"/>
+<line class="glass" x1="513.0" y1="1435" x2="513.0" y2="1500"/>
+<line class="glass" x1="517.0" y1="1435" x2="517.0" y2="1500"/>
+<rect class="opening" x="764" y="1435" width="12" height="65"/>
+<line class="glass" x1="768.0" y1="1435" x2="768.0" y2="1500"/>
+<line class="glass" x1="772.0" y1="1435" x2="772.0" y2="1500"/>
+<rect class="opening" x="770" y="1264" width="100" height="12"/>
+<line class="glass" x1="770" y1="1268.0" x2="870" y2="1268.0"/>
+<line class="glass" x1="770" y1="1272.0" x2="870" y2="1272.0"/>
+<rect class="opening" x="884" y="1290" width="12" height="110"/>
+<line class="glass" x1="888.0" y1="1290" x2="888.0" y2="1400"/>
+<line class="glass" x1="892.0" y1="1290" x2="892.0" y2="1400"/>
+</g><g class="doors">
+<g aria-label="Conservatory French doors"><title>Conservatory French doors</title><rect class="opening" x="332" y="139" width="160" height="12"/>
+<line class="leaf" x1="332" y1="140" x2="332" y2="60"/><path class="swing" d="M332,60 A80,80 0 0 1 412,140"/><line class="leaf" x1="492" y1="140" x2="492" y2="60"/><path class="swing" d="M492,60 A80,80 0 0 0 412,140"/>
+</g>
+<g aria-label="Bedroom 1 to Hall"><title>Bedroom 1 to Hall</title><rect class="opening" x="414" y="765" width="12" height="75"/>
+<line class="leaf" x1="425" y1="765" x2="500" y2="765"/><path class="swing" d="M500,765 A75,75 0 0 1 425,840"/>
+</g>
+<g aria-label="Kitchen to Hall"><title>Kitchen to Hall</title><rect class="opening" x="440" y="744" width="80" height="12"/>
+<line class="leaf" x1="440" y1="745" x2="440" y2="665"/><path class="swing" d="M440,665 A80,80 0 0 1 520,745"/>
+</g>
+<g aria-label="Hall to Lounge"><title>Hall to Lounge</title><rect class="opening" x="428" y="849" width="60" height="12"/>
+<line class="leaf" x1="428" y1="860" x2="428" y2="920"/><path class="swing" d="M428,920 A60,60 0 0 0 488,860"/>
+</g>
+<g aria-label="Hall to Shower Room"><title>Hall to Shower Room</title><rect class="opening" x="600" y="949" width="75" height="12"/>
+<line class="leaf" x1="600" y1="960" x2="600" y2="1035"/><path class="swing" d="M600,1035 A75,75 0 0 0 675,960"/>
+</g>
+<g aria-label="Hall to Front Porch"><title>Hall to Front Porch</title><rect class="opening" x="744" y="790" width="12" height="80"/>
+<line class="leaf" x1="755" y1="870" x2="835" y2="870"/><path class="swing" d="M835,870 A80,80 0 0 0 755,790"/>
+</g>
+<g aria-label="Front Porch outside door"><title>Front Porch outside door</title><rect class="opening" x="770" y="969" width="75" height="12"/>
+<line class="leaf" x1="770" y1="970" x2="770" y2="895"/><path class="swing" d="M770,895 A75,75 0 0 1 845,970"/>
+</g>
+<g aria-label="Lounge to Guest Bedroom"><title>Lounge to Guest Bedroom</title><rect class="opening" x="489" y="1290" width="12" height="80"/>
+<line class="leaf" x1="500" y1="1370" x2="580" y2="1370"/><path class="swing" d="M580,1370 A80,80 0 0 0 500,1290"/>
+</g>
+<g aria-label="Guest Bedroom to Back Fuckin Porch"><title>Guest Bedroom to Back Fuckin Porch</title><rect class="opening" x="744" y="1300" width="12" height="70"/>
+<line class="leaf" x1="755" y1="1370" x2="825" y2="1370"/><path class="swing" d="M825,1370 A70,70 0 0 0 755,1300"/>
+</g>
+<g aria-label="Back Fuckin Porch outside door"><title>Back Fuckin Porch outside door</title><rect class="opening" x="785" y="1414" width="75" height="12"/>
+<line class="leaf" x1="860" y1="1415" x2="860" y2="1340"/><path class="swing" d="M860,1340 A75,75 0 0 0 785,1415"/>
+</g>
+<g aria-label="Bedroom 1 to Conservatory"><title>Bedroom 1 to Conservatory</title><rect class="opening" x="200" y="414" width="180" height="22"/>
+<line class="slide" x1="200" y1="422.0" x2="308" y2="422.0"/><line class="slide" x1="272" y1="428.0" x2="380" y2="428.0"/></g>
+</g><g class="room-labels">
+<text font-size="26"><tspan x="412" y="290">Conservatory</tspan></text>
+<text font-size="26"><tspan x="257" y="650">Bedroom 1</tspan></text>
+<text font-size="26"><tspan x="585" y="600">Kitchen</tspan></text>
+<text font-size="24"><tspan x="600" y="810">Hall</tspan></text>
+<text font-size="15"><tspan x="805" y="773">Front</tspan><tspan x="805" y="791">Porch</tspan></text>
+<text font-size="26"><tspan x="295" y="1130">Lounge</tspan></text>
+<text font-size="22"><tspan x="662" y="1097">Shower</tspan><tspan x="662" y="1123">Room</tspan></text>
+<text font-size="24"><tspan x="642" y="1276">Guest</tspan><tspan x="642" y="1304">Bedroom</tspan></text>
+<text font-size="15"><tspan x="842" y="1282">Back</tspan><tspan x="842" y="1300">Fuckin</tspan><tspan x="842" y="1318">Porch</tspan></text>
+</g>
+<g id="homeOverlays" class="home-overlays"></g>
+</svg>
+<div class="home-legend"><span>Room colour shows temperature</span><span class="home-legend-scale" aria-hidden="true"><span>12°C</span><span class="home-legend-bar"></span><span>25°C+</span></span></div>
+</div>
+<div class="home-cards"><article class="card home-card" id="homeSection-outside"><h2>Outside</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article><article class="card home-card" id="homeSection-loft"><h2>Loft</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article><article class="card home-card" id="homeSection-garage"><h2>Garage</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article></div>
+</section>
+      </div>
+
+      <script>
+const $ = id => document.getElementById(id);
+let activeTab = 'power';
+const views = ['power','juwai','ewelink','home'];
+function connectionLost(){$('currentVal').style.opacity='.55';$('meterKwh').style.opacity='.55';}
+function selectTab(name) {
+  if(activeTab===name)return;
+  activeTab=name;stopJuwai();stopHome();window.stopEwelink?.();
+  $('timeWindow').hidden=name!=='power';
+  if(location.hash!=='#'+name)history.replaceState(null,'','#'+name);
+  if(name!=='power'){generation++;controller?.abort();}
+  for(const view of views){
+    const current=view===name;
+    $(view+'Tab').setAttribute('aria-selected',String(current));$(view+'Tab').tabIndex=current?0:-1;
+    $(view+'Panel').hidden=!current;
+  }
+  if(name==='ewelink') {
+    window.startEwelink?.();
+  } else if(name==='juwai') {
+    makeJuwaiChart();juwaiChart.resize();readJuwai(juwaiVersion);
+  } else if(name==='home') {
+    readHome(homeVersion);
+  } else if(name==='power') {
+    chart.resize();lastHistory=0;
+    loadHistory().catch(e=>{if(e.name!=='AbortError')connectionLost();});
+  }
+}
+for(const view of views){
+  $(view+'Tab').addEventListener('click',()=>selectTab(view));
+  $(view+'Tab').addEventListener('keydown',event=>{
+    if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+    event.preventDefault();
+    const i=views.indexOf(view);
+    const next=event.key==='Home'?views[0]:event.key==='End'?views[views.length-1]:views[(i+(event.key==='ArrowRight'?1:views.length-1))%views.length];
+    selectTab(next);$(next+'Tab').focus();
+  });
+}
+
+let juwaiChart=null, juwaiTimer=null, juwaiController=null, juwaiVersion=0;
+let juwaiHistory={}, juwaiHistoryKey='', juwaiHistoryTime=0;
+const juwaiFields={power_w:{label:'Power',unit:'W',column:4},voltage_v:{label:'Voltage',unit:'V',column:2},current_a:{label:'Current',unit:'A',column:3}};
+function stopJuwai(){juwaiVersion++;clearTimeout(juwaiTimer);juwaiTimer=null;juwaiController?.abort();juwaiController=null;}
+function makeJuwaiChart(){
+  if(juwaiChart)return;
+  juwaiChart=new Chart($('juwaiChart'),{type:'line',data:{datasets:['Shed','Garage','Total'].map((name,i)=>({label:name,data:[],parsing:false,borderColor:['#38bdf8','#34d399','#fbbf24'][i],backgroundColor:['#38bdf8','#34d399','#fbbf24'][i],pointRadius:3,pointHitRadius:10,borderWidth:2,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:v=>new Date(v).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})},grid:{color:'#1e293b'}},y:{ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()+' '+juwaiFields[$('juwaiMetric').value].unit}}}}});
+}
+function drawJuwai(){
+  if(!juwaiChart)return;
+  const field=juwaiFields[$('juwaiMetric').value];let count=0;
+  for(const [i,id] of ['shed','garage'].entries()){
+    const series=juwaiHistory[id],points=[];
+    for(const row of series?.points||[]){
+      const prev=points[points.length-1];
+      if(prev && row[0]-prev.x>Math.max(1800000,series.step_ms*2.1))points.push({x:prev.x+series.step_ms,y:null});
+      points.push({x:row[0],y:Number.isFinite(row[field.column])?row[field.column]:null});count++;
+    }
+    juwaiChart.data.datasets[i].data=points;
+    if(series){juwaiChart.options.scales.x.min=series.start;juwaiChart.options.scales.x.max=series.end;}
+  }
+  const combined=juwaiChart.data.datasets[2];combined.hidden=$('juwaiMetric').value!=='power_w';
+  const other=new Map((juwaiHistory.garage?.points||[]).map(r=>[r[0],r[4]]));
+  combined.data=(juwaiChart.data.datasets[0].data||[]).map(p=>({x:p.x,y:Number.isFinite(p.y)&&Number.isFinite(other.get(p.x))?p.y+other.get(p.x):null}));
+  juwaiChart.options.scales.y.title={display:true,text:field.label+' ('+field.unit+')',color:'#94a3b8'};
+  juwaiChart.update('none');
+  const period=$('juwaiWindow').selectedOptions[0].textContent;
+  document.querySelectorAll('.juwai-period').forEach(el=>el.textContent=period);
+  const energies=['shed','garage'].map(id=>juwaiHistory[id]?.energy);
+  for(const [i,id] of ['shed','garage'].entries())$(id+'Energy').textContent=Number.isFinite(energies[i]?.estimated_kwh)?energies[i].estimated_kwh.toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})+' kWh':'— kWh';
+  const complete=energies.every(e=>Number.isFinite(e?.estimated_kwh));
+  $('totalEnergy').textContent=complete?energies.reduce((sum,e)=>sum+e.estimated_kwh,0).toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})+' kWh':'— kWh';
+  const covered=energies.map(e=>e?.coverage_s||0), duration=energies[0]?.period_s||0;
+  const hours=s=>(s/3600).toLocaleString(undefined,{maximumFractionDigits:1});
+  $('juwaiHistoryNote').textContent=juwaiHistoryKey?('Generation is estimated from 15-minute readings. Gaps over 30 minutes are excluded. '+
+    (duration?'Recorded: Shed '+hours(covered[0])+'h, Garage '+hours(covered[1])+'h of '+hours(duration)+'h. ':'')+
+    (complete?'':'Not enough readings for a combined total. ')+
+    (['today','yesterday'].includes($('juwaiWindow').value)?'Calendar days use UK time.':'')):'Loading generation…';
+  drawMobileJuwai();
+}
+function renderJuwai(data){
+  for(const device of data.devices){
+    if(!['shed','garage'].includes(device.id))continue;
+    const id=device.id,number=(v,unit,digits)=>Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:digits})+' '+unit:'— '+unit;
+    $(id+'Power').textContent=number(device.values.power_w,'W',2);
+    $(id+'Voltage').textContent=number(device.values.voltage_v,'V',2);
+    $(id+'Current').textContent=number(device.values.current_a,'A',3);
+    $(id+'Card').dataset.stale=String(device.stale);
+    $(id+'State').textContent=device.stale?'Delayed':'Current';
+    $(id+'Age').textContent=device.observed_at?'Checked '+new Date(device.observed_at).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'No recorded sample';
+    if(device.observed_at)$(id+'Age').dateTime=new Date(device.observed_at).toISOString();
+  }
+  const valid=data.devices.filter(d=>['shed','garage'].includes(d.id)&&!d.stale&&Number.isFinite(d.values.power_w));
+  $('totalPower').textContent=valid.length===2?valid.reduce((sum,d)=>sum+d.values.power_w,0).toLocaleString(undefined,{maximumFractionDigits:2})+' W':'— W';
+  $('totalCard').dataset.stale=String(valid.length!==2);
+  $('totalState').textContent=valid.length===2?'Current':'Delayed';
+  const stamps=data.devices.filter(d=>['shed','garage'].includes(d.id)).map(d=>d.observed_at).filter(Number.isFinite);
+  const stamp=stamps.length===2?Math.min(...stamps):null;
+  $('totalAge').textContent=stamp?'Checked '+new Date(stamp).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'Waiting for readings';
+  if(stamp)$('totalAge').dateTime=new Date(stamp).toISOString();
+  $('juwaiStatus').hidden=true;
+}
+async function readJuwai(version){
+  if(version!==juwaiVersion||activeTab!=='juwai'||document.hidden)return;
+  // One in-flight cycle; changing range cancels and invalidates the old cycle.
+  const aborter=new AbortController();juwaiController=aborter;
+  const window=$('juwaiWindow').value;
+  try{
+    const tasks=[getJSON('/api/tuya/latest',aborter.signal).then(data=>{if(version===juwaiVersion&&activeTab==='juwai'&&!document.hidden)renderJuwai(data);})];
+    if(juwaiHistoryKey!==window||Date.now()-juwaiHistoryTime>=300000){
+      tasks.push(Promise.all(['shed','garage'].map(id=>getJSON('/api/tuya/history?device='+id+'&window='+window,aborter.signal).then(data=>[id,data]))).then(rows=>{
+        if(version!==juwaiVersion||activeTab!=='juwai'||document.hidden)return;
+        juwaiHistory=Object.fromEntries(rows);juwaiHistoryKey=window;juwaiHistoryTime=Date.now();drawJuwai();
+      }));
+    }
+    const results=await Promise.allSettled(tasks);
+    if(version!==juwaiVersion||activeTab!=='juwai'||document.hidden)return;
+    if(results[0].status==='rejected'){
+      $('juwaiStatus').hidden=false;$('juwaiStatus').textContent='Readings unavailable. Previous values may be out of date.';$('totalPower').textContent='— W';$('totalCard').dataset.stale='true';$('totalState').textContent='Unavailable';
+      for(const id of ['shed','garage']){$(id+'Card').dataset.stale='true';$(id+'State').textContent='Unavailable';}
+    }
+    if(results[1]?.status==='rejected'){$('mobileCoverage').textContent='Generation history unavailable. Please try again.';$('mobileGenerationTotal').textContent='— kWh';$('juwaiHistoryNote').textContent='Generation history unavailable. Please try again.';for(const id of ['shed','garage','total'])$(id+'Energy').textContent='— kWh';}
+  }finally{
+    if(version===juwaiVersion&&activeTab==='juwai'&&!document.hidden){juwaiController=null;juwaiTimer=setTimeout(()=>readJuwai(version),30000);}
+  }
+}
+$('juwaiMetric').addEventListener('change',drawJuwai);
+$('juwaiWindow').addEventListener('change',()=>{mobileWeek=null;mobileBinIndex=null;mobileMeter='total';stopJuwai();juwaiHistoryKey='';juwaiHistory={};drawJuwai();readJuwai(juwaiVersion);});
+
+let mobileChart=null, mobileMeter='total', mobileWeek=null, mobileBinIndex=null, mobileBins=[];
+const mobileMedia=matchMedia('(max-width:600px)');
+const ukDate=(ts,options)=>new Date(ts).toLocaleString('en-GB',{timeZone:'Europe/London',...options});
+const mobileKwh=v=>Number.isFinite(v)?v.toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})+' kWh':'No data';
+function mobileBinLabel(b,unit,long=false){
+  if(unit==='hour')return ukDate(b.start,long?{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZoneName:'short'}:{hour:'2-digit',minute:'2-digit'});
+  const start=ukDate(b.start,{day:'numeric',month:'short'});
+  return unit==='week'?start+' – '+ukDate(b.end-1,{day:'numeric',month:'short'}):ukDate(b.start,{weekday:'short',day:'numeric',...(long?{month:'short'}:{})});
+}
+const missingMobileBins={id:'missingMobileBins',beforeDatasetsDraw(chart){
+  const {ctx,chartArea,scales}=chart;if(chart.config.type!=='bar'||!chartArea)return;
+  const width=(chartArea.right-chartArea.left)/Math.max(1,mobileBins.length)*.78;
+  for(const [i,pair] of mobileBins.entries()){
+    const missing=pair.every(b=>!b||!b.coverage_s);
+    const partial=!missing&&pair.some(b=>!b||b.coverage_s< b.period_s*.95);
+    if(!missing&&!partial)continue;
+    const x=scales.x.getPixelForValue(i)-width/2;
+    ctx.save();ctx.beginPath();ctx.rect(x,chartArea.top,width,chartArea.bottom-chartArea.top);ctx.clip();
+    ctx.fillStyle='rgba(148,163,184,.07)';ctx.fillRect(x,chartArea.top,width,chartArea.bottom-chartArea.top);
+    ctx.strokeStyle='rgba(148,163,184,.17)';ctx.lineWidth=1;
+    for(let y=chartArea.top-width;y<chartArea.bottom;y+=12){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+width,y+width);ctx.stroke();}
+    if(width>18){ctx.translate(x+width/2,chartArea.top+48);ctx.rotate(-Math.PI/2);ctx.fillStyle='#94a3b8';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText(missing?'No data':'Partial',0,0);}
+    ctx.restore();
+  }
+}};
+function showMobileBin(index){
+  if(!mobileBins.length){$('mobileBucketDetails').textContent='No generation intervals available.';return;}
+  mobileBinIndex=Math.max(0,Math.min(mobileBins.length-1,Number(index)||0));
+  const pair=mobileBins[mobileBinIndex],unit=mobileWeek?'day':juwaiHistory.shed?.energy?.bucket_unit||'hour';
+  $('mobileBucketChoice').value=String(mobileBinIndex);
+  const complete=pair.every(b=>Number.isFinite(b?.estimated_kwh));
+  const lines=[mobileBinLabel(pair[0]||pair[1],unit,true),
+    'Shed: '+mobileKwh(pair[0]?.estimated_kwh),'Garage: '+mobileKwh(pair[1]?.estimated_kwh),
+    'Total: '+(complete?mobileKwh(pair[0].estimated_kwh+pair[1].estimated_kwh):'Unavailable · missing readings')];
+  const minutes=b=>b?(b.period_s>=3600?(b.coverage_s/3600).toLocaleString(undefined,{maximumFractionDigits:1})+' / '+(b.period_s/3600).toLocaleString(undefined,{maximumFractionDigits:1})+' h':Math.round(b.coverage_s/60)+' / '+Math.round(b.period_s/60)+' min'):'No data';
+  lines.push('Recorded · Shed '+minutes(pair[0])+'; Garage '+minutes(pair[1]));
+  $('mobileBucketDetails').textContent=lines.join('\n');
+  $('mobileWeekDrill').hidden=unit!=='week';
+}
+function drawMobileJuwai(){
+  if(!mobileMedia.matches)return;
+  const period=$('juwaiWindow').value, metric=$('juwaiMetric').value;
+  const energies=['shed','garage'].map(id=>juwaiHistory[id]?.energy);
+  $('mobileGenerationPeriod').textContent=$('juwaiWindow').selectedOptions[0].textContent;
+  $('mobileGenerationTotal').textContent=$('totalEnergy').textContent;
+  $('mobileGenerationSplit').textContent='Shed '+$('shedEnergy').textContent+' · Garage '+$('garageEnergy').textContent;
+  const coverage=Math.min(...energies.map(e=>e?.coverage_s||0)),duration=energies[0]?.period_s||0;
+  const hours=s=>(s/3600).toLocaleString(undefined,{maximumFractionDigits:1});
+  $('mobileCoverage').textContent=juwaiHistoryKey?'Recorded: Shed '+hours(energies[0]?.coverage_s||0)+'h · Garage '+hours(energies[1]?.coverage_s||0)+'h of '+hours(duration)+'h. Hatched slots have missing or incomplete readings.':'Loading generation…';
+  if(mobileChart){mobileChart.destroy();mobileChart=null;}
+  const bars=metric==='power_w'&&period!=='live';
+  $('juwaiMetric').querySelector('[value=power_w]').textContent=bars?'Generation (kWh)':'Power (W)';
+  $('mobileMeterButtons').hidden=bars;$('mobileBinControls').hidden=!bars;$('mobileWeekBack').hidden=!bars||!mobileWeek;
+  if(!bars)mobileWeek=null;
+  let datasets,labels=[],unit='hour';
+  if(bars){
+    unit=mobileWeek?'day':energies[0]?.bucket_unit||'hour';
+    const rows=energies.map(e=>(mobileWeek?e?.daily_buckets:e?.buckets)||[]);
+    const left=rows[0].filter(b=>!mobileWeek||b.start>=mobileWeek.start&&b.end<=mobileWeek.end);
+    const key=b=>unit==='hour'?Math.floor(b.start/3600000):ukDate(b.start,{year:'numeric',month:'2-digit',day:'2-digit'});
+    const right=new Map(rows[1].map(b=>[key(b),b]));
+    mobileBins=left.map(b=>[b,right.get(key(b))]);
+    labels=mobileBins.map(pair=>mobileBinLabel(pair[0],unit));
+    datasets=['Shed','Garage'].map((name,i)=>({label:name,data:mobileBins.map(pair=>pair[i]?.estimated_kwh??null),backgroundColor:['#38bdf8','#34d399'][i],borderRadius:3,barPercentage:.8,categoryPercentage:.85,minBarLength:2}));
+    $('mobileChartHeading').textContent='Estimated generation by '+unit+(mobileWeek?' · '+mobileBinLabel(mobileWeek,'week'):'');
+    $('mobileBucketChoice').replaceChildren(...labels.map((label,i)=>{const o=document.createElement('option');o.value=i;o.textContent=mobileBinLabel(mobileBins[i][0],unit,true);return o;}));
+    if(mobileBinIndex===null)mobileBinIndex=Math.max(0,mobileBins.length-1);
+    showMobileBin(mobileBinIndex);
+  }else{
+    const field=juwaiFields[metric];if(metric!=='power_w'&&mobileMeter==='total')mobileMeter='compare';
+    for(const button of $('mobileMeterButtons').querySelectorAll('button')){button.hidden=metric!=='power_w'&&button.dataset.meter==='total';button.setAttribute('aria-pressed',String(button.dataset.meter===mobileMeter));}
+    const source=juwaiChart.data.datasets;
+    const ids=mobileMeter==='compare'?[0,1]:[mobileMeter==='total'?2:mobileMeter==='shed'?0:1];
+    datasets=ids.map(i=>({...source[i],data:source[i].data,hidden:false,pointRadius:0,pointHitRadius:16,borderWidth:2,fill:false}));
+    $('mobileChartHeading').textContent=(mobileMeter==='compare'?'Shed and Garage':mobileMeter[0].toUpperCase()+mobileMeter.slice(1))+' '+field.label.toLowerCase();
+  }
+  const series=juwaiHistory.shed||juwaiHistory.garage;
+  const tick=v=>ukDate(v,period==='live'||['today','yesterday','24h','previous24h'].includes(period)?{hour:'2-digit',minute:'2-digit'}:{day:'numeric',month:'short'});
+  mobileChart=new Chart($('mobileJuwaiChart'),{type:bars?'bar':'line',data:{labels,datasets},plugins:bars?[missingMobileBins]:[],options:{responsive:true,maintainAspectRatio:false,animation:false,
+    interaction:{mode:'index',intersect:false},onClick:(event)=>{if(bars&&mobileChart?.chartArea){const i=Math.round(mobileChart.scales.x.getValueForPixel(event.x));showMobileBin(i);}},
+    scales:{x:bars?{type:'category',stacked:true,grid:{display:false},ticks:{color:'#94a3b8',maxRotation:0,autoSkip:true,maxTicksLimit:unit==='hour'?5:7}}:{type:'linear',min:series?.start,max:series?.end,grid:{display:false},ticks:{color:'#94a3b8',maxTicksLimit:4,callback:tick}},
+      y:{stacked:bars,beginAtZero:bars,title:{display:true,text:bars?'Generation (kWh)':juwaiFields[metric].unit,color:'#94a3b8'},ticks:{color:'#94a3b8',maxTicksLimit:5},grid:{color:'#222f49'}}},
+    plugins:{legend:{display:datasets.length>1,labels:{color:'#94a3b8',usePointStyle:true,boxWidth:8,padding:16}},tooltip:{enabled:!bars,callbacks:{title:items=>ukDate(items[0].parsed.x,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZoneName:'short'}),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()+' '+juwaiFields[metric].unit}}}}});
+}
+$('mobileBucketChoice').addEventListener('change',e=>showMobileBin(e.target.value));
+$('mobileMeterButtons').addEventListener('click',e=>{const button=e.target.closest('button[data-meter]');if(button){mobileMeter=button.dataset.meter;drawMobileJuwai();}});
+$('mobileWeekDrill').addEventListener('click',()=>{mobileWeek=mobileBins[mobileBinIndex]?.[0]||null;mobileBinIndex=null;drawMobileJuwai();});
+$('mobileWeekBack').addEventListener('click',()=>{mobileWeek=null;mobileBinIndex=null;drawMobileJuwai();});
+mobileMedia.addEventListener('change',()=>{if(activeTab==='juwai'){if(mobileMedia.matches)drawMobileJuwai();else {$('juwaiMetric').querySelector('[value=power_w]').textContent='Power (W)';juwaiChart?.resize();if(mobileChart){mobileChart.destroy();mobileChart=null;}}}});
+
+const ranges = {"15m":900,"30m":1800,"1h":3600,"2h":7200,"4h":14400,"8h":28800,"1d":86400,"24h":86400,"7d":604800,"30d":2592000,"90d":7776000,"365d":31536000};
+let selected = '15m';
+let customBounds = null;
+try { customBounds = JSON.parse(localStorage.getItem('modbus-custom') || 'null'); } catch (_) {}
+if (!(selected in ranges) && !(selected === 'custom' && customBounds && customBounds.start < customBounds.end && customBounds.end <= Date.now() && customBounds.end - customBounds.start <= 365*86400000)) selected = '15m';
+const localInput = timestamp => {const d = new Date(timestamp);return new Date(timestamp-d.getTimezoneOffset()*60000).toISOString().slice(0,16);};
+$('dateFrom').value = localInput(customBounds?.start || Date.now()-86400000);
+$('dateTo').value = localInput(customBounds?.end || Date.now());
+$('dateFrom').max = $('dateTo').max = localInput(Date.now());
+$('timeWindow').value = selected;
+$('customRange').hidden = selected !== 'custom';
+let points = [], step = 3000, cursor = 0, lastHistory = 0, generation = 0;
+let displayStart = 0, displayEnd = 0, controller = null, calendarBounds = null;
+const spanSeconds = () => selected === 'custom' ? (customBounds.end-customBounds.start)/1000 : selected === '1d' && calendarBounds ? (calendarBounds.end-calendarBounds.start)/1000 : ranges[selected];
+const chart = new Chart($('lineChart'), {
+  type:'line', data:{datasets:[{label:'Net power',data:[],parsing:false,
+    borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,.08)',
+    borderWidth:2,pointRadius:0,pointHitRadius:12,fill:{target:'origin',above:'rgba(56,189,248,.08)',below:'rgba(52,211,153,.08)'},
+    spanGaps:false,tension:0,
+    segment:{borderColor:ctx => ctx.p1.parsed.y < 0 ? '#34d399' : '#38bdf8'}}]},
+  options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,
+    scales:{x:{type:'linear',grid:{color:'#1e293b'},ticks:{color:'#94a3b8',maxTicksLimit:6,
+      callback:value => new Date(value).toLocaleString(undefined,spanSeconds()<=14400 ? {hour:'2-digit',minute:'2-digit'} : spanSeconds()<=90000 ? {weekday:'short',hour:'2-digit',minute:'2-digit',...(selected==='1d'?{timeZone:'Europe/London'}:{})} : {day:'numeric',month:'short'})}},
+    y:{grid:{color:c=>c.tick.value===0?'#f59e0b':'#1e293b',lineWidth:c=>c.tick.value===0?2:1},ticks:{color:'#94a3b8',callback:v=>v.toLocaleString()+' W'}}},
+    plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),
+      label:ctx=>{const p=ctx.raw;return [`${p.y<0?'Exporting':'Importing'}: ${Math.abs(p.y).toLocaleString()} W`, ...(p.low!==p.high?[`Range: ${p.low.toLocaleString()} to ${p.high.toLocaleString()} W`]:[])];}}}}}
+});
+function energy(value) {return value>=1000?(value/1000).toLocaleString(undefined,{maximumFractionDigits:2})+' kWh':value.toLocaleString(undefined,{maximumFractionDigits:2})+' Wh';}
+function updateLive(data) {
+  const meter=data.meter;
+  $('meterKwh').innerText=meter ? meter.kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:false})+' kWh' : '— kWh';
+  $('meterKwh').style.opacity=meter?.stale?'.55':'1';
+  const latest=data.latest;
+  if(!latest)return;
+  const val=latest.value;
+  $('currentVal').innerText=(val>0?'+':'')+val.toLocaleString(undefined,{maximumFractionDigits:2})+' W';
+  $('currentVal').style.color=val<0?'#34d399':'#38bdf8';
+  $('currentVal').style.opacity=data.stale?'.55':'1';
+  cursor=latest.ts;
+}
+function updateEnergy(summary) {
+  $('totalImportVal').innerText=energy(summary.import_wh);
+  $('totalExportVal').innerText=energy(summary.export_wh);
+}
+function draw(end=Date.now()) {
+  displayEnd=selected==='custom'?customBounds.end:selected==='1d'?calendarBounds.end:end;
+  displayStart=selected==='custom'?customBounds.start:selected==='1d'?calendarBounds.start:displayEnd-ranges[selected]*1000;
+  points=points.filter(p=>p.x>=displayStart-step && p.x<=displayEnd);
+  const expanded=[];
+  for(const p of points){const prev=expanded[expanded.length-1];if(prev&&p.x-prev.x>Math.max(12000,step*2.1))expanded.push({x:prev.x+step,y:null});expanded.push(p);}
+  chart.data.datasets[0].data=expanded;
+  chart.options.scales.x.min=displayStart;chart.options.scales.x.max=displayEnd;chart.update('none');
+}
+async function getJSON(url,signal){const response=await fetch(url,{signal,cache:'no-store'});if(!response.ok)throw new Error('Readings unavailable');return response.json();}
+async function loadHistory(){
+  const version=++generation;
+  if(controller)controller.abort();controller=new AbortController();
+  const query=selected==='custom'?'start='+customBounds.start+'&end='+customBounds.end:'window='+selected;
+  const data=await getJSON('/api/history?'+query,controller.signal);
+  if(version!==generation)return;
+  if(selected==='1d') calendarBounds={start:data.start,end:data.end};
+  step=data.step_ms;points=data.points.map(p=>({x:p[0],y:p[1],low:p[2],high:p[3],n:p[4]}));
+  updateLive(data.live);draw(data.end);updateEnergy(data.energy);lastHistory=Date.now();
+}
+$('timeWindow').addEventListener('change',async()=>{
+  const choice=$('timeWindow').value;
+  $('customRange').hidden=choice!=='custom';$('rangeError').innerText='';
+  $('dateFrom').max=$('dateTo').max=localInput(Date.now());
+  if(choice==='custom') return;
+  selected=choice;localStorage.setItem('modbus-window',selected);
+  try{await loadHistory();}catch(e){if(e.name!=='AbortError')connectionLost();}
+});
+$('customRange').addEventListener('submit',async event=>{
+  event.preventDefault();
+  const start=new Date($('dateFrom').value).getTime(),end=new Date($('dateTo').value).getTime();
+  let error='';
+  if(!Number.isFinite(start)||!Number.isFinite(end)) error='Choose a From and To date and time.';
+  else if(start>=end) error='To must be later than From.';
+  else if(end>Date.now()) error='Choose dates up to the current time.';
+  else if(end-start>365*86400000) error='Choose a period of up to 365 days.';
+  $('rangeError').innerText=error;if(error)return;
+  selected='custom';customBounds={start,end};
+  localStorage.setItem('modbus-window',selected);localStorage.setItem('modbus-custom',JSON.stringify(customBounds));
+  $('applyRange').disabled=true;
+  try{await loadHistory();}catch(e){if(e.name!=='AbortError')$('rangeError').innerText='Could not load this period. Please try again.';}
+  finally{$('applyRange').disabled=false;}
+});
+async function tick(){
+  try {
+    if(!document.hidden && activeTab==='power'){
+      if(!lastHistory || selected!=='custom' && Date.now()-lastHistory>60000){await loadHistory();}
+      else {
+        const version=generation;
+        const data=await getJSON('/api/live?since='+cursor+(selected==='custom'?'':'&window='+selected));
+        if(version===generation && activeTab==='power'){
+          updateLive(data);
+          if(selected!=='custom'){
+            if(data.reload || selected==='1d' && data.period.start!==calendarBounds?.start)await loadHistory();
+            else {
+              if(ranges[selected]<=14400){
+                for(const p of data.points){
+                  const x=Math.floor(p[0]/step)*step,tail=points[points.length-1];
+                  if(tail&&tail.x===x){tail.y=(tail.y*tail.n+p[1])/(tail.n+1);tail.n++;tail.low=Math.min(tail.low,p[1]);tail.high=Math.max(tail.high,p[1]);}
+                  else points.push({x,y:p[1],low:p[1],high:p[1],n:1});
+                }
+              }
+              if(selected==='1d')calendarBounds=data.period;
+              draw(data.server_time);if(data.energy)updateEnergy(data.energy);
+            }
+          }
+        }
+      }
+    }
+  } catch(e){if(e.name!=='AbortError')connectionLost();}
+  finally{setTimeout(tick,3000);}
+}
+document.addEventListener('visibilitychange',()=>{
+  stopJuwai();stopHome();
+  if(!document.hidden){
+    if(activeTab==='juwai')readJuwai(juwaiVersion);
+    else if(activeTab==='home')readHome(homeVersion);
+    else if(activeTab==='power'&&selected!=='custom')lastHistory=0;
+  }
+});
+window.addEventListener('pagehide',()=>{stopJuwai();stopHome();});
+window.addEventListener('pageshow',event=>{if(event.persisted&&!document.hidden&&activeTab==='juwai')readJuwai(juwaiVersion);});
+// Home tab: read-only eWeLink overlays on the floor plan; placement comes from the Pi's private mapping.
+const homeAnchors={'room:conservatory':[412,340],'room:bedroom-1':[257,700],'room:kitchen':[600,612],'room:hall':[620,860],
+  'room:lounge':[295,1182],'room:shower-room':[662,1165],'room:guest-bedroom':[642,1462],'room:lower-porch':[820,1352],'room:front-porch':[805,840],
+  'door:conservatory':[412,190],'door:front-porch-outside':[807,1008],'door:front-porch-hall':[690,912],
+  'door:lower-porch-outside':[822,1455],'door:lower-porch-guest':[690,1342]};
+const homeRoomLabels={'room:conservatory':'Conservatory','room:bedroom-1':'Bedroom 1','room:kitchen':'Kitchen','room:hall':'Hall',
+  'room:lounge':'Lounge','room:shower-room':'Shower Room','room:guest-bedroom':'Guest Bedroom','room:front-porch':'Front Porch','room:lower-porch':'Back Fuckin Porch'};
+const homePlaceByLabel=Object.fromEntries(Object.entries(homeRoomLabels).map(([place,label])=>[label,place]));
+// Room tint: blue at 12°C through green to red at 25°C and above; dark enough to keep labels readable.
+// Each doorway takes the colour of the room its door opens into, so tinted rooms have no dark gaps.
+const homeDoorRooms={'Conservatory French doors':'Conservatory','Bedroom 1 to Conservatory':'Bedroom 1','Bedroom 1 to Hall':'Hall','Kitchen to Hall':'Kitchen',
+  'Hall to Lounge':'Lounge','Hall to Shower Room':'Shower Room','Hall to Front Porch':'Front Porch','Front Porch outside door':'Front Porch',
+  'Lounge to Guest Bedroom':'Guest Bedroom','Guest Bedroom to Back Fuckin Porch':'Back Fuckin Porch','Back Fuckin Porch outside door':'Back Fuckin Porch'};
+function homeTint(c){const t=Math.max(0,Math.min(1,(c-12)/13));return `hsl(${Math.round(215-205*t)} 45% 17%)`;}
+const homeCompact=new Set(['room:front-porch','room:lower-porch','room:shower-room']);
+let homeTimer=null,homeController=null,homeVersion=0;
+function svgEl(tag,attrs,text){const el=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,v);if(text!==undefined)el.textContent=text;return el;}
+function homeTime(ts){return new Date(ts).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});}
+function homeState(d){return d.ts==null||d.stale||d.online===false?'stale':d.kind==='door'?d.door:d.kind==='switch'?d.switch:'ok';}
+function homeValue(d){
+  if(d.ts==null)return '—';
+  if(d.online===false)return 'Offline';
+  if(d.kind==='temp')return Number.isFinite(d.temperature_c)?d.temperature_c.toFixed(1)+'°C':'—';
+  if(d.kind==='door')return d.door==='open'?'Open':d.door==='closed'?'Closed':'—';
+  return d.switch==='on'?'On':d.switch==='off'?'Off':'—';
+}
+function homeDetail(d){
+  const parts=[];
+  if(d.ts!=null&&d.online!==false){if(Number.isFinite(d.humidity_pct))parts.push(Math.round(d.humidity_pct)+'% humidity');if(Number.isFinite(d.power_w)&&d.switch==='on')parts.push(d.power_w.toFixed(1)+' W');}
+  parts.push(d.ts==null?'Not linked yet':(d.stale?'No update since ':'Updated ')+homeTime(d.ts));
+  if(Number.isFinite(d.battery_pct)&&d.battery_pct<=20)parts.push('Battery low ('+Math.round(d.battery_pct)+'%)');
+  return parts.join(' · ');
+}
+function homeChip(d,place,x,y){
+  let text=homeValue(d);
+  if(d.kind==='temp'&&!homeCompact.has(place)&&homeState(d)==='ok'&&Number.isFinite(d.humidity_pct))text+=' · '+Math.round(d.humidity_pct)+'%';
+  if(place.startsWith('room:')&&d.name!==homeRoomLabels[place])text=d.name+' '+text;
+  const w=text.length*13+30;
+  const g=svgEl('g',{class:'home-chip','data-kind':d.kind,'data-state':homeState(d),transform:`translate(${x},${y})`});
+  g.append(svgEl('title',{},d.name+' · '+homeDetail(d)),svgEl('rect',{x:-w/2,y:-19,width:w,height:38,rx:19}),svgEl('text',{x:0,y:1},text));
+  return g;
+}
+function renderHomeSection(key,devices){
+  const box=$('homeSection-'+key).querySelector('.home-rows');box.replaceChildren();
+  if(!devices.length){const p=document.createElement('p');p.className='period-note';p.textContent='Not linked yet';box.append(p);return;}
+  for(const d of devices){
+    const row=document.createElement('div');row.className='home-row';row.dataset.kind=d.kind;row.dataset.state=homeState(d);
+    const name=document.createElement('span');name.className='home-row-name';name.textContent=d.name;
+    const value=document.createElement('span');value.className='home-row-value';value.textContent=homeValue(d);
+    const detail=document.createElement('div');detail.className='home-row-detail';detail.textContent=homeDetail(d);
+    row.append(name,value);box.append(row,detail);
+  }
+}
+function renderHome(data){
+  const layer=$('homeOverlays');layer.replaceChildren();
+  const byPlace={};for(const d of data.devices||[])(byPlace[d.place]??=[]).push(d);
+  for(const [place,list] of Object.entries(byPlace)){
+    const anchor=homeAnchors[place];if(!anchor)continue;
+    list.forEach((d,i)=>layer.append(homeChip(d,place,anchor[0],anchor[1]+i*46)));
+  }
+  const fills={};
+  for(const d of data.devices||[])if(d.kind==='temp'&&d.name===homeRoomLabels[d.place]&&homeState(d)==='ok'&&Number.isFinite(d.temperature_c))fills[d.place]=homeTint(d.temperature_c);
+  document.querySelectorAll('.home-plan .rooms polygon').forEach(room=>{room.style.fill=fills[homePlaceByLabel[room.querySelector('title')?.textContent]]||'';});
+  document.querySelectorAll('.home-plan .doors > g').forEach(door=>{const gap=door.querySelector('.opening');if(gap)gap.style.fill=fills[homePlaceByLabel[homeDoorRooms[door.getAttribute('aria-label')]]]||'';});
+  for(const key of ['outside','loft','garage'])renderHomeSection(key,byPlace['section:'+key]||[]);
+  $('homeStatus').textContent=data.configured?'Updated '+homeTime(data.server_time)+' · refreshes every minute':'Devices not linked yet';
+}
+function stopHome(){homeVersion++;clearTimeout(homeTimer);homeTimer=null;homeController?.abort();homeController=null;}
+async function readHome(version){
+  if(version!==homeVersion||activeTab!=='home'||document.hidden)return;
+  homeController=new AbortController();
+  try{const data=await getJSON('/api/home/latest',homeController.signal);if(version===homeVersion)renderHome(data);}
+  catch(e){if(e.name!=='AbortError'&&version===homeVersion)$('homeStatus').textContent='Readings unavailable · retrying';}
+  finally{if(version===homeVersion&&activeTab==='home'&&!document.hidden){homeController=null;homeTimer=setTimeout(()=>readHome(version),60000);}}
+}
+// Open the tab named in the URL (e.g. #home); default stays Power.
+function openHashTab(){const name=location.hash.slice(1);if(views.includes(name))selectTab(name);}
+window.addEventListener('hashchange',openHashTab);
+openHashTab();
+tick();
+
+      </script>
+    </body>
+    </html>
