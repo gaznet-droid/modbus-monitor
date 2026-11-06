@@ -355,7 +355,7 @@ class Ewelink:
             return dict(configured=True,server_time=now,interval_seconds=INTERVAL,devices=devices)
 
     def history(self, slug, window):
-        allowed=('live','today','24h','previous24h','yesterday','7d','30d')
+        allowed=('live','2h','4h','8h','today','24h','previous24h','yesterday','7d','30d')
         if slug not in dict(DEVICES) or window not in allowed: raise ValueError('Invalid history query')
         from tuya_cached import period_bounds, generation_bins
         with self.read_lock:

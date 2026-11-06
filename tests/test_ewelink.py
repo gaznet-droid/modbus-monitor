@@ -164,11 +164,13 @@ class AdapterTests(unittest.TestCase):
         self.assertFalse(self.calls)
     def test_new_periods_are_bounded_and_do_not_contact_vendor(self):
         with self.a.database():pass
-        for window in ['live','today','yesterday','previous24h','24h','7d','30d']:
+        for window in ['live','2h','4h','8h','today','yesterday','previous24h','24h','7d','30d']:
             data=self.a.history('fridge',window)
             self.assertLessEqual(len(data['bins']),25)
             self.assertLessEqual(len(data.get('daily_bins',[])),32)
             self.assertLessEqual(len(data['points']),501)
+        for window,hours in [('live',1),('2h',2),('4h',4),('8h',8)]:
+            data=self.a.history('fridge',window);self.assertEqual(data['end']-data['start'],hours*3600000)
         self.assertFalse(self.calls)
 
 if __name__=='__main__':unittest.main()

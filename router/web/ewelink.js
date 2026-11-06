@@ -6,7 +6,8 @@
   const el=id=>document.getElementById(id), mobile=matchMedia('(max-width:600px)');
   const DEVICE_IDS=['inverter-1000','garage-inverter','inverter-600','charger-inverter','fridge'];
   const INTERVAL_S=300; // eWeLink readings arrive every 5 minutes
-  const PERIOD_WORD={live:'past hour',today:'today','24h':'past 24 h',previous24h:'previous 24 h',yesterday:'yesterday','7d':'past week','30d':'past month'};
+  const SHORT=['live','2h','4h','8h'];
+  const PERIOD_WORD={live:'past hour','2h':'past 2 h','4h':'past 4 h','8h':'past 8 h',today:'today','24h':'past 24 h',previous24h:'previous 24 h',yesterday:'yesterday','7d':'past week','30d':'past month'};
   let timer=null,controller=null,version=0,chart=null,historyAt=0,historyKey='',history=null,week=null,shownBins=[],selectedBin=0;
   const available=()=>!document.hidden&&!el('ewelinkPanel').hidden;
   const format=(v,unit)=>Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:2})+' '+unit:'Not reported';
@@ -77,7 +78,7 @@
   }};
   function drawHistory(){
     if(!history||!available())return;
-    const bars=mobile.matches&&history.window!=='live';
+    const bars=mobile.matches&&!SHORT.includes(history.window);
     el('ewelinkBinControls').hidden=!bars;el('ewelinkBack').hidden=!bars||!week;
     let data,labels=[],unit=week?'day':history.bucket_unit;
     if(bars){
@@ -99,7 +100,7 @@
         onClick:event=>{if(bars)showBin(Math.round(chart.scales.x.getValueForPixel(event.x)));},
         // Touch screens report taps as touch events, not clicks, so select the bar under the finger here too.
         onHover:event=>{if(bars&&event.native?.type?.startsWith('touch'))showBin(Math.round(chart.scales.x.getValueForPixel(event.x)));},
-        scales:{x:{type:bars?'category':'linear',grid:{display:!bars,color:'#222f49'},ticks:{color:'#94a3b8',maxTicksLimit:mobile.matches?5:8,maxRotation:0,callback:bars?undefined:v=>date(v,history.window==='live'||['today','24h','previous24h','yesterday'].includes(history.window)?{hour:'2-digit',minute:'2-digit'}:{day:'numeric',month:'short'})}},y:{beginAtZero:bars,grid:{color:'#222f49'},ticks:{color:'#94a3b8',callback:v=>v+' W'}}},
+        scales:{x:{type:bars?'category':'linear',grid:{display:!bars,color:'#222f49'},ticks:{color:'#94a3b8',maxTicksLimit:mobile.matches?5:8,maxRotation:0,callback:bars?undefined:v=>date(v,SHORT.includes(history.window)||['today','24h','previous24h','yesterday'].includes(history.window)?{hour:'2-digit',minute:'2-digit'}:{day:'numeric',month:'short'})}},y:{beginAtZero:bars,grid:{color:'#222f49'},ticks:{color:'#94a3b8',callback:v=>v+' W'}}},
         plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>bars?binLabel(shownBins[items[0].dataIndex],unit,true):date(items[0].parsed.x),label:item=>format(item.parsed.y,'W')+(bars?' average':'')}}}}});
     highlightBin();
     const count=history.points.length;

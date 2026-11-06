@@ -6,7 +6,7 @@
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Live Power Monitor · Dad</title>
       <script src="/chart.umd.min.js"></script>
-      <script src="/ewelink.js?v=card-graphs-5" defer></script>
+      <script src="/ewelink.js?v=card-graphs-6" defer></script>
       <style>
         :root {
           --bg-base: #090d16;
@@ -453,7 +453,7 @@
 <p class="period-note">Solar meter is not connected: Tuya permission is unresolved. Read-only monitoring.</p>
 </section>
 <section id="ewelinkPanel" class="tab-panel" role="tabpanel" aria-labelledby="ewelinkTab" hidden>
-<div class="card juwai-group ewelink-group"><div class="juwai-group-heading"><h1>Inverters &amp; fridge</h1><label for="ewelinkPeriod">Period <select id="ewelinkPeriod"><option value="live">Live · past hour</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
+<div class="card juwai-group ewelink-group"><div class="juwai-group-heading"><h1>Inverters &amp; fridge</h1><label for="ewelinkPeriod">Period <select id="ewelinkPeriod"><option value="live">Past hour</option><option value="2h">Past 2 hours</option><option value="4h">Past 4 hours</option><option value="8h">Past 8 hours</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
 <div class="ewelink-layout">
 <div class="ewelink-grid"><article id="ew-inverter-1000" class="card ewelink-card" data-stale="true" role="button" tabindex="0" aria-expanded="false" aria-controls="ewelinkChartSection">
 <div class="ewelink-heading"><h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m13 6-4 6h6l-4 6M1 8h3m-3 8h3m16-8h3m-3 8h3"/></svg><span>1000 watt inverter</span></h2></div>

@@ -13,7 +13,7 @@ with (Path(__file__).parent / "tz/Europe-London.tzif").open("rb") as tzfile:
     LONDON = ZoneInfo.from_file(tzfile, key="Europe/London")
 
 DEVICES = {"shed": "Shed", "garage": "Garage"}
-WINDOWS = {"24h": 86400, "7d": 604800, "30d": 2592000, "365d": 31536000, "live": 3600, "today": 86400,
+WINDOWS = {"24h": 86400, "7d": 604800, "30d": 2592000, "365d": 31536000, "live": 3600, "2h": 7200, "4h": 14400, "8h": 28800, "today": 86400,
            "yesterday": 86400, "previous24h": 86400}
 FIELDS = ("voltage_v", "current_a", "power_w")
 
