@@ -14,8 +14,15 @@ UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer pa
 
 ## Next
 - Shut the Pi down cleanly, check Dad's Wi-Fi details against his router, and move ModPi to Dad's house.
-- Job 1: find the meter on Dad's LAN, switch the Pi to the local address, then remove the port-forward and add a DHCP reservation.
+- Job 1: find the meter on Dad's LAN, switch the Pi to the local address, then remove the port-forward and add a DHCP reservation. Once the Pi is on Dad's network no port-forward is needed at all: the website goes out through the Cloudflare tunnel and maintenance through Tailscale, both outbound. Removing it also stops the meter's Modbus port being open to the internet.
 - Job 2: test local reads of the two Juwai meters with the saved local keys; if they work, replace Tuya cloud polling before 23 November.
+- Job 3 (added 4 Nov, Dad wants it): replace the Elfin RS485-to-Wi-Fi box with a Waveshare RS485 CAN HAT (The Pi Hut, WAV-14882, about £12.60) wired straight to the meter. Dad has to reset the Elfin daily because it gets maxed out; the Pi would become the only Modbus master. HAT purchased 4 Nov, due Fri 6 or Sat 7 Nov. Notes:
+  - Wiring: the meter's RS485 A/B screw terminals go to the HAT's A/B terminals. No special cable: move the Elfin's existing wires if the Pi sits by the meter, otherwise any twisted pair (Cat5/6 offcut). Add ground if the meter has one. Unplug the Elfin completely, since two masters on one bus clash.
+  - Elfin serial settings (from Dad's screenshot of its web page, 4 Nov): EW11 at 192.168.4.38 on Dad's LAN; 9600 baud, 8 data bits, 1 stop bit, parity None (9600 8N1). Dad says the ID is 1 or 0; the collector already reads slave ID 1, and 0 is the Modbus broadcast address (no replies), so use 1. Dad confirmed (4 Nov) nothing else reads through the Elfin, so it can be removed outright. Job 1 can use 192.168.4.38 as the meter's local address until the HAT is fitted.
+  - Pi 3A+ setup: `dtoverlay=disable-bt` and serial console off so GPIO14/15 serves `/dev/serial0`; CAN/SPI not needed. The HAT has TVS protection but no isolation.
+  - Collector: switch the meter read from Modbus TCP (port 8838) to Modbus RTU on `/dev/serial0`, same slave ID and register 146. Needs a modpi restart and a backup of private files first.
+  - Side benefits: removes the public IP and port-forward dependency for the meter (Job 1) and may explain the evening dropouts. Interim option if the HAT is delayed: keep one persistent TCP connection to the Elfin instead of reconnecting each poll.
+  - Pi must have Wi-Fi coverage at the meter's location.
 
 ## Later
 - Add a seamless login for Dad once the Home tab and other proofs of concept settle, so door, switch and temperature states aren't public. No Cloudflare Access, and he shouldn't have to keep logging in. Built into the Pi app, allowlisted users only, long-lived sessions renewed on each visit. Order of preference (decided 4 Nov):

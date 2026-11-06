@@ -6,6 +6,9 @@ truth between us. Keep it in sync every time.
 
 ### At the start of every session
 1. Read ROADMAP.md and PROGRESS.md in the repo root (create them if missing).
+   The live copies are on the raspberry-pi branch; main holds the old app only.
+   Check `git status` and commit any uncommitted ROADMAP.md or PROGRESS.md
+   changes before starting.
 2. Check this project's area file in my Claude memory (/areas/<project-slug>.md)
    for ideas, decisions or roadmap changes made in chat since the last
    PROGRESS.md entry. Copy anything new into ROADMAP.md before starting work.
@@ -13,7 +16,8 @@ truth between us. Keep it in sync every time.
 
 ### Whenever you push, and at the end of every session
 Write a short handoff in two places:
-   a. Repo: append it to PROGRESS.md, update ROADMAP.md if items were finished
+   a. Repo: append it to PROGRESS.md (add a new line at the bottom; never
+      delete, replace or rewrite earlier entries), update ROADMAP.md if items were finished
       or changed, and include both in the commit.
    b. Memory: add the same dated line to the project's area file
       (create it if missing).
