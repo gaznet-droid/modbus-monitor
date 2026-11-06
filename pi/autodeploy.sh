@@ -1,5 +1,6 @@
 #!/bin/sh
-# ModPi auto-deploy. Run as root by modpi-deploy.timer once a day (about 03:30).
+# ModPi auto-deploy. Run as root when GitHub's push webhook queues a request
+# (modpi-deploy.path), and once a day at about 03:30 as a backup (modpi-deploy.timer).
 #
 # Pulls main from GitHub (public, read-only, no credentials on the Pi), runs the
 # test suite, copies the app into /opt/modpi, restarts only what changed, checks
@@ -54,7 +55,7 @@ UNITDIR=${MODPI_UNITDIR:-/etc/systemd/system}
 SELF=${MODPI_SELF:-/usr/local/sbin/modpi-autodeploy}
 PENDING=""
 cmp -s "$SRC/pi/autodeploy.sh" "$SELF" || PENDING="autodeploy.sh"
-for unit in modpi.service modpi-tuya.service modpi-tunnel.service modpi-deploy.service modpi-deploy.timer; do
+for unit in modpi.service modpi-tuya.service modpi-tunnel.service modpi-deploy.service modpi-deploy.timer modpi-deploy.path; do
     cmp -s "$SRC/pi/$unit" "$UNITDIR/$unit" || PENDING="$PENDING $unit"
 done
 if [ -n "$PENDING" ]; then

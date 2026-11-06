@@ -1,0 +1,9 @@
+[Unit]
+Description=Deploy as soon as the GitHub webhook queues a request
+
+[Path]
+PathModified=/var/lib/modpi/deploy-request
+Unit=modpi-deploy.service
+
+[Install]
+WantedBy=paths.target

@@ -2,6 +2,8 @@
 """Read-only Modbus power monitor. Python standard library only."""
 import argparse
 import contextlib
+import hashlib
+import hmac
 import json
 import logging
 import math
@@ -28,6 +30,11 @@ with (Path(__file__).parent/"tz/Europe-London.tzif").open("rb") as timezone_file
 
 # Written by pi/autodeploy.sh after each deploy; absent on non-Pi hosts.
 VERSION_FILE=Path(__file__).resolve().parents[1]/"VERSION.json"
+# GitHub push webhook: a valid signed push to main touches the request file, which
+# modpi-deploy.path watches. It can only make the Pi pull from GitHub, nothing else.
+DEPLOY_SECRET_FILE=Path("/var/lib/modpi/private/deploy-hook.secret")
+DEPLOY_REQUEST_FILE=Path("/var/lib/modpi/deploy-request")
+DEPLOY_BRANCH_REF="refs/heads/main"
 
 def period_bounds(window, now):
     if window=="1d":
@@ -336,6 +343,41 @@ def handler(store, web, voltage=None, tuya=None, ewelink=None):
             self.send_header("Referrer-Policy","no-referrer")
             self.end_headers()
             self.wfile.write(body)
+        def do_POST(self):
+            if urlsplit(self.path).path!="/api/deploy-hook":
+                return self.send_error(501)
+            try:
+                length=int(self.headers.get("Content-Length",""))
+            except ValueError:
+                return self.send(411,{"error":"Length required"})
+            if not 0<length<=262144:
+                return self.send(413,{"error":"Body too large"})
+            body=self.rfile.read(length)
+            try:
+                secret=DEPLOY_SECRET_FILE.read_bytes().strip()
+            except OSError:
+                return self.send(503,{"error":"Deploy hook not configured"})
+            if not secret:
+                return self.send(503,{"error":"Deploy hook not configured"})
+            expected="sha256="+hmac.new(secret,body,hashlib.sha256).hexdigest()
+            if not hmac.compare_digest(expected,self.headers.get("X-Hub-Signature-256","")):
+                return self.send(403,{"error":"Bad signature"})
+            event=self.headers.get("X-GitHub-Event","")
+            if event=="ping":
+                return self.send(200,{"ok":True})
+            if event!="push":
+                return self.send(202,{"queued":False})
+            try:
+                ref=json.loads(body).get("ref")
+            except (ValueError,AttributeError):
+                return self.send(400,{"error":"Invalid payload"})
+            if ref!=DEPLOY_BRANCH_REF:
+                return self.send(202,{"queued":False})
+            try:
+                DEPLOY_REQUEST_FILE.write_text(str(int(time.time()))+"\n")
+            except OSError:
+                return self.send(503,{"error":"Could not queue deploy"})
+            return self.send(202,{"queued":True})
         def do_GET(self):
             if len(self.path)>1024:
                 return self.send(414,{"error":"Request too long"})

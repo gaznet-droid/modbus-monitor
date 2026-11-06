@@ -11,14 +11,21 @@ for tool in rsync curl flock timeout runuser; do
 done
 install -m 0755 "$ROOT/pi/autodeploy.sh" /usr/local/sbin/modpi-autodeploy
 # Only the deploy units. The app units are left exactly as they are on the Pi.
-for unit in modpi-deploy.service modpi-deploy.timer; do
+for unit in modpi-deploy.service modpi-deploy.timer modpi-deploy.path; do
     install -m 0644 "$ROOT/pi/$unit" "/etc/systemd/system/$unit"
 done
 systemctl daemon-reload
-systemd-analyze verify /etc/systemd/system/modpi-deploy.service /etc/systemd/system/modpi-deploy.timer
+systemd-analyze verify /etc/systemd/system/modpi-deploy.service /etc/systemd/system/modpi-deploy.timer /etc/systemd/system/modpi-deploy.path
+# Webhook secret, shared only with GitHub. Created once; never printed.
+SECRET=/var/lib/modpi/private/deploy-hook.secret
+if [ ! -s "$SECRET" ]; then
+    (umask 077; head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$SECRET")
+    chown modpi:modpi "$SECRET"; chmod 0600 "$SECRET"
+    echo "New webhook secret created in $SECRET; add it to the GitHub webhook."
+fi
 # Clear a blocked marker so the next run re-checks against what is now installed.
 rm -f /var/lib/modpi-deploy/blocked
-systemctl enable --now modpi-deploy.timer
-echo "Auto-deploy enabled. Checks GitHub daily at about 03:30."
+systemctl enable --now modpi-deploy.timer modpi-deploy.path
+echo "Auto-deploy enabled: on each GitHub push, plus a daily check at about 03:30."
 echo "Watch it:  journalctl -u modpi-deploy -f"
 echo "Run now:   sudo systemctl start modpi-deploy"

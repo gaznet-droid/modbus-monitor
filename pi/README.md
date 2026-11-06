@@ -100,10 +100,14 @@ Mac tests use fixtures and mocks. They do not prove Pi boot, Linux storage,
 systemd behavior, real Juwai compatibility or successful credential migration.
 
 ## Auto-deploy from GitHub
-GitHub `main` is the source of truth. The Pi checks it once a day at about 03:30
-(modpi-deploy.timer) and deploys new commits by itself, so no Mac is needed.
-Push from any device and it goes live the next morning. If the Pi was off at
-03:30, it checks as soon as it is back on.
+GitHub `main` is the source of truth. Push from any device and it goes live within about a minute, with no Mac needed:
+GitHub sends a signed push webhook to https://modbus.clockmillbarn.uk/api/deploy-hook
+through the existing Cloudflare tunnel. The site checks the HMAC signature against
+/var/lib/modpi/private/deploy-hook.secret (shared only with GitHub's webhook settings)
+and touches /var/lib/modpi/deploy-request; modpi-deploy.path then starts the deploy.
+The hook can only make the Pi pull main from GitHub. As a backup, modpi-deploy.timer
+also checks once a day at about 03:30, or as soon as the Pi is back on if it was off.
+Webhook deliveries and their responses are listed in the repo's GitHub settings.
 
 What `/usr/local/sbin/modpi-autodeploy` (pi/autodeploy.sh) does with a new commit:
 1. Pulls main anonymously over HTTPS (public repo, no credentials on the Pi).

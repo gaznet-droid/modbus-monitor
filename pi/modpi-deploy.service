@@ -5,6 +5,7 @@ After=network-online.target modpi.service
 
 [Service]
 Type=oneshot
-ExecStart=/bin/sh /usr/local/sbin/modpi-autodeploy
-TimeoutStartSec=900
+# Re-run if another push was queued while this deploy was running.
+ExecStart=/bin/sh -c 'while :; do t=$(date +%%s); /bin/sh /usr/local/sbin/modpi-autodeploy || true; r=$(stat -c %%Y /var/lib/modpi/deploy-request 2>/dev/null || echo 0); [ "$r" -ge "$t" ] || break; done'
+TimeoutStartSec=1800
 Nice=10

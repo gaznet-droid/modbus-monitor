@@ -59,4 +59,31 @@ class HttpTests(unittest.TestCase):
             with self.request('/version') as r:self.assertEqual(json.load(r)['commit'],None)
         with self.request('/version?x=1') as r:self.assertEqual(r.status,400)
 
+    def hook(self,body,event='push',secret=b'sekrit',sig=None):
+        import hashlib,hmac
+        data=json.dumps(body).encode()
+        if sig is None:sig='sha256='+hmac.new(secret,data,hashlib.sha256).hexdigest()
+        req=urllib.request.Request(self.base+'/api/deploy-hook',data=data,method='POST',
+            headers={'X-Hub-Signature-256':sig,'X-GitHub-Event':event,'Content-Type':'application/json'})
+        try:return urllib.request.urlopen(req,timeout=3)
+        except urllib.error.HTTPError as error:return error
+    def test_deploy_hook_queues_only_signed_pushes_to_main(self):
+        from unittest.mock import patch
+        root=self.fixture.root;secret=root/'hook.secret';req=root/'deploy-request'
+        with patch.object(monitor,'DEPLOY_SECRET_FILE',secret),patch.object(monitor,'DEPLOY_REQUEST_FILE',req):
+            with self.hook({'ref':'refs/heads/main'}) as r:self.assertEqual(r.status,503)
+            secret.write_bytes(b'sekrit\n')
+            with self.hook({'ref':'refs/heads/main'},secret=b'wrong') as r:self.assertEqual(r.status,403)
+            with self.hook({'ref':'refs/heads/main'},sig='') as r:self.assertEqual(r.status,403)
+            self.assertFalse(req.exists())
+            with self.hook({'zen':'hi'},event='ping') as r:self.assertEqual(r.status,200)
+            with self.hook({'ref':'refs/heads/other'}) as r:self.assertEqual(json.load(r),{'queued':False})
+            with self.hook({'ref':'refs/heads/main'},event='issues') as r:self.assertEqual(json.load(r),{'queued':False})
+            self.assertFalse(req.exists())
+            with self.hook({'ref':'refs/heads/main'}) as r:
+                self.assertEqual(r.status,202);self.assertEqual(json.load(r),{'queued':True})
+            self.assertTrue(req.exists())
+        with self.request('/api/deploy-hook') as r:self.assertEqual(r.status,404)
+        with self.request('/api/other',method='POST') as r:self.assertEqual(r.status,501)
+
 if __name__=='__main__':unittest.main()
