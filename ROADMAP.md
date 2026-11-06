@@ -13,7 +13,6 @@ UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer pa
 - Home tab requested by Dad: his floor plan redrawn as SVG in the site style, with eWeLink door sensors, switches and room temperatures on the plan, and Loft, Outside, Freezer and Garage door as cards below it. Old Bedroom 2 is now the Kitchen, the old Kitchen is the Guest Bedroom, and its porch is the Front Porch; no fittings. eWeLink scan done; placements are Gareth's assumptions until Dad confirms. Read-only. Full plan and open questions in docs/home-page-plan.md. Proof of concept: stays public for now, by decision on 4 Nov. Steps 1 to 3 are live (plan, collection, overlays). Remaining: Dad to confirm the drawing and placements; optional temperature history (step 4); low-battery warnings on the plan (Outside sensor at 39%).
 
 ## Next
-- Pi deploys itself from GitHub (decided 6 Nov): GitHub main is the single source of truth and the Mac is no longer needed. Claude Code on any device pushes to main; a signed GitHub webhook tells the Pi through the tunnel, and it deploys within about a minute (daily 03:30 check as a backup); runs the tests, deploys, health-checks and rolls back on failure. Page-only changes need no restart. Unit or installer changes are blocked for a manual install. Live commit shown at /version. Live on ModPi since 6 Nov. Remaining: prove it end to end with a push from the phone.
 - Shut the Pi down cleanly, check Dad's Wi-Fi details against his router, and move ModPi to Dad's house.
 - Job 1: find the meter on Dad's LAN, switch the Pi to the local address, then remove the port-forward and add a DHCP reservation. Once the Pi is on Dad's network no port-forward is needed at all: the website goes out through the Cloudflare tunnel and maintenance through Tailscale, both outbound. Removing it also stops the meter's Modbus port being open to the internet.
 - Job 2: test local reads of the two Juwai meters with the saved local keys; if they work, replace Tuya cloud polling before 23 November.
@@ -45,3 +44,5 @@ UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer pa
 - 4 Nov: Tuya local keys and MACs fetched and backed up on the Pi and the Mac.
 - 4 Nov: Full handoff in docs/handoff-2026-11-04.md.
 - 4 Nov: Home tab live with floor plan, icon navigation, and 23 eWeLink devices (temperatures, doors, switches) collected in one request per cycle.
+- 6 Nov: Main is the only branch; ROADMAP and PROGRESS in sync across chats, Claude Code and GitHub.
+- 6 Nov: Pi deploys itself from GitHub. A signed push webhook deploys within about a minute (tested, health-checked, rolled back on failure); daily 03:30 check as backup; live commit at /version. No Mac needed.
