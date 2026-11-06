@@ -143,6 +143,29 @@ class AdapterTests(unittest.TestCase):
         self.a.collect()
         self.assertEqual(self.calls[0][1:3],('POST','/v2/device/thing'))
         self.assertFalse(self.a.home_latest()['configured'])
+    def test_home_history_returns_day_of_temperatures_only(self):
+        self.home_setup();self.a.collect();self.calls.clear()
+        now=int(time.time()*1000)
+        with self.a.database() as db,db:
+            for device,ts,value in [('home:lounge-temp',now-25*3600000,{'online':True,'temperature_c':5.0}),
+                                    ('home:lounge-temp',now-3600000,{'online':True,'temperature_c':18.5,'humidity_pct':60.0}),
+                                    ('home:lounge-temp',now-1800000,{'online':False,'temperature_c':99.0}),
+                                    ('home:garage-door',now-600000,{'online':True,'door':'open'})]:
+                db.execute('INSERT OR REPLACE INTO samples VALUES(?,?,?)',(device,ts,json.dumps(value)))
+        self.a.history_cache.clear()
+        data=self.a.home_history('lounge-temp');text=json.dumps(data)
+        self.assertEqual(data['end']-data['start'],86400000);self.assertEqual(data['name'],'Lounge')
+        self.assertEqual([p[1:] for p in data['points']],[[18.5,60.0],[19.25,72.4]])
+        self.assertEqual((data['min_c'],data['max_c']),(18.5,19.25))
+        for secret in ('temp1','door1','unmapped','access'):self.assertNotIn(secret,text)
+        self.assertIs(self.a.home_history('lounge-temp'),data)
+        self.assertFalse(self.calls)
+    def test_home_history_rejects_doors_and_unknown_sensors(self):
+        with self.assertRaises(ValueError):self.a.home_history('lounge-temp')
+        self.home_setup()
+        for slug in ('garage-door','unknown','',None):
+            with self.assertRaises(ValueError):self.a.home_history(slug)
+        self.assertFalse(self.calls)
     def test_home_latest_without_mapping_makes_no_calls(self):
         self.assertEqual(self.a.home_latest()['devices'],[]);self.assertFalse(self.calls)
     def test_mobile_bins_distinguish_zero_missing_and_weight_samples(self):

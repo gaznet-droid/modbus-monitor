@@ -354,6 +354,32 @@ class Ewelink:
                                     stale=ts is None or now-ts>900000,**value))
             return dict(configured=True,server_time=now,interval_seconds=INTERVAL,devices=devices)
 
+    def home_history(self, slug):
+        """Past 24 hours of one Home temperature sensor. Stored readings only: no vendor calls, never device ids."""
+        try: home = self.home_mapping()
+        except (OSError,RuntimeError): home = None
+        h = (home or {}).get(slug) if isinstance(slug,str) else None
+        if not h or h['kind']!='temp': raise ValueError('Invalid Home sensor')
+        with self.read_lock:
+            self.guard()
+            key='home:'+slug
+            cached=self.history_cache.get(key)
+            if cached and time.monotonic()<cached[1]:return cached[2]
+            end=int(time.time()*1000);start=end-86400000
+            points=[]
+            with self.database(readonly=True) as db:
+                for ts,payload in db.execute('SELECT ts,payload FROM samples WHERE device=? AND ts>=? AND ts<=? ORDER BY ts',(key,start,end)):
+                    value=json.loads(payload)
+                    temperature=number(value.get('temperature_c'),-60,100) if value.get('online') else None
+                    if temperature is None:continue
+                    points.append([ts,temperature,number(value.get('humidity_pct'),0,100)])
+            temps=[p[1] for p in points]
+            result=dict(device=slug,name=h['name'],start=start,end=end,interval_seconds=INTERVAL,points=points,
+                        min_c=min(temps) if temps else None,max_c=max(temps) if temps else None)
+            # collect() clears the cache, so a new reading appears within one cycle.
+            self.history_cache[key]=('24h',time.monotonic()+60,result)
+            return result
+
     def history(self, slug, window):
         allowed=('live','2h','4h','8h','today','24h','previous24h','yesterday','7d','30d')
         if slug not in dict(DEVICES) or window not in allowed: raise ValueError('Invalid history query')

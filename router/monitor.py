@@ -410,6 +410,9 @@ def handler(store, web, voltage=None, tuya=None, ewelink=None):
                 if parsed.path=="/api/home/latest" and ewelink is not None:
                     if query: raise ValueError()
                     return self.send(200,ewelink.home_latest())
+                if parsed.path=="/api/home/history" and ewelink is not None:
+                    if set(query)!={"device"} or len(query["device"])!=1: raise ValueError()
+                    return self.send(200,ewelink.home_history(query["device"][0]))
                 if parsed.path=="/api/ewelink/history" and ewelink is not None:
                     if set(query)!={"device","window"} or any(len(v)!=1 for v in query.values()): raise ValueError()
                     return self.send(200,ewelink.history(query["device"][0],query["window"][0]))

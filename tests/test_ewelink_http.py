@@ -35,6 +35,15 @@ class HttpTests(unittest.TestCase):
         for path in ['/api/ewelink/history?device=fridge&window=999d','/api/ewelink/history?device=unknown&window=24h']:
             with self.request(path) as r:self.assertEqual(r.status,400)
         self.assertFalse(self.fixture.calls)
+    def test_home_history_accepts_one_temperature_sensor_only(self):
+        self.fixture.home_setup();self.a.collect();self.fixture.calls.clear()
+        with self.request('/api/home/history?device=lounge-temp') as r:
+            self.assertEqual(r.status,200);data=json.load(r)
+            self.assertEqual(data['name'],'Lounge');self.assertEqual(data['points'][-1][1],19.25)
+        for path in ['/api/home/history','/api/home/history?device=','/api/home/history?device=lounge-temp&device=lounge-temp',
+                     '/api/home/history?device=lounge-temp&window=24h','/api/home/history?device=unknown','/api/home/history?device=garage-door']:
+            with self.request(path) as r:self.assertEqual(r.status,400,path)
+        self.assertFalse(self.fixture.calls)
     def test_success_strips_callback_query_and_replay_fails(self):
         class NoRedirect(urllib.request.HTTPRedirectHandler):
             def redirect_request(self,*a,**kw):return None
