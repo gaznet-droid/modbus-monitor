@@ -98,3 +98,28 @@ until meter collection is enabled. No demo readings or old history are fabricate
 
 Mac tests use fixtures and mocks. They do not prove Pi boot, Linux storage,
 systemd behavior, real Juwai compatibility or successful credential migration.
+
+## Auto-deploy from GitHub
+GitHub `main` is the source of truth. The Pi checks it every 5 minutes
+(modpi-deploy.timer) and deploys new commits by itself, so no Mac is needed.
+Push from any device and it goes live within about 5 minutes.
+
+What `/usr/local/sbin/modpi-autodeploy` (pi/autodeploy.sh) does with a new commit:
+1. Pulls main anonymously over HTTPS (public repo, no credentials on the Pi).
+2. Docs-only commits are just recorded.
+3. Runs the full test suite as `nobody`, then `run.py --check-config`. Failure = nothing deployed.
+4. Compares the new app files with /opt/modpi. Page-only changes (router/web) go live
+   with no restart. Python changes back up /var/lib/modpi/private, then restart modpi;
+   modpi-tuya restarts only if Tuya or storage code changed and it was already running.
+5. Checks the dashboard answers on port 8096 within a minute. If not, it restores the
+   previous copy and restarts again.
+6. A failed commit is not retried. Push a fix and the next run picks it up.
+7. Commits that change systemd units, installers or autodeploy.sh are BLOCKED and must
+   be applied by hand on the Pi (Tailscale SSH), then `sudo sh pi/install-autodeploy.sh`.
+
+Check what is live from anywhere: https://modbus.clockmillbarn.uk/version
+(commit, time and subject; also shows FAILED, ROLLED BACK or BLOCKED).
+On the Pi: `journalctl -u modpi-deploy`, state in /var/lib/modpi-deploy.
+Run now: `sudo systemctl start modpi-deploy`. Pause: `sudo systemctl stop modpi-deploy.timer`.
+
+One-time setup on the Pi (from a checkout of main): `sudo sh pi/install-autodeploy.sh`.

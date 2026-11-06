@@ -47,4 +47,16 @@ class HttpTests(unittest.TestCase):
         else:self.fail('Expected a redirect')
         with self.request('/api/integrations/ewelink/callback?'+query) as r:self.assertEqual(r.status,400)
 
+    def test_version_reports_deployed_commit_only(self):
+        from unittest.mock import patch
+        vf=self.fixture.root/'VERSION.json'
+        vf.write_text(json.dumps({'commit':'abc123','deployed_at':'2026-11-06T09:00:00Z','subject':'Test','secret':'x'}))
+        with patch.object(monitor,'VERSION_FILE',vf):
+            with self.request('/version') as r:
+                self.assertEqual(r.status,200);body=json.load(r)
+        self.assertEqual(body,{'commit':'abc123','deployed_at':'2026-11-06T09:00:00Z','subject':'Test'})
+        with patch.object(monitor,'VERSION_FILE',self.fixture.root/'missing.json'):
+            with self.request('/version') as r:self.assertEqual(json.load(r)['commit'],None)
+        with self.request('/version?x=1') as r:self.assertEqual(r.status,400)
+
 if __name__=='__main__':unittest.main()

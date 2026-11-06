@@ -1,0 +1,10 @@
+[Unit]
+Description=ModPi auto-deploy from GitHub main
+Wants=network-online.target
+After=network-online.target modpi.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh /usr/local/sbin/modpi-autodeploy
+TimeoutStartSec=900
+Nice=10

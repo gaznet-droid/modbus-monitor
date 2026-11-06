@@ -26,6 +26,9 @@ WINDOWS = {"15m": 900, "30m": 1800, "1h": 3600, "2h": 7200,
 with (Path(__file__).parent/"tz/Europe-London.tzif").open("rb") as timezone_file:
     LONDON=ZoneInfo.from_file(timezone_file,key="Europe/London")
 
+# Written by pi/autodeploy.sh after each deploy; absent on non-Pi hosts.
+VERSION_FILE=Path(__file__).resolve().parents[1]/"VERSION.json"
+
 def period_bounds(window, now):
     if window=="1d":
         midnight=datetime.fromtimestamp(now/1000,LONDON).replace(hour=0,minute=0,second=0,microsecond=0)
@@ -400,6 +403,13 @@ def handler(store, web, voltage=None, tuya=None, ewelink=None):
                     if window not in WINDOWS:
                         raise ValueError()
                     return self.send(200,store.history(window))
+                if parsed.path=="/version":
+                    if query: raise ValueError()
+                    try:
+                        info=json.loads(VERSION_FILE.read_text())
+                    except (OSError,ValueError):
+                        info={}
+                    return self.send(200,{k:info.get(k) for k in ("commit","deployed_at","subject")})
                 if parsed.path=="/health":
                     live=store.live()
                     return self.send(200 if not live["stale"] else 503,{"ok":not live["stale"],"latest_ts":live["latest"]["ts"] if live["latest"] else None})
