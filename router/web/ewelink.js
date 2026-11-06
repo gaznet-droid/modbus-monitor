@@ -1,22 +1,49 @@
-/* Read-only cached view. Responsive charts reuse the same fetched history. */
+/* Read-only cached view. Responsive charts reuse the same fetched history.
+   Web (>=601px): a list of devices with one persistent graph on the right, the
+   1000 watt inverter preselected. Mobile (<=600px): tap a card to open its graph
+   underneath, one at a time. */
 (() => {
   const el=id=>document.getElementById(id), mobile=matchMedia('(max-width:600px)');
+  const DEVICE_IDS=['inverter-1000','garage-inverter','inverter-600','charger-inverter','fridge'];
+  const INTERVAL_S=300; // eWeLink readings arrive every 5 minutes
+  const PERIOD_WORD={live:'past hour',today:'today','24h':'past 24 h',previous24h:'previous 24 h',yesterday:'yesterday','7d':'past week','30d':'past month'};
   let timer=null,controller=null,version=0,chart=null,historyAt=0,historyKey='',history=null,week=null,shownBins=[],selectedBin=0;
   const available=()=>!document.hidden&&!el('ewelinkPanel').hidden;
   const format=(v,unit)=>Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:2})+' '+unit:'Not reported';
   const date=(ts,options={})=>new Date(ts).toLocaleString('en-GB',{timeZone:'Europe/London',...options});
+  const layout=()=>el('ewelinkChartSection').closest('.ewelink-layout')||document.querySelector('.ewelink-layout');
   window.stopEwelink=()=>{version++;clearTimeout(timer);timer=null;controller?.abort();controller=null;};
   function draw(data){
-    const newest=Math.max(0,...data.devices.map(d=>d.ts||0));
-    el('ewelinkStatus').textContent=data.status+(newest?' · Checked '+date(newest,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'');
     for(const device of data.devices){
       const card=el('ew-'+device.id);if(!card)continue;
-      card.dataset.stale=String(!device.ts||device.stale||!device.online);
+      const stale=!device.ts||device.stale||!device.online;
+      card.dataset.stale=String(stale);
+      // Icon status: green+pulse when on, amber when off, grey when offline/unknown.
+      card.dataset.devstate=!device.ts?'unknown':stale?'offline':device.switch==='on'?'on':device.switch==='off'?'off':'unknown';
       const state=!device.ts?'Not connected':device.stale?'Old reading':device.online?'Online':'Offline';
-      card.querySelector('[data-state]').textContent=' · '+state;card.querySelector('.ewelink-latest .status-dot').title=state;
+      card.querySelector('[data-state]').textContent=' · '+state;
       for(const [field,key,unit] of [['power','power_w','W'],['voltage','voltage_v','V'],['current','current_a','A']])card.querySelector('[data-'+field+']').textContent=format(device[key],unit);
       card.querySelector('[data-switch]').textContent=device.switch==='on'?'On':device.switch==='off'?'Off':'Not reported';
     }
+  }
+  // Cumulative energy for the selected period, from the same cached history the graph uses.
+  function energyWh(result){
+    let sum=0,any=false;
+    for(const b of (result.bins||[]))if(b.samples&&Number.isFinite(b.mean_w)){sum+=b.mean_w*b.samples;any=true;}
+    return any?sum*INTERVAL_S/3600:null;
+  }
+  const fmtEnergy=wh=>wh==null?'No readings':wh<1000?Math.round(wh).toLocaleString()+' Wh':(wh/1000).toLocaleString(undefined,{maximumFractionDigits:2})+' kWh';
+  async function refreshCumulative(v){
+    const period=el('ewelinkPeriod').value,word=PERIOD_WORD[period]||'this period';
+    document.querySelectorAll('.ewelink-cumulative-label').forEach(x=>x.textContent='Used '+word);
+    await Promise.all(DEVICE_IDS.map(async id=>{
+      try{
+        const r=await get('/api/ewelink/history?device='+encodeURIComponent(id)+'&window='+period);
+        if(v!==version||!available())return;
+        const cell=el('ew-'+id)?.querySelector('[data-energy]');
+        if(cell)cell.textContent=fmtEnergy(energyWh(r));
+      }catch(error){/* keep the previous figure if a read fails */}
+    }));
   }
   function binLabel(b,unit,full=false){
     if(unit==='hour')return date(b.start,full?{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}:{hour:'2-digit',minute:'2-digit'});
@@ -86,7 +113,8 @@
     try{
       const data=await get('/api/ewelink/latest',aborter.signal);
       if(v!==version||!available())return;draw(data);
-      if(el('ewelinkChartSection').hidden)return; // History only while a device graph is open.
+      refreshCumulative(v); // cumulative shows on every card, graph open or not
+      if(el('ewelinkChartSection').hidden)return; // History only while a device graph is shown.
       const device=el('ewelinkDevice').value,period=el('ewelinkPeriod').value,key=device+period;
       if(historyKey!==key||Date.now()-historyAt>300000){
         try{
@@ -96,30 +124,54 @@
           history=result;historyKey=key;historyAt=Date.now();drawHistory();
         }catch(error){if(v!==version||!available())return;history=null;if(chart){chart.destroy();chart=null;}el('ewelinkBinControls').hidden=true;el('ewelinkBack').hidden=true;el('ewelinkHistoryNote').textContent='History is not available yet.';}
       }else drawHistory();
-    }catch(error){if(v===version&&available()){el('ewelinkStatus').textContent='Readings unavailable · reconnecting';document.querySelectorAll('.ewelink-card').forEach(c=>c.dataset.stale='true');}}
+    }catch(error){if(v===version&&available())document.querySelectorAll('.ewelink-card').forEach(c=>c.dataset.stale='true');}
     finally{clearTimeout(timeout);if(v===version&&available()){controller=null;timer=setTimeout(()=>read(v),30000);}}
   }
   window.startEwelink=()=>{window.stopEwelink();read(version);};
-  // Tap a card to open its graph underneath; tap again (or another card) to close it.
+  // Web: pick a device; its graph fills the right-hand pane. One device highlighted at a time.
+  function webSelect(card){
+    document.querySelectorAll('.ewelink-card').forEach(c=>{c.setAttribute('aria-selected',String(c===card));c.setAttribute('aria-expanded','false');});
+    const section=el('ewelinkChartSection');
+    if(section.parentElement!==layout())layout().appendChild(section);
+    section.hidden=false;
+    el('ewelinkDevice').value=card.id.slice(3);historyAt=0;week=null;window.startEwelink();
+  }
+  // Mobile: tap a card to open its graph underneath; tap again (or another card) to close it.
   function toggle(card){
     const section=el('ewelinkChartSection'),wasOpen=card.getAttribute('aria-expanded')==='true';
-    document.querySelectorAll('.ewelink-card').forEach(c=>c.setAttribute('aria-expanded','false'));
+    document.querySelectorAll('.ewelink-card').forEach(c=>{c.setAttribute('aria-expanded','false');c.setAttribute('aria-selected','false');});
     if(chart){chart.destroy();chart=null;}
     if(wasOpen){section.hidden=true;return;}
     card.setAttribute('aria-expanded','true');card.after(section);section.hidden=false;
     el('ewelinkDevice').value=card.id.slice(3);historyAt=0;week=null;window.startEwelink();
   }
+  // Put the page into web (list + persistent graph) or mobile (collapsed) shape.
+  function initMode(){
+    const section=el('ewelinkChartSection');
+    document.querySelectorAll('.ewelink-card').forEach(c=>c.setAttribute('aria-expanded','false'));
+    if(section.parentElement!==layout())layout().appendChild(section);
+    if(mobile.matches){
+      document.querySelectorAll('.ewelink-card').forEach(c=>c.setAttribute('aria-selected','false'));
+      section.hidden=true;if(chart){chart.destroy();chart=null;}
+    }else{
+      let sel=document.querySelector('.ewelink-card[aria-selected="true"]')||el('ew-inverter-1000')||document.querySelector('.ewelink-card');
+      document.querySelectorAll('.ewelink-card').forEach(c=>c.setAttribute('aria-selected',String(c===sel)));
+      if(sel)el('ewelinkDevice').value=sel.id.slice(3);
+      section.hidden=false;
+    }
+  }
   document.querySelectorAll('.ewelink-card').forEach(card=>{
-    card.addEventListener('click',()=>toggle(card));
-    card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle(card);}});
+    card.addEventListener('click',()=>mobile.matches?toggle(card):webSelect(card));
+    card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();mobile.matches?toggle(card):webSelect(card);}});
   });
   for(const id of ['ewelinkDevice','ewelinkPeriod'])el(id).addEventListener('change',()=>{historyAt=0;week=null;window.startEwelink();});
   el('ewelinkDrill').addEventListener('click',()=>{week=shownBins[selectedBin];selectedBin=0;drawHistory();});
   el('ewelinkBack').addEventListener('click',()=>{week=null;selectedBin=0;drawHistory();});
-  mobile.addEventListener('change',()=>{if(available())drawHistory();});
+  mobile.addEventListener('change',()=>{initMode();if(available())window.startEwelink();});
   document.addEventListener('visibilitychange',()=>{window.stopEwelink();if(available())window.startEwelink();});
   window.addEventListener('pagehide',window.stopEwelink);
   window.addEventListener('pageshow',event=>{if(event.persisted&&available())window.startEwelink();});
+  initMode();
   // The page may already have opened #ewelink before this deferred script loaded.
   if(location.hash==='#ewelink'){if(activeTab==='ewelink')window.startEwelink();else selectTab('ewelink');}
 })();
