@@ -984,6 +984,8 @@ const homeDoorRooms={'Conservatory French doors':'Conservatory','Bedroom 1 to Co
   'Hall to Lounge':'Lounge','Hall to Shower Room':'Shower Room','Hall to Front Porch':'Front Porch','Front Porch outside door':'Front Porch',
   'Lounge to Guest Bedroom':'Guest Bedroom','Guest Bedroom to Back Fuckin Porch':'Back Fuckin Porch','Back Fuckin Porch outside door':'Back Fuckin Porch'};
 function homeTint(c){const t=Math.max(0,Math.min(1,(c-12)/13));return `hsl(${Math.round(215-205*t)} 45% 17%)`;}
+// Same 12–25°C hue scale as the key, brightened so the graph line stands out on the dark background.
+function homeLineColour(c){const t=Math.max(0,Math.min(1,(c-12)/13));return `hsl(${Math.round(215-205*t)} 75% 60%)`;}
 const homeCompact=new Set(['room:front-porch','room:lower-porch','room:shower-room']);
 let homeTimer=null,homeController=null,homeVersion=0;
 function svgEl(tag,attrs,text){const el=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,v);if(text!==undefined)el.textContent=text;return el;}
@@ -1078,7 +1080,7 @@ function drawHomeGraph(data){
   }
   const hhmm=v=>new Date(v).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
   homeGraphChart=new Chart($('homeGraphChart'),{type:'line',
-    data:{datasets:[{label:'Temperature',data:points,parsing:false,borderColor:'#38bdf8',backgroundColor:'#38bdf8',borderWidth:2,pointRadius:0,pointHitRadius:10,spanGaps:false,tension:0}]},
+    data:{datasets:[{label:'Temperature',data:points,parsing:false,borderColor:'#38bdf8',backgroundColor:'#38bdf8',segment:{borderColor:ctx=>homeLineColour((ctx.p0.parsed.y+ctx.p1.parsed.y)/2)},pointHoverBackgroundColor:ctx=>Number.isFinite(ctx.raw?.y)?homeLineColour(ctx.raw.y):'#38bdf8',pointHoverBorderColor:'#f8fafc',borderCapStyle:'round',borderJoinStyle:'round',borderWidth:2,pointRadius:0,pointHitRadius:10,spanGaps:false,tension:0}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,interaction:{mode:'nearest',axis:'x',intersect:false},
       scales:{x:{type:'linear',min:data.start,max:data.end,grid:{color:'#222f49'},ticks:{color:'#94a3b8',maxRotation:0,autoSkip:false,callback:hhmm},
           // On-the-hour ticks: every 6 hours on phones, every 3 hours wider.
