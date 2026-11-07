@@ -299,7 +299,7 @@
         .home-plan .leaf { stroke:var(--text-main); stroke-width:3; stroke-linecap:round; }
         .home-plan .swing { fill:none; stroke:var(--text-muted); stroke-width:1.4; stroke-dasharray:5 5; opacity:.8; }
         .home-plan .slide { stroke:var(--text-main); stroke-width:3; stroke-linecap:round; }
-        .home-plan .room-labels text { fill:var(--text-muted); font-weight:700; letter-spacing:.08em; text-transform:uppercase; text-anchor:middle; dominant-baseline:middle; font-family:inherit; paint-order:stroke; stroke:var(--bg-base); stroke-width:6px; stroke-linejoin:round; }
+        .home-plan .room-labels text, .home-outdoor .outdoor-label { fill:var(--text-main); font-weight:700; letter-spacing:.08em; text-transform:uppercase; text-anchor:middle; dominant-baseline:middle; font-family:inherit; paint-order:stroke; stroke:var(--bg-base); stroke-width:6px; stroke-linejoin:round; }
         .home-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1rem; align-items:start; }
         .home-chip rect { fill:var(--card-bg); stroke:var(--border); stroke-width:2; }
         .home-chip text { fill:var(--text-main); font-size:24px; font-weight:700; text-anchor:middle; dominant-baseline:middle; font-family:inherit; }
@@ -317,7 +317,16 @@
         /* Home: full browser width; plan and graph view side by side on desktop, graph replaces the plan on mobile */
         body:has(#homePanel:not([hidden])) > .container { max-width:none; }
         .home-body, .home-plan-view { width:100%; display:flex; flex-direction:column; align-items:center; }
-        .home-plan .room-icons svg { color:var(--import-color); opacity:.9; }
+        .home-plan .room-icons svg, .home-outdoor svg { color:var(--text-main); }
+        /* Outside and Loft sit on the plan, top right, styled like the room labels */
+        .home-outdoor .outdoor-label { text-anchor:start; }
+        .home-outdoor .outdoor-temp { font-size:30px; font-weight:700; dominant-baseline:middle; font-family:inherit; fill:var(--text-main); }
+        .home-outdoor .outdoor-temp tspan { font-size:20px; font-weight:600; fill:var(--text-muted); }
+        .home-outdoor .hit { fill:transparent; stroke:none; }
+        .home-outdoor[role="button"] { cursor:pointer; outline:none; }
+        .home-outdoor[aria-expanded="true"] .hit { stroke:var(--import-color); stroke-width:3; }
+        .home-outdoor:focus-visible .hit { stroke:var(--text-main); stroke-width:3; }
+        .home-outdoor[data-state="stale"] { opacity:.5; }
         /* No boxes: the plan card and the graph view sit straight on the page to use the full width */
         .card.home-plan-card { background:transparent; border:0; border-radius:0; padding:0; box-shadow:none; }
         .home-graph { width:100%; box-sizing:border-box; display:grid; grid-template-columns:auto minmax(0,1fr); gap:1rem; }
@@ -651,7 +660,7 @@
 <div id="homeGraph" class="home-graph" hidden><div id="homeGraphTabs" class="home-graph-tabs" role="tablist" aria-orientation="vertical" aria-label="Temperatures"></div><div class="home-graph-main"><div class="home-graph-head"><h2 id="homeGraphTitle">Loading…</h2><button id="homeGraphClose" type="button" aria-label="Close the graph and show the floor plan">✕</button></div><p id="homeGraphNote" class="period-note" role="status">Loading readings…</p><div class="home-graph-chart"><canvas id="homeGraphChart" role="img" aria-label="Temperature over the past 24 hours"></canvas></div></div></div>
 </div>
 </div>
-<div class="home-cards"><article class="card home-card" id="homeSection-outside"><h2>Outside</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article><article class="card home-card" id="homeSection-loft"><h2>Loft</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article><article class="card home-card" id="homeSection-garage"><h2>Garage</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article></div>
+<div class="home-cards"><article class="card home-card" id="homeSection-garage"><h2>Garage</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article></div>
 </section>
       </div>
 
@@ -1006,13 +1015,13 @@ const homeAnchors={'room:conservatory':[412,340],'room:bedroom-1':[257,700],'roo
 const homeRoomLabels={'room:conservatory':'Conservatory','room:bedroom-1':'Bedroom 1','room:kitchen':'Kitchen','room:hall':'Hall',
   'room:lounge':'Lounge','room:shower-room':'Shower Room','room:guest-bedroom':'Guest Bedroom','room:front-porch':'Front Porch','room:lower-porch':'Back Fuckin Porch'};
 const homePlaceByLabel=Object.fromEntries(Object.entries(homeRoomLabels).map(([place,label])=>[label,place]));
-// Room tint: blue at 12°C through green to red at 25°C and above; dark enough to keep labels readable.
+// Room tint: the key's colours exactly, blue at 12°C through green to red at 25°C and above.
 // Each doorway takes the colour of the room its door opens into, so tinted rooms have no dark gaps.
 const homeDoorRooms={'Conservatory French doors':'Conservatory','Bedroom 1 to Conservatory':'Bedroom 1','Bedroom 1 to Hall':'Hall','Kitchen to Hall':'Kitchen',
   'Hall to Lounge':'Lounge','Hall to Shower Room':'Shower Room','Hall to Front Porch':'Front Porch','Front Porch outside door':'Front Porch',
   'Lounge to Guest Bedroom':'Guest Bedroom','Guest Bedroom to Back Fuckin Porch':'Back Fuckin Porch','Back Fuckin Porch outside door':'Back Fuckin Porch'};
-function homeTint(c){const t=Math.max(0,Math.min(1,(c-12)/13));return `hsl(${Math.round(215-205*t)} 45% 17%)`;}
-// Same 12–25°C hue scale as the key, brightened so the graph line stands out on the dark background.
+function homeTint(c){const t=Math.max(0,Math.min(1,(c-12)/13));return `hsl(${Math.round(215-205*t)} 45% 32%)`;}
+// Same 12–25°C hue scale as the key, brightened for text and the graph line on the dark background.
 function homeLineColour(c){const t=Math.max(0,Math.min(1,(c-12)/13));return `hsl(${Math.round(215-205*t)} 75% 60%)`;}
 const homeCompact=new Set(['room:front-porch','room:lower-porch','room:shower-room']);
 let homeTimer=null,homeController=null,homeVersion=0;
@@ -1039,7 +1048,8 @@ function homeChip(d,place,x,y){
   if(place.startsWith('room:')&&d.name!==homeRoomLabels[place])text=d.name+' '+text;
   const w=text.length*13+30;
   const g=svgEl('g',{class:'home-chip','data-kind':d.kind,'data-state':homeState(d),transform:`translate(${x},${y})`});
-  g.append(svgEl('title',{},d.name+' · '+homeDetail(d)),svgEl('rect',{x:-w/2,y:-19,width:w,height:38,rx:19}),svgEl('text',{x:0,y:1},text));
+  const label=svgEl('text',{x:0,y:1},text);if(d.kind==='temp'&&homeState(d)==='ok'&&Number.isFinite(d.temperature_c))label.style.fill=homeLineColour(d.temperature_c);
+  g.append(svgEl('title',{},d.name+' · '+homeDetail(d)),svgEl('rect',{x:-w/2,y:-19,width:w,height:38,rx:19}),label);
   if(d.kind==='temp')homeTempControl(g,d);
   return g;
 }
@@ -1055,6 +1065,17 @@ function renderHomeSection(key,devices){
     if(d.kind==='temp')homeTempControl(row,d);
   }
 }
+// Outside and Loft temperatures: a label, icon and reading in the empty top-right corner of the plan.
+function homeOutdoor(key,y,devices){
+  const d=devices.find(x=>x.kind==='temp'),ok=d&&homeState(d)==='ok'&&Number.isFinite(d.temperature_c);
+  const g=svgEl('g',{class:'home-outdoor','data-state':d?homeState(d):'stale',transform:`translate(722,${y})`});
+  const temp=svgEl('text',{class:'outdoor-temp',x:0,y:44},d?homeValue(d):'—');
+  if(ok){temp.style.fill=homeLineColour(d.temperature_c);if(Number.isFinite(d.humidity_pct))temp.append(svgEl('tspan',{dx:8},'· '+Math.round(d.humidity_pct)+'%'));}
+  const icon=homeIcon(key);for(const [k,v] of Object.entries({x:0,y:-14,width:28,height:28}))icon.setAttribute(k,v);
+  g.append(svgEl('rect',{class:'hit',x:-12,y:-30,width:196,height:100,rx:12}),icon,svgEl('text',{class:'outdoor-label','font-size':26,x:38,y:0},key[0].toUpperCase()+key.slice(1)),temp);
+  if(d){g.prepend(svgEl('title',{},homeSensorLabel(d)+' · '+homeDetail(d)));homeTempControl(g,d);}
+  return g;
+}
 function renderHome(data){
   homeLastData=data;
   const layer=$('homeOverlays');layer.replaceChildren();
@@ -1067,7 +1088,8 @@ function renderHome(data){
   for(const d of data.devices||[])if(d.kind==='temp'&&d.name===homeRoomLabels[d.place]&&homeState(d)==='ok'&&Number.isFinite(d.temperature_c))fills[d.place]=homeTint(d.temperature_c);
   document.querySelectorAll('.home-plan .rooms polygon').forEach(room=>{room.style.fill=fills[homePlaceByLabel[room.querySelector('title')?.textContent]]||'';});
   document.querySelectorAll('.home-plan .doors > g').forEach(door=>{const gap=door.querySelector('.opening');if(gap)gap.style.fill=fills[homePlaceByLabel[homeDoorRooms[door.getAttribute('aria-label')]]]||'';});
-  for(const key of ['outside','loft','garage'])renderHomeSection(key,byPlace['section:'+key]||[]);
+  layer.append(homeOutdoor('outside',84,byPlace['section:outside']||[]),homeOutdoor('loft',204,byPlace['section:loft']||[]));
+  renderHomeSection('garage',byPlace['section:garage']||[]);
   $('homeStatus').textContent=data.configured?'Updated '+homeTime(data.server_time)+' · refreshes every minute':'Devices not linked yet';
   placeHomeRoomIcons();if(homeGraphSlug)renderHomeTabs();
 }
@@ -1124,7 +1146,7 @@ function renderHomeTabs(){
     const tab=document.createElement('button'),selected=d.id===homeGraphSlug;
     tab.type='button';tab.dataset.tab=d.id;tab.setAttribute('role','tab');tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;
     const name=document.createElement('span');name.textContent=homeSensorLabel(d);
-    const temp=document.createElement('span');temp.className='tab-temp';temp.textContent=homeState(d)==='ok'&&Number.isFinite(d.temperature_c)?d.temperature_c.toFixed(1)+'°':'—';
+    const temp=document.createElement('span');temp.className='tab-temp';const ok=homeState(d)==='ok'&&Number.isFinite(d.temperature_c);temp.textContent=ok?d.temperature_c.toFixed(1)+'°':'—';if(ok)temp.style.color=homeLineColour(d.temperature_c);
     tab.append(homeIcon(homeIconKey(d)),name,temp);tab.addEventListener('click',()=>selectHomeGraph(d.id));box.append(tab);
   }
   if(focused)box.querySelector(`[data-tab="${focused}"]`)?.focus();
