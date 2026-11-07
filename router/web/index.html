@@ -318,7 +318,9 @@
         body:has(#homePanel:not([hidden])) > .container { max-width:none; }
         .home-body, .home-plan-view { width:100%; display:flex; flex-direction:column; align-items:center; }
         .home-plan .room-icons svg { color:var(--import-color); opacity:.9; }
-        .home-graph { width:100%; box-sizing:border-box; display:grid; grid-template-columns:auto minmax(0,1fr); gap:1rem; padding:1rem; border:1px solid var(--import-color); border-radius:12px; background:var(--bg-base); }
+        /* No boxes: the plan card and the graph view sit straight on the page to use the full width */
+        .card.home-plan-card { background:transparent; border:0; border-radius:0; padding:0; box-shadow:none; }
+        .home-graph { width:100%; box-sizing:border-box; display:grid; grid-template-columns:auto minmax(0,1fr); gap:1rem; }
         .home-graph-tabs { display:flex; flex-direction:column; gap:.3rem; }
         .home-graph-tabs [role="tab"] { display:grid; grid-template-columns:20px minmax(0,1fr) auto; align-items:center; gap:.5rem; width:11.5rem; min-height:40px; padding:.35rem .6rem; border:1px solid transparent; border-radius:10px; background:transparent; color:var(--text-muted); font:inherit; font-size:.85rem; text-align:left; cursor:pointer; }
         .home-graph-tabs [role="tab"] svg { width:20px; height:20px; color:var(--import-color); }
@@ -339,7 +341,7 @@
         }
         @media(max-width:899px) { .home-body.graph-open .home-plan-view { display:none; } }
         @media(max-width:600px) {
-          .home-graph { gap:.6rem; padding:.6rem; }
+          .home-graph { gap:.6rem; }
           .home-graph-tabs [role="tab"] { grid-template-columns:1fr; justify-items:center; width:4.6rem; min-height:52px; padding:.3rem .2rem; gap:.1rem; font-size:.62rem; line-height:1.2; text-align:center; }
           .home-graph-tabs [role="tab"] .tab-temp { font-size:.7rem; }
           .home-graph-chart { height:380px; }
