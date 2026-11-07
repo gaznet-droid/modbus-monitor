@@ -314,14 +314,36 @@
         .home-row[role="button"] { cursor:pointer; border-radius:8px; margin:-.25rem -.45rem; padding:.25rem .45rem; }
         .home-row[role="button"]:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
         .home-row[aria-expanded="true"] { background:#1e293b; box-shadow:inset 0 0 0 1px var(--import-color); }
-        .home-graph { width:100%; max-width:640px; box-sizing:border-box; margin-top:1rem; padding:.9rem 1rem 1rem; border:1px solid var(--import-color); border-radius:12px; background:var(--bg-base); }
+        /* Home: full browser width; plan and graph view side by side on desktop, graph replaces the plan on mobile */
+        body:has(#homePanel:not([hidden])) > .container { max-width:none; }
+        .home-body, .home-plan-view { width:100%; display:flex; flex-direction:column; align-items:center; }
+        .home-plan .room-icons svg { color:var(--import-color); opacity:.9; }
+        .home-graph { width:100%; box-sizing:border-box; display:grid; grid-template-columns:auto minmax(0,1fr); gap:1rem; padding:1rem; border:1px solid var(--import-color); border-radius:12px; background:var(--bg-base); }
+        .home-graph-tabs { display:flex; flex-direction:column; gap:.3rem; }
+        .home-graph-tabs [role="tab"] { display:grid; grid-template-columns:20px minmax(0,1fr) auto; align-items:center; gap:.5rem; width:11.5rem; min-height:40px; padding:.35rem .6rem; border:1px solid transparent; border-radius:10px; background:transparent; color:var(--text-muted); font:inherit; font-size:.85rem; text-align:left; cursor:pointer; }
+        .home-graph-tabs [role="tab"] svg { width:20px; height:20px; color:var(--import-color); }
+        .home-graph-tabs [role="tab"] .tab-temp { font-variant-numeric:tabular-nums; font-weight:700; color:var(--text-main); }
+        .home-graph-tabs [role="tab"]:hover { background:#141c2e; color:var(--text-main); }
+        .home-graph-tabs [role="tab"][aria-selected="true"] { background:#1e293b; border-color:var(--import-color); color:var(--text-main); }
+        .home-graph-tabs [role="tab"]:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        .home-graph-main { min-width:0; }
         .home-graph-head { display:flex; justify-content:space-between; align-items:center; gap:.75rem; }
         .home-graph-head h2 { font-size:1rem; min-width:0; overflow-wrap:anywhere; }
         #homeGraphClose { flex-shrink:0; min-width:44px; min-height:44px; border:1px solid var(--border); border-radius:8px; background:#1e293b; color:var(--text-main); font:inherit; font-size:1rem; cursor:pointer; }
         #homeGraphClose:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
         .home-graph .period-note { margin:.3rem 0 .6rem; }
-        .home-graph-chart { position:relative; width:100%; height:240px; }
-        @media(max-width:600px) { .home-graph { padding:.75rem; } .home-graph-chart { height:210px; } }
+        .home-graph-chart { position:relative; width:100%; height:440px; }
+        @media(min-width:900px) {
+          .home-body.graph-open { display:grid; grid-template-columns:minmax(0,5fr) minmax(0,7fr); gap:1.5rem; align-items:start; }
+          .home-body.graph-open .home-plan { max-height:78vh; }
+        }
+        @media(max-width:899px) { .home-body.graph-open .home-plan-view { display:none; } }
+        @media(max-width:600px) {
+          .home-graph { gap:.6rem; padding:.6rem; }
+          .home-graph-tabs [role="tab"] { grid-template-columns:1fr; justify-items:center; width:4.6rem; min-height:52px; padding:.3rem .2rem; gap:.1rem; font-size:.62rem; line-height:1.2; text-align:center; }
+          .home-graph-tabs [role="tab"] .tab-temp { font-size:.7rem; }
+          .home-graph-chart { height:380px; }
+        }
         .home-legend { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:.4rem 1rem; margin-top:.8rem; color:var(--text-muted); font-size:.75rem; }
         .home-legend-scale { display:inline-flex; align-items:center; gap:.5rem; }
         .home-legend-bar { width:140px; height:10px; border-radius:5px; border:1px solid var(--border);
@@ -502,6 +524,7 @@
 <section id="homePanel" class="tab-panel" role="tabpanel" aria-labelledby="homeTab" hidden>
 <div class="card home-plan-card">
 <div class="juwai-group-heading"><h1>Home</h1><span id="homeStatus" class="period-note home-plan-note" role="status">Loading readings…</span></div>
+<div id="homeBody" class="home-body"><div class="home-plan-view">
 <svg class="home-plan" viewBox="80 40 830 1500" role="img" aria-labelledby="homePlanTitle">
 <title id="homePlanTitle">Floor plan of the bungalow: Conservatory at the rear, then Bedroom 1, Kitchen, Hall and Front Porch, Lounge, Shower Room, Guest Bedroom and a second porch at the front</title>
 <g class="walls">
@@ -618,10 +641,13 @@
 <text font-size="24"><tspan x="642" y="1276">Guest</tspan><tspan x="642" y="1304">Bedroom</tspan></text>
 <text font-size="15"><tspan x="842" y="1282">Back</tspan><tspan x="842" y="1300">Fuckin</tspan><tspan x="842" y="1318">Porch</tspan></text>
 </g>
+<g id="homeRoomIcons" class="room-icons" aria-hidden="true"></g>
 <g id="homeOverlays" class="home-overlays"></g>
 </svg>
-<div id="homeGraph" class="home-graph" hidden><div class="home-graph-head"><h2 id="homeGraphTitle">Loading…</h2><button id="homeGraphClose" type="button" aria-label="Close graph">✕</button></div><p id="homeGraphNote" class="period-note" role="status">Loading readings…</p><div class="home-graph-chart"><canvas id="homeGraphChart" role="img" aria-label="Temperature over the past 24 hours"></canvas></div></div>
 <div class="home-legend"><span>Tap a temperature to see its past 24 hours</span><span>Room colour shows temperature</span><span class="home-legend-scale" aria-hidden="true"><span>12°C</span><span class="home-legend-bar"></span><span>25°C+</span></span></div>
+</div>
+<div id="homeGraph" class="home-graph" hidden><div id="homeGraphTabs" class="home-graph-tabs" role="tablist" aria-orientation="vertical" aria-label="Temperatures"></div><div class="home-graph-main"><div class="home-graph-head"><h2 id="homeGraphTitle">Loading…</h2><button id="homeGraphClose" type="button" aria-label="Close the graph and show the floor plan">✕</button></div><p id="homeGraphNote" class="period-note" role="status">Loading readings…</p><div class="home-graph-chart"><canvas id="homeGraphChart" role="img" aria-label="Temperature over the past 24 hours"></canvas></div></div></div>
+</div>
 </div>
 <div class="home-cards"><article class="card home-card" id="homeSection-outside"><h2>Outside</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article><article class="card home-card" id="homeSection-loft"><h2>Loft</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article><article class="card home-card" id="homeSection-garage"><h2>Garage</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article></div>
 </section>
@@ -1028,6 +1054,7 @@ function renderHomeSection(key,devices){
   }
 }
 function renderHome(data){
+  homeLastData=data;
   const layer=$('homeOverlays');layer.replaceChildren();
   const byPlace={};for(const d of data.devices||[])(byPlace[d.place]??=[]).push(d);
   for(const [place,list] of Object.entries(byPlace)){
@@ -1040,28 +1067,86 @@ function renderHome(data){
   document.querySelectorAll('.home-plan .doors > g').forEach(door=>{const gap=door.querySelector('.opening');if(gap)gap.style.fill=fills[homePlaceByLabel[homeDoorRooms[door.getAttribute('aria-label')]]]||'';});
   for(const key of ['outside','loft','garage'])renderHomeSection(key,byPlace['section:'+key]||[]);
   $('homeStatus').textContent=data.configured?'Updated '+homeTime(data.server_time)+' · refreshes every minute':'Devices not linked yet';
+  placeHomeRoomIcons();if(homeGraphSlug)renderHomeTabs();
 }
-// Home temperature history: tap a temperature chip or row for its past 24 hours; tap again or ✕ to close.
-let homeGraphSlug=null,homeGraphChart=null,homeGraphController=null,homeGraphBounds=null;
-const homeNarrow=matchMedia('(max-width:600px)');
+// Home temperature history. Tapping a temperature opens the graph view: room tabs down the left, graph beside them.
+// Desktop keeps the plan on the left; on smaller screens the graph view replaces the plan until it is closed.
+let homeGraphSlug=null,homeGraphChart=null,homeGraphController=null,homeGraphBounds=null,homeLastData=null;
+const homeIcons={ // 24-unit line icons in the site's icon style
+  conservatory:'M3 20h18M4 20v-9l8-7 8 7v9M4 11h16M12 4v16M8 11v9M16 11v9',
+  bed:'M2 19V6M2 14h20v5M22 19v-3M6 11h4a2 2 0 0 1 2 2v1M12 11h7a3 3 0 0 1 3 3',
+  guestbed:'M2 19V8M2 15h20v4M22 19v-2M6 12h4a2 2 0 0 1 2 2v1M12 12h7a3 3 0 0 1 3 3M18 3v5M15.5 5.5h5',
+  kitchen:'M4 10h16v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7zM2 10h20M9 6V4M12 6V3M15 6V4',
+  freezer:'M12 2v20M3.5 7l17 10M20.5 7l-17 10M9 3.5l3 2 3-2M9 20.5l3-2 3 2',
+  door:'M6 21V3h12v18M3 21h18M14.5 12h.01',
+  porch:'M3 9l9-6 9 6M7 21V11h10v10M3 21h18M14.5 16h.01',
+  sofa:'M5 11V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3M3 12a2 2 0 0 1 4 0v2h10v-2a2 2 0 0 1 4 0v5H3v-5zM5 17v2M19 17v2',
+  shower:'M5 21V7a4 4 0 0 1 8 0M10 7h6M16 7l-3 4M10 14v.5M13 14v.5M16 14v.5M11.5 17.5v.5M14.5 17.5v.5M17.5 17.5v.5',
+  loft:'M2 12 12 4l10 8M5 10v10h14V10M9.5 12h5L12 9.5z',
+  outside:'M12 21v-5M8 16h8a4 4 0 0 0 1-7.9 5 5 0 0 0-9.8 0A4 4 0 0 0 8 16z'};
+const homePlaceIcons={'room:conservatory':'conservatory','room:bedroom-1':'bed','room:kitchen':'kitchen','room:hall':'door','room:front-porch':'porch',
+  'room:lounge':'sofa','room:shower-room':'shower','room:guest-bedroom':'guestbed','room:lower-porch':'porch','section:loft':'loft','section:outside':'outside'};
+const homeLabelPlaces={Conservatory:'room:conservatory','Bedroom 1':'room:bedroom-1',Kitchen:'room:kitchen',Hall:'room:hall',Front:'room:front-porch',
+  Lounge:'room:lounge',Shower:'room:shower-room',Guest:'room:guest-bedroom',Back:'room:lower-porch'};
+const homeSensorOrder=['room:conservatory','room:bedroom-1','room:kitchen','room:hall','room:front-porch','room:lounge','room:shower-room','room:guest-bedroom','section:loft','section:outside'];
+function homeIcon(key,size){const icon=svgEl('svg',{viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'1.6','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',focusable:'false'});
+  if(size)icon.setAttribute('width',size),icon.setAttribute('height',size);icon.append(svgEl('path',{d:homeIcons[key]||homeIcons.door}));return icon;}
+function homeIconKey(d){return d.name==='Freezer'?'freezer':homePlaceIcons[d.place]||'door';}
+function homeSensorLabel(d){return d.place.startsWith('section:')?d.place[8].toUpperCase()+d.place.slice(9):d.name;}
+function homeSensor(slug){return (homeLastData?.devices||[]).find(d=>d.id===slug);}
+function homeSensors(){
+  const temps=(homeLastData?.devices||[]).filter(d=>d.kind==='temp'),rank=d=>{const i=homeSensorOrder.indexOf(d.place);return (i<0?99:i)*2+(d.name===homeRoomLabels[d.place]||d.place.startsWith('section:')?0:1);};
+  return temps.sort((a,b)=>rank(a)-rank(b));
+}
+// Small room icons beside each room name on the plan, placed once the plan is visible so the label widths can be measured.
+function placeHomeRoomIcons(){
+  const layer=$('homeRoomIcons');if(layer.childElementCount)return;
+  for(const text of document.querySelectorAll('.home-plan .room-labels text')){
+    const first=text.querySelector('tspan'),place=homeLabelPlaces[first?.textContent];if(!place)continue;
+    const width=first.getComputedTextLength();if(!width)return; // not rendered yet: try again on the next refresh
+    const size=Number(text.getAttribute('font-size')),icon=size<=16?16:Math.round(size*1.15),gap=Math.round(size*0.3);
+    const x=Number(first.getAttribute('x'))-width/2-gap-icon,y=Number(first.getAttribute('y'))-icon/2;
+    const g=homeIcon(homePlaceIcons[place]);for(const [k,v] of Object.entries({x,y,width:icon,height:icon}))g.setAttribute(k,v);layer.append(g);
+  }
+}
 function homeTempControl(el,d){
   el.dataset.homeTemp=d.id;el.setAttribute('role','button');el.setAttribute('tabindex','0');
-  el.setAttribute('aria-expanded',String(homeGraphSlug===d.id));el.setAttribute('aria-label',d.name+' temperature, show the past 24 hours');
+  el.setAttribute('aria-expanded',String(homeGraphSlug===d.id));el.setAttribute('aria-label',homeSensorLabel(d)+' temperature, show the past 24 hours');
   el.addEventListener('click',()=>toggleHomeGraph(d.id));
   el.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleHomeGraph(d.id);}});
 }
 function markHomeGraph(){document.querySelectorAll('[data-home-temp]').forEach(el=>el.setAttribute('aria-expanded',String(el.dataset.homeTemp===homeGraphSlug)));}
+function renderHomeTabs(){
+  const box=$('homeGraphTabs'),focused=document.activeElement?.dataset?.tab;box.replaceChildren();
+  for(const d of homeSensors()){
+    const tab=document.createElement('button'),selected=d.id===homeGraphSlug;
+    tab.type='button';tab.dataset.tab=d.id;tab.setAttribute('role','tab');tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;
+    const name=document.createElement('span');name.textContent=homeSensorLabel(d);
+    const temp=document.createElement('span');temp.className='tab-temp';temp.textContent=homeState(d)==='ok'&&Number.isFinite(d.temperature_c)?d.temperature_c.toFixed(1)+'°':'—';
+    tab.append(homeIcon(homeIconKey(d)),name,temp);tab.addEventListener('click',()=>selectHomeGraph(d.id));box.append(tab);
+  }
+  if(focused)box.querySelector(`[data-tab="${focused}"]`)?.focus();
+}
+$('homeGraphTabs').addEventListener('keydown',event=>{
+  const tabs=[...$('homeGraphTabs').querySelectorAll('[role="tab"]')],i=tabs.indexOf(document.activeElement);
+  if(i<0||!['ArrowUp','ArrowDown','Home','End'].includes(event.key))return;event.preventDefault();
+  const next=tabs[event.key==='Home'?0:event.key==='End'?tabs.length-1:(i+(event.key==='ArrowDown'?1:tabs.length-1))%tabs.length];
+  selectHomeGraph(next.dataset.tab);$('homeGraphTabs').querySelector(`[data-tab="${next.dataset.tab}"]`)?.focus();
+});
+function selectHomeGraph(slug){
+  homeGraphSlug=slug;markHomeGraph();renderHomeTabs();
+  const d=homeSensor(slug);$('homeGraphTitle').textContent=(d?homeSensorLabel(d):'Temperature')+' · past 24 hours';$('homeGraphNote').textContent='Loading readings…';
+  if(homeGraphChart){homeGraphChart.data.datasets[0].data=[];homeGraphChart.update('none');}
+  loadHomeGraph();
+}
 function toggleHomeGraph(slug){
   if(homeGraphSlug===slug){closeHomeGraph();return;}
-  homeGraphSlug=slug;markHomeGraph();
-  $('homeGraph').hidden=false;$('homeGraphTitle').textContent='Loading…';$('homeGraphNote').textContent='Loading readings…';
-  if(homeGraphChart){homeGraphChart.data.datasets[0].data=[];homeGraphChart.update('none');}
-  $('homeGraph').scrollIntoView({behavior:'smooth',block:'nearest'});
-  loadHomeGraph();
+  const wasOpen=!!homeGraphSlug;$('homeGraph').hidden=false;$('homeBody').classList.add('graph-open');selectHomeGraph(slug);
+  if(!wasOpen)(matchMedia('(min-width:900px)').matches?$('homeGraph'):$('homeBody')).scrollIntoView({behavior:'smooth',block:'start'});
 }
 function closeHomeGraph(){
   homeGraphSlug=null;homeGraphController?.abort();homeGraphController=null;
-  $('homeGraph').hidden=true;if(homeGraphChart){homeGraphChart.destroy();homeGraphChart=null;}markHomeGraph();
+  $('homeGraph').hidden=true;$('homeBody').classList.remove('graph-open');if(homeGraphChart){homeGraphChart.destroy();homeGraphChart=null;}markHomeGraph();
 }
 async function loadHomeGraph(){
   const slug=homeGraphSlug;if(!slug)return;
@@ -1070,7 +1155,7 @@ async function loadHomeGraph(){
   catch(e){if(e.name!=='AbortError'&&slug===homeGraphSlug)$('homeGraphNote').textContent='History unavailable · trying again at the next refresh';}
 }
 function drawHomeGraph(data){
-  $('homeGraphTitle').textContent=data.name+' · past 24 hours';
+  $('homeGraphTitle').textContent=homeSensorLabel(homeSensor(data.device)||{name:data.name,place:''})+' · past 24 hours';
   $('homeGraphNote').textContent=data.points.length?'Low '+data.min_c.toFixed(1)+'°C · High '+data.max_c.toFixed(1)+'°C · readings every '+Math.round(data.interval_seconds/60)+' minutes':'No recorded readings in the past 24 hours.';
   const points=[];let previous=null;
   for(const [ts,c,h] of data.points){if(previous!==null&&ts-previous>900000)points.push({x:previous+1,y:null});points.push({x:ts,y:c,h});previous=ts;}
@@ -1083,14 +1168,13 @@ function drawHomeGraph(data){
     data:{datasets:[{label:'Temperature',data:points,parsing:false,borderColor:'#38bdf8',backgroundColor:'#38bdf8',segment:{borderColor:ctx=>homeLineColour((ctx.p0.parsed.y+ctx.p1.parsed.y)/2)},pointHoverBackgroundColor:ctx=>Number.isFinite(ctx.raw?.y)?homeLineColour(ctx.raw.y):'#38bdf8',pointHoverBorderColor:'#f8fafc',borderCapStyle:'round',borderJoinStyle:'round',borderWidth:2,pointRadius:0,pointHitRadius:10,spanGaps:false,tension:0}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,interaction:{mode:'nearest',axis:'x',intersect:false},
       scales:{x:{type:'linear',min:data.start,max:data.end,grid:{color:'#222f49'},ticks:{color:'#94a3b8',maxRotation:0,autoSkip:false,callback:hhmm},
-          // On-the-hour ticks: every 6 hours on phones, every 3 hours wider.
-          afterBuildTicks:axis=>{const every=homeNarrow.matches?6:3,ticks=[];for(let t=Math.ceil(homeGraphBounds.start/3600000)*3600000;t<=homeGraphBounds.end;t+=3600000)if(new Date(t).getHours()%every===0)ticks.push({value:t});axis.ticks=ticks;}},
+          // On-the-hour ticks: every 6 hours on a narrow graph, every 3 hours on a wide one.
+          afterBuildTicks:axis=>{const every=axis.chart.width<520?6:3,ticks=[];for(let t=Math.ceil(homeGraphBounds.start/3600000)*3600000;t<=homeGraphBounds.end;t+=3600000)if(new Date(t).getHours()%every===0)ticks.push({value:t});axis.ticks=ticks;}},
         y:{grid:{color:'#222f49'},ticks:{color:'#94a3b8',callback:v=>v.toLocaleString(undefined,{maximumFractionDigits:1})+'°C'}}},
       plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(undefined,{weekday:'short',hour:'2-digit',minute:'2-digit'}),
         label:item=>[item.parsed.y.toFixed(1)+'°C',...(Number.isFinite(item.raw.h)?[Math.round(item.raw.h)+'% humidity']:[])]}}}}});
 }
-$('homeGraphClose').addEventListener('click',closeHomeGraph);
-homeNarrow.addEventListener('change',()=>homeGraphChart?.update('none'));
+$('homeGraphClose').addEventListener('click',()=>{const from=homeGraphSlug;closeHomeGraph();$('homeBody').scrollIntoView({block:'start'});document.querySelector(`[data-home-temp="${from}"]`)?.focus({preventScroll:true});});
 function stopHome(){homeVersion++;clearTimeout(homeTimer);homeTimer=null;homeController?.abort();homeController=null;homeGraphController?.abort();}
 async function readHome(version){
   if(version!==homeVersion||activeTab!=='home'||document.hidden)return;
