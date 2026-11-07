@@ -1,5 +1,5 @@
 [Unit]
-Description=Deploy as soon as the optional GitHub webhook queues a request
+Description=Deploy as soon as the signed GitHub push webhook queues a request
 
 [Path]
 PathModified=/var/lib/modpi/deploy-request

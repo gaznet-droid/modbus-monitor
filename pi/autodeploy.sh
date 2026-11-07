@@ -1,6 +1,6 @@
 #!/bin/sh
-# ModPi auto-deploy. Run as root every two minutes by modpi-deploy.timer, and straight
-# away if a signed GitHub push webhook queues a request (modpi-deploy.path; optional).
+# ModPi auto-deploy. Run as root straight away when a signed GitHub push webhook queues
+# a request (modpi-deploy.path, the main trigger), and once a day by modpi-deploy.timer.
 #
 # Pulls main from GitHub (public, read-only, no credentials on the Pi), runs the
 # test suite, copies the app into /opt/modpi, restarts only what changed, checks

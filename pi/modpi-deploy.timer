@@ -1,12 +1,12 @@
 [Unit]
-Description=Check GitHub for a new ModPi commit every two minutes
+Description=Check GitHub for a new ModPi commit once a day, early morning
 
 [Timer]
-# Polling replaces the GitHub webhook as the main trigger: nothing inbound, no secret.
-# A check with no new commit is one small read-only fetch and changes nothing.
-OnBootSec=1min
-OnUnitInactiveSec=2min
-RandomizedDelaySec=15s
+# Backup only. The signed GitHub push webhook (modpi-deploy.path) is the main trigger;
+# this catches any push whose webhook delivery was missed.
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+RandomizedDelaySec=10min
 
 [Install]
 WantedBy=timers.target

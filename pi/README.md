@@ -100,16 +100,22 @@ Mac tests use fixtures and mocks. They do not prove Pi boot, Linux storage,
 systemd behavior, real Juwai compatibility or successful credential migration.
 
 ## Auto-deploy from GitHub
-GitHub `main` is the source of truth. Push from any device and it goes live within about
-two minutes, with no Mac needed: modpi-deploy.timer checks main every two minutes (and a
-minute after boot). A check with no new commit is one small anonymous, read-only fetch.
-Nothing reaches in from outside, so there is no webhook or secret to set up.
+GitHub `main` is the source of truth. Push from any device and it goes live within seconds,
+with no Mac needed.
 
-Optional, not set up as of 6 Nov: a signed GitHub push webhook to
-https://modbus.clockmillbarn.uk/api/deploy-hook would deploy a little sooner. The site checks
-the HMAC signature against /var/lib/modpi/private/deploy-hook.secret and touches
-/var/lib/modpi/deploy-request; modpi-deploy.path then starts the deploy. It can only make
-the Pi pull main. Adding it means pasting that secret into the repo's webhook settings.
+Main trigger (since 7 Nov): a signed GitHub push webhook (JSON, push events only) to
+https://modbus.clockmillbarn.uk/api/deploy-hook. The site checks the HMAC signature against
+/var/lib/modpi/private/deploy-hook.secret (owner modpi:modpi, mode 0600, never committed or
+printed), then touches /var/lib/modpi/deploy-request; modpi-deploy.path starts the deploy.
+Only pushes to main queue a deploy, and the hook can only make the Pi pull main. Tested on
+7 Nov: a push went live about 3 seconds later with the timer paused. Results show in the
+modpi journal as `deploy-hook:` lines (`ping ok`, `push to main queued`, or a refusal).
+To rotate the secret: set a new one in the repo's webhook settings, write it to that file
+with the same owner and mode (no restart needed), then Redeliver the ping on GitHub.
+
+Backup: modpi-deploy.timer checks main once a day at 03:30 (up to 10 minutes later, and
+on the next boot if the Pi was off), so a missed webhook delivery goes live by morning.
+A check with no new commit is one small anonymous, read-only fetch.
 
 What `/usr/local/sbin/modpi-autodeploy` (pi/autodeploy.sh) does with a new commit:
 1. Pulls main anonymously over HTTPS (public repo, no credentials on the Pi).

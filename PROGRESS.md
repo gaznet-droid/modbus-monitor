@@ -2,3 +2,4 @@
 - 2026-11-07 11:50: The Home tab's boxes are gone. The plan and the graph view now sit straight on the page with no card border or blue frame, which gives the graphs more width, especially on phones. The Outside, Loft and Garage cards keep their boxes. It was a page-only change. Next: Gareth wants a broader rethink of the mobile and desktop layout later.
 
 - 2026-11-07 12:20: The GitHub deploy webhook has a new secret, now on the Pi, and GitHub's ping was accepted. This push tests that the webhook alone deploys, with the two-minute check paused. Next: switch the backup check to once a day at 03:30.
+- 2026-11-07 12:25: The GitHub push webhook is now the main way the Pi deploys. A new secret is on the Pi, GitHub's ping was accepted, and a test push went live about 3 seconds later with the two-minute check paused. The backup check is back to once a day at 03:30, and the Pi README says so. Nothing is broken. Next: shut the Pi down cleanly and move it to Dad's house.
