@@ -122,11 +122,12 @@ restart_units() {
     if [ "$RESTART_TUYA" = yes ]; then systemctl restart modpi-tuya.service; fi
 }
 
-healthy() {  # dashboard page answers 200 and units stay up
+healthy() {  # the app answers 200 and units stay up
+    # /version, not /: with login on, / answers 303 (sign in), which is still healthy.
     i=0
     while [ $i -lt 12 ]; do
         sleep 5; i=$((i + 1))
-        code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$PORT/" || true)
+        code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$PORT/version" || true)
         [ "$code" = 200 ] || continue
         systemctl is-active --quiet modpi.service || return 1
         if [ "$RESTART_TUYA" = yes ]; then systemctl is-active --quiet modpi-tuya.service || return 1; fi

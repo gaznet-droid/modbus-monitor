@@ -124,7 +124,7 @@ What `/usr/local/sbin/modpi-autodeploy` (pi/autodeploy.sh) does with a new commi
 4. Compares the new app files with /opt/modpi. Page-only changes (router/web) go live
    with no restart. Python changes back up /var/lib/modpi/private, then restart modpi;
    modpi-tuya restarts only if Tuya or storage code changed and it was already running.
-5. Checks the dashboard answers on port 8096 within a minute. If not, it restores the
+5. Checks the app answers /version on port 8096 within a minute (not /, which redirects to sign-in when login is on). If not, it restores the
    previous copy and restarts again.
 6. A failed commit is not retried. Push a fix and the next run picks it up.
 7. If main's systemd units or autodeploy.sh differ from those installed on the Pi, the
