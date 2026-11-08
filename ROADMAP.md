@@ -26,12 +26,15 @@ UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer pa
   - Pi must have Wi-Fi coverage at the meter's location.
 
 ## Later
-- Add a seamless login for Dad once the Home tab and other proofs of concept settle, so door, switch and temperature states aren't public. No Cloudflare Access, and he shouldn't have to keep logging in. Built into the Pi app, allowlisted users only, long-lived sessions renewed on each visit. Order of preference (decided 4 Nov):
-  1. Passkeys (Face ID or fingerprint). Enrol each device through a one-time link. Signature checks need ES256: python3-cryptography 43 (Debian package) is already on the Pi, which would be the first non-stdlib runtime dependency, so decide that deliberately.
-  2. Remember-this-device links: a one-time link per device sets a long-lived cookie. Also the fallback if passkeys don't work on one of Dad's devices.
-  3. Sign in with Google (allowlisted emails), as the last fallback.
-  One login covers the whole site, but signed-in state lives in each browser, so Dad signs in once on each phone, tablet or computer he uses and then stays signed in. Passkeys sync across devices on the same Apple or Google account, so after the first setup another device is one Face ID tap; device links need one link per device; Google is one tap where he's already signed in.
-  Keep the eWeLink OAuth callback and /health reachable without login. Decide whether it covers the whole site or only the Home tab.
+- Login for the whole site (plan agreed 8 Nov, replaces the 4 Nov ordering). Built into the Pi app; no Cloudflare Access; long-lived sessions renewed on each visit, so each device signs in once and stays signed in.
+  - Users: Gareth and Dad only. Their two email addresses are the allowlist, kept in the Pi's private folder, never in the public repo. No public sign-up.
+  - Sign in two ways: Google (allowlisted emails only), and passkeys (Face ID or Touch ID on Apple, fingerprint or face unlock on Android) for everyday use.
+  - An "Admin" link in the site footer opens the sign-in page. Once signed in, the admin page creates one-time, short-lived sign-up links to add a passkey on a new device, and lists passkeys and signed-in devices so either user can remove one. Only a signed-in user can create links.
+  - First use: Gareth signs in with Google, then sends Dad a sign-up link, or Dad signs in with Google and adds his own passkey. No SSH needed.
+  - Decided against Claude creating links over SSH: links would end up in chat history.
+  - Whole site sits behind the login. Must stay reachable without it: the sign-in pages and Google callback, the eWeLink OAuth callback, /health, /version and the GitHub deploy webhook.
+  - Needs: a Google Cloud OAuth client (Gareth to set up, with guidance; its secret only on the Pi), and python3-cryptography (already on the Pi as a Debian package) for passkey signatures, the app's first non-standard-library dependency, accepted.
+  - Risk accepted: anyone in Gareth's or Dad's Google account could sign in.
 - Investigate the meter dropping out most evenings around 17:45–18:30 (seen 28–31 Oct) while eWeLink stayed online.
 - Confirm Dad's broadband: his Wi-Fi is a BT Hub, but the meter's public IP is TalkTalk.
 - Optionally make Live Net Power and the Combined Meter Reading follow the time window (average power; meter reading at window end needs meter history).
