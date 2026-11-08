@@ -284,6 +284,8 @@ class BondsProxyTests(AuthHttpBase):
             self.assertEqual(r.status, 200); self.assertEqual(r.headers['Cache-Control'], 'private, no-store')
             self.assertEqual(r.read(), b'<a href="/bonds/">Overview</a><a href="/bonds/people">People</a><form action="/bonds/bonds/add" method="post"></form>')
         self.assertEqual(self.seen[-1], ('GET', '/people', None))    # session cookie not passed on
+        self.assertIn(b'<a class="modpi-back" href="/">', monitor.rewrite_bonds_html(b'<header><nav><a href="/x">x</a></nav></header>'))
+        self.assertIn(b'href="/bonds/x"', monitor.rewrite_bonds_html(b'<header><a href="/x">x</a></header>'))
         with self.request('/bonds', cookie=cookie) as r:
             self.assertEqual(r.status, 200)
         self.assertEqual(self.seen[-1][1], '/')

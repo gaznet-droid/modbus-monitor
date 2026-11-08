@@ -350,11 +350,17 @@ BONDS_PREFIX="/bonds"
 def bonds_path(path):
     return path==BONDS_PREFIX or path.startswith(BONDS_PREFIX+"/")
 
+# A "back to the monitor" button added to the top-right of the tracker's header, in its own colours.
+BONDS_BACK=(b'<style>header{position:relative}.brand{padding-right:7.5rem}'
+    b'.modpi-back{position:absolute;top:12px;right:16px;padding:6px 12px;border:1px solid var(--line);border-radius:8px;'
+    b'background:var(--surface);color:var(--ink);font-weight:600;text-decoration:none}</style>'
+    b'<a class="modpi-back" href="/">&larr; Monitor</a>')
+
 def rewrite_bonds_html(body):
-    """The bond tracker links from its own root; point those links at /bonds/ instead."""
+    """The bond tracker links from its own root; point those links at /bonds/ instead, and add a way back."""
     for attr in (b'href="/',b'action="/',b'src="/'):
         body=body.replace(attr,attr[:-1]+BONDS_PREFIX.encode()+b"/")
-    return body
+    return body.replace(b"<header>",b"<header>"+BONDS_BACK,1)
 
 def handler(store, web, voltage=None, tuya=None, ewelink=None, auth=None, bonds_port=None):
     class Handler(BaseHTTPRequestHandler):
