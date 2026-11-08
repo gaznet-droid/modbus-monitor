@@ -1,0 +1,8 @@
+[Unit]
+Description=ModPi clean power-off requested from the Admin page
+
+[Service]
+Type=oneshot
+# Only a fresh request (written in the last two minutes) powers off; the request is always removed,
+# so a leftover file can never shut the Pi down after the next boot.
+ExecStart=/bin/sh -c 'f=/var/lib/modpi/shutdown-request; [ -f "$f" ] || exit 0; age=$(( $(date +%%s) - $(stat -c %%Y "$f") )); rm -f "$f"; if [ "$age" -ge 0 ] && [ "$age" -lt 120 ]; then echo "modpi-shutdown: powering off"; systemctl --no-block poweroff; else echo "modpi-shutdown: ignored stale request"; fi'

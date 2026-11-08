@@ -1,0 +1,9 @@
+[Unit]
+Description=Power off when a signed-in user asks from the Admin page
+
+[Path]
+PathModified=/var/lib/modpi/shutdown-request
+Unit=modpi-shutdown.service
+
+[Install]
+WantedBy=paths.target

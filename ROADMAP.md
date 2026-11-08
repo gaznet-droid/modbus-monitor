@@ -53,4 +53,5 @@ UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer pa
 - 6 Nov: Home tab temperatures tappable for a 24-hour graph (plan chips, Freezer, Outside and Loft).
 - 7 Nov: Home graph view with room tabs and room icons; Home tab full browser width on desktop.
 - 6 Nov: Pi deploys itself from GitHub: tested, health-checked, rolled back on failure; live commit at /version. No Mac needed.
+- 8 Nov: Login live, Premium Bonds at /bonds/, and a safe Shut down the Pi button on the Admin page.
 - 7 Nov: GitHub push webhook set up with a new secret and proven on its own (live about 3 seconds after a push); the backup check is back to once a day at 03:30.

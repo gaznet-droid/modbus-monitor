@@ -46,6 +46,12 @@
     <p id="addStatus" class="status" role="status"></p>
   </section>
   <section><h2>Passkeys</h2><div id="passkeys"><p>Loading…</p></div></section>
+  <section>
+    <h2>Power</h2>
+    <p>Shut the Pi down safely before unplugging it. Wait until its green light has stopped flashing (about 30 seconds), then unplug. To start it again, plug it back in.</p>
+    <div class="controls"><button id="powerOff" type="button" class="danger">Shut down the Pi</button></div>
+    <p id="powerStatus" class="status" role="status"></p>
+  </section>
   <section><h2>Signed-in devices</h2><p>Signing a device out here means it needs a passkey or Google to get back in.</p><div id="sessions"></div></section>
   <p id="status" class="status" role="status"></p>
 </main>
@@ -89,6 +95,13 @@ $('thisDevice').addEventListener('click',async()=>{
   const b=$('thisDevice');b.disabled=true;say($('addStatus'),'');
   try{await passkeyCreate();say($('addStatus'),'Face ID or fingerprint is set up on this device.',true);await load();}
   catch(e){say($('addStatus'),passkeyMessage(e));}b.disabled=false;
+});
+$('powerOff').addEventListener('click',async()=>{
+  const b=$('powerOff');
+  if(!b.classList.contains('confirm')){b.classList.add('confirm');b.textContent='Tap again to shut down';setTimeout(()=>{if(!b.disabled){b.classList.remove('confirm');b.textContent='Shut down the Pi';}},5000);return;}
+  b.disabled=true;
+  try{await authPost('/admin/power-off');say($('powerStatus'),'Shutting down. Wait about 30 seconds until the green light stops flashing, then unplug. The site will be offline until it is plugged back in.',true);b.textContent='Shutting down…';}
+  catch(e){say($('powerStatus'),e.message);b.disabled=false;b.classList.remove('confirm');b.textContent='Shut down the Pi';}
 });
 $('signOut').addEventListener('click',async()=>{try{await authPost('/auth/logout');}catch{}location.replace('/login');});
 load().catch(()=>say($('status'),'Could not load. Check the connection.'));

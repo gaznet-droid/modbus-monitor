@@ -37,6 +37,7 @@ VERSION_FILE=Path(__file__).resolve().parents[1]/"VERSION.json"
 DEPLOY_SECRET_FILE=Path("/var/lib/modpi/private/deploy-hook.secret")
 DEPLOY_REQUEST_FILE=Path("/var/lib/modpi/deploy-request")
 DEPLOY_BRANCH_REF="refs/heads/main"
+SHUTDOWN_REQUEST_FILE=Path("/var/lib/modpi/shutdown-request")  # modpi-shutdown.path powers off on change
 
 def period_bounds(window, now):
     if window=="1d":
@@ -442,6 +443,10 @@ def handler(store, web, voltage=None, tuya=None, ewelink=None, auth=None, bonds_
                     return self.send(200,auth.remove("passkeys",body.get("id")))
                 if path=="/auth/sessions/delete":
                     return self.send(200,auth.remove("sessions",body.get("id")))
+                if path=="/admin/power-off":
+                    SHUTDOWN_REQUEST_FILE.write_text(str(int(time.time()))+"\n")
+                    LOG.warning("power-off requested by %s from the Admin page",self.user)
+                    return self.send(202,{"ok":True})
                 if path=="/auth/logout":
                     self.cookies.append(auth.logout(self.session_id));return self.send(200,{"ok":True})
                 return self.send(404,{"error":"Not found"})
@@ -488,7 +493,7 @@ def handler(store, web, voltage=None, tuya=None, ewelink=None, auth=None, bonds_
             return self.send(reply.status,data,kind,cache="private, no-store")
         def do_POST(self):
             path=urlsplit(self.path).path
-            if path.startswith("/auth/"):
+            if path.startswith("/auth/") or path=="/admin/power-off":
                 return self.auth_post(path)
             if bonds_path(path):
                 if not self.allowed(path): return

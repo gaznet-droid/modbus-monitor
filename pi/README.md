@@ -177,3 +177,11 @@ never forwarding the session cookie, and marking every reply private, no-store s
 can't cache bond data. A footer link appears next to Admin. Since 8 Nov the override
 /etc/systemd/system/bondtracker.service.d/local-only.conf makes the tracker listen on 127.0.0.1 only;
 Oscar reaches it through the site or an SSH tunnel (ssh -L 8000:127.0.0.1:8000 admin@modpi).
+
+## Shutting down from the Admin page
+Admin has a "Shut down the Pi" button (two taps). The site, running as the unprivileged modpi
+user, only writes /var/lib/modpi/shutdown-request; modpi-shutdown.path (root) sees it and
+modpi-shutdown.service powers off cleanly. Only a request less than two minutes old counts, and
+the file is always deleted first, so a leftover request can never shut the Pi down after a boot.
+Only signed-in users on the site's own origin can ask; with login off there is no button. Wait for
+the green light to stop flashing before unplugging. Installed with pi/install-autodeploy.sh.

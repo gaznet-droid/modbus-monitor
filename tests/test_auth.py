@@ -233,6 +233,18 @@ class AuthHttpTests(AuthHttpBase):
         self.assertEqual(self.post('/auth/passkeys/delete', {'id': passkey}, mine)[0], 200)
         self.assertEqual(attempt(count=9), 403)
 
+    def test_power_off_needs_a_signed_in_user_on_this_site(self):
+        from unittest.mock import patch
+        request = Path(self.tmp.name) / 'shutdown-request'
+        with patch.object(monitor, 'SHUTDOWN_REQUEST_FILE', request):
+            self.assertEqual(self.post('/admin/power-off', {})[0], 404)          # login off: no button
+            self.enable(); _, cookie = self.google()
+            self.assertEqual(self.post('/admin/power-off', {})[0], 401)
+            self.assertEqual(self.post('/admin/power-off', {}, cookie, origin='https://evil.test')[0], 403)
+            self.assertFalse(request.exists())
+            self.assertEqual(self.post('/admin/power-off', {}, cookie)[0], 202)
+            self.assertTrue(request.exists())
+
     @unittest.skipUnless(CRYPTO, 'python3-cryptography not installed')
     def test_sign_up_link_expires(self):
         self.enable(); _, mine = self.google()

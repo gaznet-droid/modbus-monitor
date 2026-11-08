@@ -55,7 +55,8 @@ UNITDIR=${MODPI_UNITDIR:-/etc/systemd/system}
 SELF=${MODPI_SELF:-/usr/local/sbin/modpi-autodeploy}
 PENDING=""
 cmp -s "$SRC/pi/autodeploy.sh" "$SELF" || PENDING="autodeploy.sh"
-for unit in modpi.service modpi-tuya.service modpi-tunnel.service modpi-deploy.service modpi-deploy.timer modpi-deploy.path; do
+for unit in modpi.service modpi-tuya.service modpi-tunnel.service modpi-deploy.service modpi-deploy.timer modpi-deploy.path \
+            modpi-shutdown.service modpi-shutdown.path; do
     cmp -s "$SRC/pi/$unit" "$UNITDIR/$unit" || PENDING="$PENDING $unit"
 done
 if [ -n "$PENDING" ]; then
