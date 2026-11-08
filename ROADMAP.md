@@ -27,7 +27,7 @@ UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer pa
 
 ## Later
 - Login for the whole site: LIVE since 8 Nov (Google for Gareth and Dad, passkeys, Admin page). To do: rotate the Google client secret (it was pasted in chat).
-- Premium Bonds (Oscar's Premium Bond Tracker on the Pi, bondtracker.service): served at /bonds/ behind the login with a footer link. Code is live; waiting on Gareth's go-ahead to set bonds_port on the Pi and limit the tracker to 127.0.0.1 (it currently listens on the whole home network with no login). Built into the Pi app; no Cloudflare Access; long-lived sessions renewed on each visit, so each device signs in once and stays signed in.
+- Premium Bonds (Oscar's Premium Bond Tracker on the Pi, bondtracker.service): served at /bonds/ behind the login with a footer link. LIVE since 8 Nov; the tracker listens on 127.0.0.1 only (systemd override bondtracker.service.d/local-only.conf, agreed by Gareth). Built into the Pi app; no Cloudflare Access; long-lived sessions renewed on each visit, so each device signs in once and stays signed in.
   - Users: Gareth and Dad only. Their two email addresses are the allowlist, kept in the Pi's private folder, never in the public repo. No public sign-up.
   - Sign in two ways: Google (allowlisted emails only), and passkeys (Face ID or Touch ID on Apple, fingerprint or face unlock on Android) for everyday use.
   - An "Admin" link in the site footer opens the sign-in page. Once signed in, the admin page creates one-time, short-lived sign-up links to add a passkey on a new device, and lists passkeys and signed-in devices so either user can remove one. Only a signed-in user can create links.

@@ -174,5 +174,6 @@ Oscar's Premium Bond Tracker runs on the Pi as bondtracker.service (~admin/bonds
 part of this repo). With "bonds_port": 8000 in /etc/modpi/monitor.json, this site serves it at
 /bonds/ to signed-in users only (never when login is off), rewriting its root links to /bonds/,
 never forwarding the session cookie, and marking every reply private, no-store so Cloudflare
-can't cache bond data. A footer link appears next to Admin. Recommended: a systemd override so the
-tracker listens on 127.0.0.1 only; otherwise anyone on the home network can open it without login.
+can't cache bond data. A footer link appears next to Admin. Since 8 Nov the override
+/etc/systemd/system/bondtracker.service.d/local-only.conf makes the tracker listen on 127.0.0.1 only;
+Oscar reaches it through the site or an SSH tunnel (ssh -L 8000:127.0.0.1:8000 admin@modpi).
