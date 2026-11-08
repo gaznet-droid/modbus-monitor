@@ -27,6 +27,9 @@ def load_config(path):
     if any(type(p) is not int or not 1 <= p <= 65535 for p in
            (config.get("port", 8096), config.get("meter_port", 8838))):
         raise ValueError("Invalid TCP port")
+    bonds = config.get("bonds_port")
+    if bonds is not None and (type(bonds) is not int or not 1 <= bonds <= 65535 or bonds == config.get("port", 8096)):
+        raise ValueError("Invalid bonds_port")
     if config.get("bind", "127.0.0.1") != "127.0.0.1":
         raise ValueError("Use loopback and an SSH tunnel until public handover")
     return config
@@ -59,7 +62,8 @@ def main():
                 workers.append(ewelink)
             server = monitor.WebServer(("127.0.0.1", config.get("port", 8096)),
                 monitor.handler(store, Path(monitor.__file__).parent / "web", voltage, tuya, ewelink,
-                    Auth("/var/lib/modpi/private/auth.json", "/var/lib/modpi/private/auth.sqlite3")))
+                    Auth("/var/lib/modpi/private/auth.json", "/var/lib/modpi/private/auth.sqlite3"),
+                    config.get("bonds_port")))
             def stop(*_):
                 for worker in workers:
                     worker.stop.set()

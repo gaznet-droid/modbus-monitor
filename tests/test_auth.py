@@ -64,7 +64,8 @@ def session_cookie(response):
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *a, **kw): return None
 
-class AuthHttpTests(unittest.TestCase):
+class AuthHttpBase(unittest.TestCase):
+    bonds_port = None
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); root = Path(self.tmp.name)
         self.settings = root / 'auth.json'; self.now = [1_800_000_000.0]; self.claims = {}
@@ -72,7 +73,7 @@ class AuthHttpTests(unittest.TestCase):
         class Store:
             def live(self, *a, **kw): return {'stale': False, 'latest': {'ts': 1}}
         web = Path(monitor.__file__).parent / 'web'
-        self.server = monitor.WebServer(('127.0.0.1', 0), monitor.handler(Store(), web, auth=self.auth))
+        self.server = monitor.WebServer(('127.0.0.1', 0), monitor.handler(Store(), web, auth=self.auth, bonds_port=self.bonds_port))
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True); self.thread.start()
         self.base = 'http://127.0.0.1:' + str(self.server.server_port)
     def tearDown(self):
@@ -111,6 +112,7 @@ class AuthHttpTests(unittest.TestCase):
         with self.request('/auth/google/callback?' + urllib.parse.urlencode({'state': q['state'][0], 'code': 'c'}), cookie=state_cookie) as r:
             return r.headers['Location'], session_cookie(r)
 
+class AuthHttpTests(AuthHttpBase):
     def test_off_by_default_changes_nothing(self):
         self.assertEqual(self.status('/')[0], 200)
         self.assertEqual(self.status('/login'), (303, '/'))
@@ -247,3 +249,49 @@ class CborTests(unittest.TestCase):
             with self.assertRaises(auth.AuthError): auth.cbor(bad)
 
 if __name__ == '__main__': unittest.main()
+
+class BondsProxyTests(AuthHttpBase):
+    """The Premium Bond Tracker is served at /bonds/ to signed-in users only, with its links rewritten."""
+    def setUp(self):
+        import http.server
+        seen = self.seen = []
+        class Upstream(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *a): pass
+            def do_GET(self):
+                seen.append(('GET', self.path, self.headers.get('Cookie')))
+                body = b'<a href="/">Overview</a><a href="/people">People</a><form action="/bonds/add" method="post"></form>'
+                self.send_response(200); self.send_header('Content-Type', 'text/html; charset=utf-8')
+                self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body)
+            def do_POST(self):
+                seen.append(('POST', self.path, self.rfile.read(int(self.headers['Content-Length']))))
+                self.send_response(303); self.send_header('Location', '/bonds?ok=1'); self.send_header('Content-Length', '0'); self.end_headers()
+        self.upstream = http.server.HTTPServer(('127.0.0.1', 0), Upstream)
+        threading.Thread(target=self.upstream.serve_forever, daemon=True).start()
+        self.bonds_port = self.upstream.server_port
+        super().setUp()
+    def tearDown(self):
+        super().tearDown(); self.upstream.shutdown(); self.upstream.server_close()
+
+    def test_bonds_only_for_signed_in_users(self):
+        self.assertEqual(self.status('/bonds/')[0], 404)              # login off: never public
+        self.enable()
+        self.assertEqual(self.status('/bonds/'), (303, '/login'))
+        self.assertEqual(self.status('/bonds/people'), (303, '/login'))
+        self.assertEqual(self.post('/bonds/bonds/add', {'x': 1})[0], 303)
+        self.assertEqual(self.seen, [])
+        _, cookie = self.google()
+        with self.request('/bonds/people', cookie=cookie) as r:
+            self.assertEqual(r.status, 200); self.assertEqual(r.headers['Cache-Control'], 'private, no-store')
+            self.assertEqual(r.read(), b'<a href="/bonds/">Overview</a><a href="/bonds/people">People</a><form action="/bonds/bonds/add" method="post"></form>')
+        self.assertEqual(self.seen[-1], ('GET', '/people', None))    # session cookie not passed on
+        with self.request('/bonds', cookie=cookie) as r:
+            self.assertEqual(r.status, 200)
+        self.assertEqual(self.seen[-1][1], '/')
+        with self.request('/auth/state', cookie=cookie) as r:
+            self.assertTrue(json.load(r)['bonds'])
+        self.assertEqual(self.post('/bonds/bonds/add', {'n': 1}, cookie, origin='https://evil.test')[0], 403)
+        with self.request('/bonds/bonds/add', 'POST', {'n': 1}, cookie) as r:
+            self.assertEqual((r.status, r.headers['Location']), (303, '/bonds/bonds?ok=1'))
+        self.assertEqual(self.seen[-1], ('POST', '/bonds/add', b'{"n": 1}'))
+        self.upstream.shutdown(); self.upstream.server_close()
+        self.assertEqual(self.status('/bonds/', cookie=cookie)[0], 502)

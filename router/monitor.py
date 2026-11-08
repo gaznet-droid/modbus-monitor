@@ -4,6 +4,7 @@ import argparse
 import contextlib
 import hashlib
 import hmac
+import http.client
 import json
 import logging
 import math
@@ -344,19 +345,30 @@ AUTH_PUBLIC={"/login","/enrol","/auth.js","/health","/version","/api/integration
     "/auth/passkey/register-options","/auth/passkey/register","/chart.umd.min.js","/ewelink.js"}|set(ICON_FILES)
 AUTH_PAGES={"/login":"login.html","/enrol":"login.html","/admin":"admin.html"}
 
-def handler(store, web, voltage=None, tuya=None, ewelink=None, auth=None):
+BONDS_PREFIX="/bonds"
+
+def bonds_path(path):
+    return path==BONDS_PREFIX or path.startswith(BONDS_PREFIX+"/")
+
+def rewrite_bonds_html(body):
+    """The bond tracker links from its own root; point those links at /bonds/ instead."""
+    for attr in (b'href="/',b'action="/',b'src="/'):
+        body=body.replace(attr,attr[:-1]+BONDS_PREFIX.encode()+b"/")
+    return body
+
+def handler(store, web, voltage=None, tuya=None, ewelink=None, auth=None, bonds_port=None):
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.0"
         def setup(self):
             self.request.settimeout(10)
             super().setup()
-        def send(self, status, body, kind="application/json; charset=utf-8"):
+        def send(self, status, body, kind="application/json; charset=utf-8", cache=None):
             if isinstance(body,dict):
                 body=json.dumps(body,separators=(",",":"),allow_nan=False).encode()
             self.send_response(status)
             self.send_header("Content-Type",kind)
             self.send_header("Content-Length",str(len(body)))
-            self.send_header("Cache-Control","no-store" if "json" in kind or "html" in kind else "public, max-age=300")
+            self.send_header("Cache-Control",cache or ("no-store" if "json" in kind or "html" in kind else "public, max-age=300"))
             self.send_header("X-Content-Type-Options","nosniff")
             self.send_header("Referrer-Policy","no-referrer")
             for cookie in getattr(self,"cookies",()):
@@ -384,7 +396,7 @@ def handler(store, web, voltage=None, tuya=None, ewelink=None, auth=None):
                 return True
             if path in AUTH_PUBLIC:
                 return True
-            if path in ("/","/index.html","/admin"): self.redirect("/login")
+            if path in ("/","/index.html","/admin") or bonds_path(path): self.redirect("/login")
             else: self.send(401,{"error":"Sign in required"})
             return False
         def auth_post(self, path):
@@ -433,10 +445,48 @@ def handler(store, web, voltage=None, tuya=None, ewelink=None, auth=None):
                 LOG.error("auth: python3-cryptography missing");return self.send(503,{"error":"Passkeys are unavailable on the Pi"})
             except (OSError,sqlite3.Error):
                 LOG.exception("auth: storage error");return self.send(503,{"error":"Sign-in storage unavailable"})
+        def proxy_bonds(self, method):
+            """Premium Bond Tracker (Oscar's app, on this Pi at 127.0.0.1:bonds_port), only for signed-in users."""
+            if bonds_port is None or auth is None or not auth.enabled() or not self.user:
+                return self.send(404,{"error":"Not found"})
+            body=None;headers={"Accept":self.headers.get("Accept","text/html")}
+            if method=="POST":
+                if self.headers.get("Origin")!=auth.settings()["origin"]:
+                    return self.send(403,{"error":"Wrong origin"})
+                try:
+                    length=int(self.headers.get("Content-Length",""))
+                    if not 0<=length<=1048576: raise ValueError()
+                except ValueError:
+                    return self.send(400,{"error":"Invalid request"})
+                body=self.rfile.read(length)
+                headers["Content-Type"]=self.headers.get("Content-Type","application/x-www-form-urlencoded")
+            upstream=self.path[len(BONDS_PREFIX):] or "/"
+            if not upstream.startswith("/"): upstream="/"+upstream
+            try:
+                conn=http.client.HTTPConnection("127.0.0.1",bonds_port,timeout=30)
+                conn.request(method,upstream,body=body,headers=headers)
+                reply=conn.getresponse();data=reply.read(8*1048576)
+                conn.close()
+            except OSError:
+                LOG.warning("bonds: tracker not answering on port %s",bonds_port)
+                return self.send(502,b"<!doctype html><meta name=viewport content='width=device-width'><body style='font-family:sans-serif;background:#090d16;color:#f8fafc;padding:2rem'><h1>Premium Bonds</h1><p>The bond tracker isn't running on the Pi right now. <a style='color:#38bdf8' href='/'>Back to the monitor</a></p>","text/html; charset=utf-8")
+            location=reply.getheader("Location")
+            if location:
+                self.send_response(reply.status)
+                self.send_header("Location",BONDS_PREFIX+location if location.startswith("/") else location)
+                self.send_header("Cache-Control","no-store");self.send_header("Content-Length","0")
+                for cookie in self.cookies: self.send_header("Set-Cookie",cookie)
+                return self.end_headers()
+            kind=reply.getheader("Content-Type","text/html; charset=utf-8")
+            if "html" in kind: data=rewrite_bonds_html(data)
+            return self.send(reply.status,data,kind,cache="private, no-store")
         def do_POST(self):
             path=urlsplit(self.path).path
             if path.startswith("/auth/"):
                 return self.auth_post(path)
+            if bonds_path(path):
+                if not self.allowed(path): return
+                return self.proxy_bonds("POST")
             if path!="/api/deploy-hook":
                 return self.send_error(501)
             try:
@@ -501,7 +551,9 @@ def handler(store, web, voltage=None, tuya=None, ewelink=None, auth=None):
                     return self.redirect("/")
                 if parsed.path=="/auth/state" and auth is not None and self.user:
                     if query: raise ValueError()
-                    return self.send(200,auth.state(self.user,self.session_id))
+                    return self.send(200,dict(auth.state(self.user,self.session_id),bonds=bonds_port is not None))
+                if bonds_path(parsed.path):
+                    return self.proxy_bonds("GET")
                 if parsed.path in ("/","/index.html"):
                     return self.send(200,(web/"index.html").read_bytes(),"text/html; charset=utf-8")
                 if parsed.path=="/chart.umd.min.js":

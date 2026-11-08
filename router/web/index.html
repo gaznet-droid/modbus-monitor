@@ -287,7 +287,7 @@
         @media(prefers-reduced-motion:reduce) { [data-stale="false"] .status-dot { animation:none; } }
         @media(max-width:600px) { .ewelink-card .device-update { grid-column:1/-1; margin:0; } .device-icon { width:20px; height:20px; } }
         /* Home tab: floor plan drawn from docs/home-page-plan.md */
-.site-footer { margin:2.5rem 0 1rem; font-size:.8rem; }
+.site-footer { margin:2.5rem 0 1rem; font-size:.8rem; display:flex; gap:1.5rem; }
         .site-footer a { color:var(--text-muted); text-decoration:none; padding:.5rem; }
         .site-footer a:hover, .site-footer a:focus-visible { color:var(--text-main); }
         .home-plan-card { display:flex; flex-direction:column; align-items:center; }
@@ -674,13 +674,13 @@
 <div class="home-cards"><article class="card home-card" id="homeSection-garage"><h2>Garage</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article></div>
 </section>
       </div>
-      <footer id="siteFooter" class="site-footer" hidden><a href="/admin">Admin</a></footer>
+      <footer id="siteFooter" class="site-footer" hidden><a id="bondsLink" href="/bonds/" hidden>Premium Bonds</a><a href="/admin">Admin</a></footer>
 
       <script>
 const $ = id => document.getElementById(id);
 // Login: if the session ends while the page is open, go to the sign-in page. The Admin link shows only when login is on.
 {const plainFetch=window.fetch.bind(window);window.fetch=(...args)=>plainFetch(...args).then(r=>{if(r.status===401&&!location.pathname.startsWith('/login'))location.replace('/login');return r;});}
-fetch('/auth/state',{credentials:'same-origin'}).then(r=>{if(r.ok)$('siteFooter').hidden=false;}).catch(()=>{});
+fetch('/auth/state',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(s=>{if(!s)return;$('siteFooter').hidden=false;$('bondsLink').hidden=!s.bonds;}).catch(()=>{});
 let activeTab = 'power';
 const views = ['power','juwai','ewelink','home'];
 function connectionLost(){$('currentVal').style.opacity='.55';$('meterKwh').style.opacity='.55';}
