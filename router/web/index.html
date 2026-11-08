@@ -339,9 +339,10 @@
         .home-outdoor[data-state="stale"] { opacity:.5; }
         /* No boxes: the plan card and the graph view sit straight on the page to use the full width */
         .card.home-plan-card { background:transparent; border:0; border-radius:0; padding:0; box-shadow:none; }
-        .home-graph { width:100%; box-sizing:border-box; display:grid; grid-template-columns:auto minmax(0,1fr); gap:1rem; }
-        .home-graph-tabs { display:flex; flex-direction:column; gap:.3rem; }
-        .home-graph-tabs [role="tab"] { display:grid; grid-template-columns:20px minmax(0,1fr) auto; align-items:center; gap:.5rem; width:11.5rem; min-height:40px; padding:.35rem .6rem; border:1px solid transparent; border-radius:10px; background:transparent; color:var(--text-muted); font:inherit; font-size:.85rem; text-align:left; cursor:pointer; }
+        /* Graph view: the chart uses the full width, with the rooms as a grid of buttons below it */
+        .home-graph { width:100%; box-sizing:border-box; }
+        .home-graph-tabs { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.5rem; margin-top:1rem; }
+        .home-graph-tabs [role="tab"] { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.2rem; min-width:0; min-height:72px; padding:.5rem .3rem; border:1px solid var(--border); border-radius:10px; background:var(--card-bg); color:var(--text-muted); font:inherit; font-size:.8rem; line-height:1.2; text-align:center; overflow-wrap:anywhere; cursor:pointer; }
         .home-graph-tabs [role="tab"] svg { width:20px; height:20px; color:var(--import-color); }
         .home-graph-tabs [role="tab"] .tab-temp { font-variant-numeric:tabular-nums; font-weight:700; color:var(--text-main); }
         .home-graph-tabs [role="tab"]:hover { background:#141c2e; color:var(--text-main); }
@@ -361,9 +362,9 @@
         }
         @media(max-width:899px) { .home-body.graph-open .home-plan-view { display:none; } }
         @media(max-width:600px) {
-          .home-graph { gap:.6rem; }
-          .home-graph-tabs [role="tab"] { grid-template-columns:1fr; justify-items:center; width:4.6rem; min-height:52px; padding:.3rem .2rem; gap:.1rem; font-size:.62rem; line-height:1.2; text-align:center; }
-          .home-graph-tabs [role="tab"] .tab-temp { font-size:.7rem; }
+          .home-graph-tabs { gap:.4rem; }
+          .home-graph-tabs [role="tab"] { min-height:64px; padding:.4rem .15rem; font-size:.66rem; }
+          .home-graph-tabs [role="tab"] .tab-temp { font-size:.75rem; }
           .home-graph-chart { height:380px; }
         }
         .home-legend { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:.4rem 1rem; margin-top:.8rem; color:var(--text-muted); font-size:.75rem; }
@@ -668,7 +669,7 @@
 </svg>
 <div class="home-legend"><span>Tap a temperature to see its past 24 hours</span><span>Room colour shows temperature</span><span class="home-legend-scale" aria-hidden="true"><span>12°C</span><span class="home-legend-bar"></span><span>25°C+</span></span></div>
 </div>
-<div id="homeGraph" class="home-graph" hidden><div id="homeGraphTabs" class="home-graph-tabs" role="tablist" aria-orientation="vertical" aria-label="Temperatures"></div><div class="home-graph-main"><div class="home-graph-head"><h2 id="homeGraphTitle">Loading…</h2><button id="homeGraphClose" type="button" aria-label="Close the graph and show the floor plan">✕</button></div><p id="homeGraphNote" class="period-note" role="status">Loading readings…</p><div class="home-graph-chart"><canvas id="homeGraphChart" role="img" aria-label="Temperature over the past 24 hours"></canvas></div></div></div>
+<div id="homeGraph" class="home-graph" hidden><div class="home-graph-main"><div class="home-graph-head"><h2 id="homeGraphTitle">Loading…</h2><button id="homeGraphClose" type="button" aria-label="Close the graph and show the floor plan">✕</button></div><p id="homeGraphNote" class="period-note" role="status">Loading readings…</p><div class="home-graph-chart"><canvas id="homeGraphChart" role="img" aria-label="Temperature over the past 24 hours"></canvas></div><div id="homeGraphTabs" class="home-graph-tabs" role="tablist" aria-label="Temperatures"></div></div></div>
 </div>
 </div>
 <div class="home-cards"><article class="card home-card" id="homeSection-garage"><h2>Garage</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article></div>
@@ -1121,7 +1122,7 @@ function renderHome(data){
   $('homeStatus').textContent=data.configured?'Updated '+homeTime(data.server_time)+' · refreshes every minute':'Devices not linked yet';
   placeHomeRoomIcons();if(homeGraphSlug)renderHomeTabs();
 }
-// Home temperature history. Tapping a temperature opens the graph view: room tabs down the left, graph beside them.
+// Home temperature history. Tapping a temperature opens the graph view: the chart full width, with a grid of room buttons below it.
 // Desktop shows the graph on the left and the plan on the right; on smaller screens the graph view replaces the plan until it is closed.
 let homeGraphSlug=null,homeGraphChart=null,homeGraphController=null,homeGraphBounds=null,homeLastData=null;
 const homeIcons={ // 24-unit line icons in the site's icon style
@@ -1182,8 +1183,9 @@ function renderHomeTabs(){
 }
 $('homeGraphTabs').addEventListener('keydown',event=>{
   const tabs=[...$('homeGraphTabs').querySelectorAll('[role="tab"]')],i=tabs.indexOf(document.activeElement);
-  if(i<0||!['ArrowUp','ArrowDown','Home','End'].includes(event.key))return;event.preventDefault();
-  const next=tabs[event.key==='Home'?0:event.key==='End'?tabs.length-1:(i+(event.key==='ArrowDown'?1:tabs.length-1))%tabs.length];
+  if(i<0||!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();
+  const step=['ArrowDown','ArrowRight'].includes(event.key)?1:tabs.length-1;
+  const next=tabs[event.key==='Home'?0:event.key==='End'?tabs.length-1:(i+step)%tabs.length];
   selectHomeGraph(next.dataset.tab);$('homeGraphTabs').querySelector(`[data-tab="${next.dataset.tab}"]`)?.focus();
 });
 function selectHomeGraph(slug){
@@ -1195,7 +1197,7 @@ function selectHomeGraph(slug){
 function toggleHomeGraph(slug){
   if(homeGraphSlug===slug){closeHomeGraph();return;}
   const wasOpen=!!homeGraphSlug;$('homeGraph').hidden=false;$('homeBody').classList.add('graph-open');selectHomeGraph(slug);
-  if(!wasOpen)(matchMedia('(min-width:900px)').matches?$('homeGraph'):$('homeBody')).scrollIntoView({behavior:'smooth',block:'start'});
+  if(!wasOpen&&$('homeGraph').getBoundingClientRect().top<0)$('homeGraph').scrollIntoView({block:'start'}); // only when it would otherwise be off-screen
 }
 function closeHomeGraph(){
   homeGraphSlug=null;homeGraphController?.abort();homeGraphController=null;
@@ -1227,7 +1229,7 @@ function drawHomeGraph(data){
       plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(undefined,{weekday:'short',hour:'2-digit',minute:'2-digit'}),
         label:item=>[item.parsed.y.toFixed(1)+'°C',...(Number.isFinite(item.raw.h)?[Math.round(item.raw.h)+'% humidity']:[])]}}}}});
 }
-$('homeGraphClose').addEventListener('click',()=>{const from=homeGraphSlug;closeHomeGraph();$('homeBody').scrollIntoView({block:'start'});document.querySelector(`[data-home-temp="${from}"]`)?.focus({preventScroll:true});});
+$('homeGraphClose').addEventListener('click',()=>{const from=homeGraphSlug;closeHomeGraph();document.querySelector(`[data-home-temp="${from}"]`)?.focus({preventScroll:true});});
 function stopHome(){homeVersion++;clearTimeout(homeTimer);homeTimer=null;homeController?.abort();homeController=null;homeGraphController?.abort();}
 async function readHome(version){
   if(version!==homeVersion||activeTab!=='home'||document.hidden)return;
