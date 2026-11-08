@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only Modbus power monitor. Python standard library only."""
+"""Read-only Modbus power monitor. Python standard library only (passkey sign-in also uses python3-cryptography)."""
 import argparse
 import contextlib
 import hashlib
@@ -20,6 +20,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
+from auth import AuthError
 
 LOG = logging.getLogger("modbus-monitor")
 WINDOWS = {"15m": 900, "30m": 1800, "1h": 3600, "2h": 7200,
@@ -336,7 +337,14 @@ ICON_FILES={
     "/site.webmanifest":"application/manifest+json",
 }
 
-def handler(store, web, voltage=None, tuya=None, ewelink=None):
+# Reachable without signing in when login is on: sign-in itself, health and deploy checks, the eWeLink
+# OAuth callback, and static files that are public in the repo anyway. Everything else needs a session.
+AUTH_PUBLIC={"/login","/enrol","/auth.js","/health","/version","/api/integrations/ewelink/callback",
+    "/auth/google/start","/auth/google/callback","/auth/passkey/options","/auth/passkey/login",
+    "/auth/passkey/register-options","/auth/passkey/register","/chart.umd.min.js","/ewelink.js"}|set(ICON_FILES)
+AUTH_PAGES={"/login":"login.html","/enrol":"login.html","/admin":"admin.html"}
+
+def handler(store, web, voltage=None, tuya=None, ewelink=None, auth=None):
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.0"
         def setup(self):
@@ -348,13 +356,88 @@ def handler(store, web, voltage=None, tuya=None, ewelink=None):
             self.send_response(status)
             self.send_header("Content-Type",kind)
             self.send_header("Content-Length",str(len(body)))
-            self.send_header("Cache-Control","no-store" if "json" in kind else "public, max-age=300")
+            self.send_header("Cache-Control","no-store" if "json" in kind or "html" in kind else "public, max-age=300")
             self.send_header("X-Content-Type-Options","nosniff")
             self.send_header("Referrer-Policy","no-referrer")
+            for cookie in getattr(self,"cookies",()):
+                self.send_header("Set-Cookie",cookie)
             self.end_headers()
             self.wfile.write(body)
+        def redirect(self, location):
+            self.send_response(303)
+            self.send_header("Location",location)
+            self.send_header("Cache-Control","no-store")
+            self.send_header("Referrer-Policy","no-referrer")
+            for cookie in getattr(self,"cookies",()):
+                self.send_header("Set-Cookie",cookie)
+            self.send_header("Content-Length","0")
+            self.end_headers()
+        def allowed(self, path):
+            """True when the request may go on; otherwise it has been answered (sign-in page or 401)."""
+            self.cookies=[];self.user=self.session_id=None
+            if auth is None or not auth.enabled():
+                return True
+            found=auth.session(self.headers.get("Cookie"))
+            if found:
+                self.user,self.session_id,renewed=found
+                if renewed: self.cookies.append(renewed)
+                return True
+            if path in AUTH_PUBLIC:
+                return True
+            if path in ("/","/index.html","/admin"): self.redirect("/login")
+            else: self.send(401,{"error":"Sign in required"})
+            return False
+        def auth_post(self, path):
+            if auth is None or not auth.enabled():
+                return self.send(404,{"error":"Not found"})
+            if not self.allowed(path):
+                return
+            settings=auth.settings()
+            if settings.get("broken"):
+                return self.send(503,{"error":"Login settings need fixing on the Pi"})
+            if self.headers.get("Origin")!=settings["origin"]:
+                LOG.warning("auth: refused POST %s from another origin",path);return self.send(403,{"error":"Wrong origin"})
+            try:
+                length=int(self.headers.get("Content-Length",""))
+                if not 0<length<=65536: raise ValueError()
+                body=json.loads(self.rfile.read(length))
+                if not isinstance(body,dict): raise ValueError()
+            except ValueError:
+                return self.send(400,{"error":"Invalid request"})
+            agent=self.headers.get("User-Agent","")[:300]
+            try:
+                if path=="/auth/passkey/options":
+                    return self.send(200,auth.login_options())
+                if path=="/auth/passkey/login":
+                    self.cookies.append(auth.passkey_login(body,agent));return self.send(200,{"ok":True})
+                if path=="/auth/passkey/register-options":
+                    return self.send(200,auth.register_options(body,self.user))
+                if path=="/auth/passkey/register":
+                    cookie=auth.passkey_register(body,agent,self.user)
+                    if cookie: self.cookies.append(cookie)
+                    return self.send(200,{"ok":True})
+                if self.user is None:
+                    return self.send(401,{"error":"Sign in required"})
+                if path=="/auth/links":
+                    return self.send(200,auth.create_link(self.user,body.get("user")))
+                if path=="/auth/passkeys/delete":
+                    return self.send(200,auth.remove("passkeys",body.get("id")))
+                if path=="/auth/sessions/delete":
+                    return self.send(200,auth.remove("sessions",body.get("id")))
+                if path=="/auth/logout":
+                    self.cookies.append(auth.logout(self.session_id));return self.send(200,{"ok":True})
+                return self.send(404,{"error":"Not found"})
+            except AuthError as error:
+                return self.send(error.status,{"error":str(error)})
+            except ImportError:
+                LOG.error("auth: python3-cryptography missing");return self.send(503,{"error":"Passkeys are unavailable on the Pi"})
+            except (OSError,sqlite3.Error):
+                LOG.exception("auth: storage error");return self.send(503,{"error":"Sign-in storage unavailable"})
         def do_POST(self):
-            if urlsplit(self.path).path!="/api/deploy-hook":
+            path=urlsplit(self.path).path
+            if path.startswith("/auth/"):
+                return self.auth_post(path)
+            if path!="/api/deploy-hook":
                 return self.send_error(501)
             try:
                 length=int(self.headers.get("Content-Length",""))
@@ -393,7 +476,32 @@ def handler(store, web, voltage=None, tuya=None, ewelink=None):
                 return self.send(414,{"error":"Request too long"})
             parsed=urlsplit(self.path)
             query=parse_qs(parsed.query)
+            if not self.allowed(parsed.path):
+                return
             try:
+                if parsed.path in AUTH_PAGES:
+                    if auth is None or not auth.enabled() or (self.user and parsed.path=="/login"):
+                        return self.redirect("/")
+                    return self.send(200,(web/AUTH_PAGES[parsed.path]).read_bytes(),"text/html; charset=utf-8")
+                if parsed.path=="/auth.js":
+                    return self.send(200,(web/"auth.js").read_bytes(),"text/javascript; charset=utf-8")
+                if parsed.path=="/auth/google/start" and auth is not None:
+                    try:
+                        url,cookie=auth.google_start()
+                    except AuthError:
+                        return self.redirect("/login?e=nogoogle")
+                    self.cookies.append(cookie)
+                    return self.redirect(url)
+                if parsed.path=="/auth/google/callback" and auth is not None:
+                    try:
+                        self.cookies+=[auth.google_callback(query,self.headers.get("Cookie"),self.headers.get("User-Agent","")[:300]),
+                                       "__Host-modpi-google=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax"]
+                    except AuthError as error:
+                        return self.redirect("/login?e="+("denied" if error.status==403 else "failed"))
+                    return self.redirect("/")
+                if parsed.path=="/auth/state" and auth is not None and self.user:
+                    if query: raise ValueError()
+                    return self.send(200,auth.state(self.user,self.session_id))
                 if parsed.path in ("/","/index.html"):
                     return self.send(200,(web/"index.html").read_bytes(),"text/html; charset=utf-8")
                 if parsed.path=="/chart.umd.min.js":
@@ -409,13 +517,7 @@ def handler(store, web, voltage=None, tuya=None, ewelink=None):
                         return self.send(400,{"error":"Authorisation failed or expired. Start a new connection."})
                     except Exception:
                         return self.send(502,{"error":"eWeLink authorisation exchange failed. Start a new connection."})
-                    self.send_response(303)
-                    self.send_header("Location","/#ewelink")
-                    self.send_header("Cache-Control","no-store")
-                    self.send_header("Referrer-Policy","no-referrer")
-                    self.send_header("Content-Length","0")
-                    self.end_headers()
-                    return
+                    return self.redirect("/#ewelink")
                 if parsed.path=="/api/ewelink/latest" and ewelink is not None:
                     if query: raise ValueError()
                     return self.send(200,ewelink.latest())
@@ -471,6 +573,8 @@ def handler(store, web, voltage=None, tuya=None, ewelink=None):
                     live=store.live()
                     return self.send(200 if not live["stale"] else 503,{"ok":not live["stale"],"latest_ts":live["latest"]["ts"] if live["latest"] else None})
                 return self.send(404,{"error":"Not found"})
+            except AuthError as error:
+                return self.send(error.status,{"error":str(error)})
             except ValueError:
                 return self.send(400,{"error":"Invalid query"})
             except (OSError,RuntimeError,sqlite3.Error):

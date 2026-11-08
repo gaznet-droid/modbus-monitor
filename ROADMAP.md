@@ -26,7 +26,7 @@ UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer pa
   - Pi must have Wi-Fi coverage at the meter's location.
 
 ## Later
-- Login for the whole site (plan agreed 8 Nov, replaces the 4 Nov ordering). Built into the Pi app; no Cloudflare Access; long-lived sessions renewed on each visit, so each device signs in once and stays signed in.
+- Login for the whole site (plan agreed 8 Nov; BUILT and deployed switched off on 8 Nov; to switch on: Gareth creates the Google sign-in client, then the private settings file goes on the Pi, see pi/README.md Login). Built into the Pi app; no Cloudflare Access; long-lived sessions renewed on each visit, so each device signs in once and stays signed in.
   - Users: Gareth and Dad only. Their two email addresses are the allowlist, kept in the Pi's private folder, never in the public repo. No public sign-up.
   - Sign in two ways: Google (allowlisted emails only), and passkeys (Face ID or Touch ID on Apple, fingerprint or face unlock on Android) for everyday use.
   - An "Admin" link in the site footer opens the sign-in page. Once signed in, the admin page creates one-time, short-lived sign-up links to add a passkey on a new device, and lists passkeys and signed-in devices so either user can remove one. Only a signed-in user can create links.

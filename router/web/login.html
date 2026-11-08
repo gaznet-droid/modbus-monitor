@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in · Live Power Monitor</title>
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="theme-color" content="#090d16">
+  <script src="/auth.js"></script>
+  <style>
+    :root { --bg-base:#090d16; --card-bg:#141c2e; --border:#222f49; --text-main:#f8fafc; --text-muted:#94a3b8; --import-color:#38bdf8; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background:var(--bg-base); color:var(--text-main);
+      min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1rem; }
+    main { width:100%; max-width:380px; background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:2rem 1.5rem; text-align:center; }
+    img { width:56px; height:56px; margin-bottom:1rem; }
+    h1 { font-size:1.4rem; margin-bottom:.5rem; }
+    p { color:var(--text-muted); line-height:1.45; margin-bottom:1.4rem; }
+    .actions { display:flex; flex-direction:column; gap:.7rem; }
+    button, .button { display:block; width:100%; min-height:48px; padding:.75rem 1rem; border-radius:10px; border:1px solid var(--border);
+      background:#1e293b; color:var(--text-main); font:inherit; font-weight:600; text-decoration:none; cursor:pointer; }
+    .primary { background:var(--import-color); border-color:var(--import-color); color:#04121f; }
+    button:disabled { opacity:.6; cursor:wait; }
+    button:focus-visible, .button:focus-visible { outline:2px solid var(--text-main); outline-offset:2px; }
+    #message { min-height:1.4em; margin:1rem 0 0; color:#fbbf24; }
+    #message.ok { color:#34d399; }
+  </style>
+</head>
+<body>
+<main>
+  <img src="/favicon.svg" alt="">
+  <h1 id="title">Sign in</h1>
+  <p id="intro">Sign in to see the power monitor.</p>
+  <div class="actions">
+    <button id="passkey" class="primary" type="button">Sign in with Face ID or fingerprint</button>
+    <a id="google" class="button" href="/auth/google/start">Sign in with Google</a>
+  </div>
+  <p id="message" role="status"></p>
+</main>
+<script>
+const $=id=>document.getElementById(id),params=new URLSearchParams(location.search),link=params.get('t');
+const errors={denied:'That Google account isn\'t allowed to sign in.',failed:'Google sign-in didn\'t work. Please try again.',nogoogle:'Google sign-in isn\'t set up yet.'};
+function say(text,ok){$('message').textContent=text;$('message').className=ok?'ok':'';}
+if(errors[params.get('e')])say(errors[params.get('e')]);
+if(location.pathname==='/enrol'){
+  $('title').textContent='Set up this device';
+  $('intro').textContent='This sets up Face ID, Touch ID or your fingerprint, so you can open the monitor on this device without signing in again.';
+  $('passkey').textContent='Set up';$('google').hidden=true;
+  if(!link)say('This sign-up link is incomplete. Ask for a new one.');
+}
+if(!passkeysSupported()){$('passkey').hidden=true;if(link)say('This browser can\'t use passkeys. Try Safari or Chrome.');}
+$('passkey').addEventListener('click',async()=>{
+  const button=$('passkey');button.disabled=true;say('');
+  try{
+    if(location.pathname==='/enrol'){const name=await passkeyCreate(link);say('All set, '+name+'. Opening the monitor…',true);}
+    else{await passkeySignIn();say('Signed in. Opening the monitor…',true);}
+    setTimeout(()=>location.replace('/'),600);
+  }catch(error){say(passkeyMessage(error));button.disabled=false;}
+});
+</script>
+</body>
+</html>

@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "router"))
 import monitor
 from tuya_cached import CachedTuya
 from ewelink import Ewelink
+from auth import Auth
 from storage import Storage
 
 def load_config(path):
@@ -57,7 +58,8 @@ def main():
             if config.get("ewelink_enabled", False):
                 workers.append(ewelink)
             server = monitor.WebServer(("127.0.0.1", config.get("port", 8096)),
-                monitor.handler(store, Path(monitor.__file__).parent / "web", voltage, tuya, ewelink))
+                monitor.handler(store, Path(monitor.__file__).parent / "web", voltage, tuya, ewelink,
+                    Auth("/var/lib/modpi/private/auth.json", "/var/lib/modpi/private/auth.sqlite3")))
             def stop(*_):
                 for worker in workers:
                     worker.stop.set()

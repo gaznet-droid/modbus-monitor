@@ -139,3 +139,32 @@ Run now: `sudo systemctl start modpi-deploy`. Pause: `sudo systemctl stop modpi-
 Journal noise: each empty check adds a couple of systemd lines; that is expected.
 
 One-time setup on the Pi (from a checkout of main): `sudo sh pi/install-autodeploy.sh`.
+
+## Login (built 8 Nov, switched off until set up)
+The whole site can sit behind a login for allowlisted people only (Gareth and Dad). Sign-in is
+Google (allowlisted emails) or a passkey (Face ID, Touch ID, Android fingerprint). The footer's
+Admin link (shown only when login is on) creates one-time sign-up links, valid 24 hours, that add a
+passkey on a new device, and lists passkeys and signed-in devices so either person can remove one.
+Sessions last 180 days from the last visit. Code: router/auth.py; pages: router/web/login.html,
+admin.html, auth.js.
+
+Switched on by a private settings file, never committed:
+/var/lib/modpi/private/auth.json (owner modpi:modpi, mode 0600)
+
+    {"enabled": true, "origin": "https://modbus.clockmillbarn.uk",
+     "users": {"gareth": {"email": "...", "name": "Gareth"}, "dad": {"email": "...", "name": "Dad"}},
+     "google": {"client_id": "...", "client_secret": "..."}}
+
+The app re-reads it on change; no restart needed. Sessions, passkeys and links live in
+/var/lib/modpi/private/auth.sqlite3 (only token hashes are stored). If the file exists but is
+invalid, the site stays locked rather than open. Without login, these still answer: /login,
+/enrol, the Google and passkey sign-in endpoints, /health, /version, the eWeLink OAuth callback,
+the GitHub deploy webhook, icons and the two public JavaScript files.
+
+Locked out? Over Tailscale SSH set "enabled": false in auth.json (the site opens again at once),
+or delete a row from auth.sqlite3. Passkeys need python3-cryptography (Debian package, installed).
+
+Google client (one-off, in Gareth's Google account): Google Cloud console, new project, OAuth
+consent screen (External, app name "Modbus monitor", add Gareth's and Dad's emails as test users),
+then Credentials, Create OAuth client ID, Web application, authorised redirect URI
+https://modbus.clockmillbarn.uk/auth/google/callback. Copy the client ID and secret into auth.json.
