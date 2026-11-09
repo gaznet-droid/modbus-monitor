@@ -78,11 +78,12 @@ async function load(){
   state=await r.json();if(!r.ok){say($('status'),state.error||'Could not load.');return;}
   if(!state.sessions.some(s=>s.current)){location.replace('/login');return;}
   $('me').textContent='Signed in as '+nameOf(state.me);
-  const who=$('who'),keep=who.value;who.replaceChildren(...state.users.map(u=>new Option(u.name,u.key)));who.value=keep||state.me;
+  const who=$('who'),keep=who.value;who.replaceChildren(new Option('Choose…',''),...state.users.map(u=>new Option(u.name,u.key)));who.options[0].disabled=true;who.value=keep; // no default: pick who the link is for
   $('passkeys').replaceChildren(...(state.passkeys.length?state.passkeys.map(p=>row(nameOf(p.user)+' · '+p.device,'Added '+when(p.created)+' · last used '+when(p.used),'',removeButton('Remove','/auth/passkeys/delete',p.id))):[Object.assign(document.createElement('p'),{textContent:'No passkeys yet.'})]));
   $('sessions').replaceChildren(...state.sessions.map(s=>row(nameOf(s.user)+' · '+s.device,'Signed in with '+s.method+' '+when(s.created)+' · last seen '+when(s.seen),s.current?'This device':'',removeButton('Sign out','/auth/sessions/delete',s.id))));
 }
 $('makeLink').addEventListener('click',async()=>{
+  if(!$('who').value){say($('addStatus'),'Choose who the link is for first.');$('who').focus();return;}
   const b=$('makeLink');b.disabled=true;say($('addStatus'),'');
   try{const l=await authPost('/auth/links',{user:$('who').value});$('link').value=l.url;$('linkBox').hidden=false;
     $('linkNote').textContent='For '+l.for+' · works once, until '+when(l.expires);$('share').hidden=!navigator.share;$('link').select();}

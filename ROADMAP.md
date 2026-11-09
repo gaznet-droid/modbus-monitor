@@ -26,7 +26,7 @@ UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer pa
   - Pi must have Wi-Fi coverage at the meter's location.
 
 ## Later
-- Login for the whole site: LIVE since 8 Nov (Google for Gareth and Dad, passkeys, Admin page). To do: rotate the Google client secret (it was pasted in chat).
+- Login for the whole site: LIVE since 8 Nov (Google for Gareth, Dad and, since 9 Nov, Mum; passkeys; Admin page). Everyone has the same rights; separate admin and viewer roles could come later. To do: rotate the Google client secret (it was pasted in chat).
 - Premium Bonds (Oscar's Premium Bond Tracker on the Pi, bondtracker.service): served at /bonds/ behind the login with a footer link. LIVE since 8 Nov; the tracker listens on 127.0.0.1 only (systemd override bondtracker.service.d/local-only.conf, agreed by Gareth). Built into the Pi app; no Cloudflare Access; long-lived sessions renewed on each visit, so each device signs in once and stays signed in.
   - Users: Gareth and Dad only. Their two email addresses are the allowlist, kept in the Pi's private folder, never in the public repo. No public sign-up.
   - Sign in two ways: Google (allowlisted emails only), and passkeys (Face ID or Touch ID on Apple, fingerprint or face unlock on Android) for everyday use.
