@@ -363,7 +363,10 @@ def rewrite_bonds_html(body):
         body=body.replace(attr,attr[:-1]+BONDS_PREFIX.encode()+b"/")
     return body.replace(b"<header>",b"<header>"+BONDS_BACK,1)
 
-def handler(store, web, voltage=None, tuya=None, ewelink=None, auth=None, bonds_port=None):
+def handler(store, web, voltage=None, tuya=None, ewelink=None, auth=None, bonds_port=None,
+            juwai_local=None, juwai_source="cloud"):
+    # Juwai readings come from one source: juwai_source ("cloud" or "local") picks what everyone sees.
+    juwai_sources={"cloud":tuya,"local":juwai_local}
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.0"
         def setup(self):
@@ -593,14 +596,25 @@ def handler(store, web, voltage=None, tuya=None, ewelink=None, auth=None, bonds_
                 if parsed.path=="/api/ewelink/history" and ewelink is not None:
                     if set(query)!={"device","window"} or any(len(v)!=1 for v in query.values()): raise ValueError()
                     return self.send(200,ewelink.history(query["device"][0],query["window"][0]))
-                if parsed.path=="/api/tuya/latest" and tuya is not None:
-                    if query:
-                        raise ValueError()
-                    return self.send(200,tuya.latest())
-                if parsed.path=="/api/tuya/history" and tuya is not None:
+                if parsed.path in ("/api/tuya/latest","/api/tuya/history"):
+                    # While local reads are on test, only signed-in users may pick the other source.
+                    source=juwai_source
+                    if "source" in query:
+                        picked=query.pop("source")
+                        if len(picked)!=1 or picked[0] not in juwai_sources or not self.user:
+                            raise ValueError()
+                        source=picked[0]
+                    reader=juwai_sources[source]
+                    if reader is None:
+                        return self.send(404,{"error":"Not found"})
+                    if parsed.path=="/api/tuya/latest":
+                        if query:
+                            raise ValueError()
+                        return self.send(200,dict(reader.latest(),source=source,
+                            switchable=bool(self.user and tuya is not None and juwai_local is not None)))
                     if set(query)!={"device","window"} or any(len(v)!=1 for v in query.values()):
                         raise ValueError()
-                    return self.send(200,tuya.history(query["device"][0],query["window"][0]))
+                    return self.send(200,dict(reader.history(query["device"][0],query["window"][0]),source=source))
                 if parsed.path=="/api/live":
                     since=int(query.get("since",["0"])[0])
                     if not 0<=since<=int(time.time()*1000)+60000:

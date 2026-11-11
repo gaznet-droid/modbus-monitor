@@ -171,6 +171,10 @@
         .juwai-group-heading select { min-height:44px; max-width:100%; background:#1e293b; color:var(--text-main); border:1px solid var(--border); border-radius:8px; padding:.5rem; font:inherit; color-scheme:dark; }
         .juwai-group-heading select:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
         .juwai-group .juwai-card { box-shadow:none; background:#101828; padding:1rem; }
+        .source-toggle { display:inline-flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+        .source-toggle button { min-height:44px; padding:.5rem 1rem; background:#1e293b; color:var(--text-muted); border:0; font:inherit; cursor:pointer; }
+        .source-toggle button[aria-pressed=true] { background:var(--import-color); color:#090d16; font-weight:600; }
+        .source-toggle button:focus-visible { outline:2px solid var(--text-main); outline-offset:-3px; }
         .juwai-card-values { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:.7rem; }
         .juwai-card-values .label { font-size:.65rem; min-height:2.4em; }
         .juwai-power, .juwai-kwh { font-size:clamp(1.15rem,3vw,1.9rem); line-height:1.2; font-variant-numeric:tabular-nums; font-weight:700; margin:.35rem 0 .5rem; overflow-wrap:anywhere; }
@@ -492,7 +496,7 @@
         </section>
 <section id="juwaiPanel" class="tab-panel" role="tabpanel" aria-labelledby="juwaiTab" hidden>
 <div class="card juwai-group">
-<div class="juwai-group-heading"><h1>Generation</h1><label for="juwaiWindow">Period <select id="juwaiWindow"><option value="live">Live · past hour</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
+<div class="juwai-group-heading"><h1>Generation</h1><div id="juwaiSource" class="source-toggle" role="group" aria-label="Reading source" hidden><button type="button" data-source="cloud" aria-pressed="true">Cloud</button><button type="button" data-source="local" aria-pressed="false">Local</button></div><label for="juwaiWindow">Period <select id="juwaiWindow"><option value="live">Live · past hour</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
 <p class="juwai-mobile-only mobile-generation-disclaimer">Generation totals are estimates.</p>
 <p id="juwaiStatus" class="period-note" role="status" hidden></p>
 <div class="juwai-grid"><article class="card juwai-card" id="shedCard" data-stale="true">
@@ -720,6 +724,9 @@ for(const view of views){
 
 let juwaiChart=null, juwaiTimer=null, juwaiController=null, juwaiVersion=0;
 let juwaiHistory={}, juwaiHistoryKey='', juwaiHistoryTime=0;
+// Reading source: null follows the site's setting; signed-in users can pick Cloud or Local while local reads are on test.
+let juwaiSource=null;
+const juwaiSourceNames={cloud:'Cloud',local:'Local'};
 const juwaiFields={power_w:{label:'Power',unit:'W',column:4},voltage_v:{label:'Voltage',unit:'V',column:2},current_a:{label:'Current',unit:'A',column:3}};
 function stopJuwai(){juwaiVersion++;clearTimeout(juwaiTimer);juwaiTimer=null;juwaiController?.abort();juwaiController=null;}
 function makeJuwaiChart(){
@@ -752,13 +759,16 @@ function drawJuwai(){
   $('totalEnergy').textContent=complete?energies.reduce((sum,e)=>sum+e.estimated_kwh,0).toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})+' kWh':'— kWh';
   const covered=energies.map(e=>e?.coverage_s||0), duration=energies[0]?.period_s||0;
   const hours=s=>(s/3600).toLocaleString(undefined,{maximumFractionDigits:1});
-  $('juwaiHistoryNote').textContent=juwaiHistoryKey?('Generation is estimated from 15-minute readings. Gaps over 30 minutes are excluded. '+
+  $('juwaiHistoryNote').textContent=juwaiHistoryKey?('Generation is estimated from '+(juwaiHistory.shed?.source==='local'?'1-minute local':'15-minute')+' readings. Gaps over 30 minutes are excluded. '+
     (duration?'Recorded: Shed '+hours(covered[0])+'h, Garage '+hours(covered[1])+'h of '+hours(duration)+'h. ':'')+
     (complete?'':'Not enough readings for a combined total. ')+
     (['today','yesterday'].includes($('juwaiWindow').value)?'Calendar days use UK time.':'')):'Loading generation…';
   drawMobileJuwai();
 }
 function renderJuwai(data){
+  const sourceName=juwaiSourceNames[data.source]||'Cloud';
+  $('juwaiSource').hidden=!data.switchable;
+  for(const button of $('juwaiSource').children)button.setAttribute('aria-pressed',String(button.dataset.source===data.source));
   for(const device of data.devices){
     if(!['shed','garage'].includes(device.id))continue;
     const id=device.id,number=(v,unit,digits)=>Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:digits})+' '+unit:'— '+unit;
@@ -767,7 +777,7 @@ function renderJuwai(data){
     $(id+'Current').textContent=number(device.values.current_a,'A',3);
     $(id+'Card').dataset.stale=String(device.stale);
     $(id+'State').textContent=device.stale?'Delayed':'Current';
-    $(id+'Age').textContent=device.observed_at?'Checked '+new Date(device.observed_at).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'No recorded sample';
+    $(id+'Age').textContent=device.observed_at?sourceName+' · '+new Date(device.observed_at).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'No recorded sample';
     if(device.observed_at)$(id+'Age').dateTime=new Date(device.observed_at).toISOString();
   }
   const valid=data.devices.filter(d=>['shed','garage'].includes(d.id)&&!d.stale&&Number.isFinite(d.values.power_w));
@@ -776,7 +786,7 @@ function renderJuwai(data){
   $('totalState').textContent=valid.length===2?'Current':'Delayed';
   const stamps=data.devices.filter(d=>['shed','garage'].includes(d.id)).map(d=>d.observed_at).filter(Number.isFinite);
   const stamp=stamps.length===2?Math.min(...stamps):null;
-  $('totalAge').textContent=stamp?'Checked '+new Date(stamp).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'Waiting for readings';
+  $('totalAge').textContent=stamp?sourceName+' · '+new Date(stamp).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'Waiting for readings';
   if(stamp)$('totalAge').dateTime=new Date(stamp).toISOString();
   $('juwaiStatus').hidden=true;
 }
@@ -786,9 +796,9 @@ async function readJuwai(version){
   const aborter=new AbortController();juwaiController=aborter;
   const window=$('juwaiWindow').value;
   try{
-    const tasks=[getJSON('/api/tuya/latest',aborter.signal).then(data=>{if(version===juwaiVersion&&activeTab==='juwai'&&!document.hidden)renderJuwai(data);})];
+    const tasks=[getJSON('/api/tuya/latest'+(juwaiSource?'?source='+juwaiSource:''),aborter.signal).then(data=>{if(version===juwaiVersion&&activeTab==='juwai'&&!document.hidden)renderJuwai(data);})];
     if(juwaiHistoryKey!==window||Date.now()-juwaiHistoryTime>=300000){
-      tasks.push(Promise.all(['shed','garage'].map(id=>getJSON('/api/tuya/history?device='+id+'&window='+window,aborter.signal).then(data=>[id,data]))).then(rows=>{
+      tasks.push(Promise.all(['shed','garage'].map(id=>getJSON('/api/tuya/history?device='+id+'&window='+window+(juwaiSource?'&source='+juwaiSource:''),aborter.signal).then(data=>[id,data]))).then(rows=>{
         if(version!==juwaiVersion||activeTab!=='juwai'||document.hidden)return;
         juwaiHistory=Object.fromEntries(rows);juwaiHistoryKey=window;juwaiHistoryTime=Date.now();drawJuwai();
       }));
@@ -805,6 +815,9 @@ async function readJuwai(version){
   }
 }
 $('juwaiMetric').addEventListener('change',drawJuwai);
+$('juwaiSource').addEventListener('click',e=>{const button=e.target.closest('button[data-source]');if(!button||button.getAttribute('aria-pressed')==='true')return;
+  juwaiSource=button.dataset.source;for(const b of $('juwaiSource').children)b.setAttribute('aria-pressed',String(b===button));
+  mobileWeek=null;mobileBinIndex=null;stopJuwai();juwaiHistoryKey='';juwaiHistory={};drawJuwai();readJuwai(juwaiVersion);});
 $('juwaiWindow').addEventListener('change',()=>{mobileWeek=null;mobileBinIndex=null;mobileMeter='total';stopJuwai();juwaiHistoryKey='';juwaiHistory={};drawJuwai();readJuwai(juwaiVersion);});
 
 let mobileChart=null, mobileMeter='total', mobileWeek=null, mobileBinIndex=null, mobileBins=[];

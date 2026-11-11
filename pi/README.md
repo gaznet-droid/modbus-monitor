@@ -185,3 +185,33 @@ modpi-shutdown.service powers off cleanly. Only a request less than two minutes 
 the file is always deleted first, so a leftover request can never shut the Pi down after a boot.
 Only signed-in users on the site's own origin can ask; with login off there is no button. Wait for
 the green light to stop flashing before unplugging. Installed with pi/install-autodeploy.sh.
+
+## Local Juwai reads (TEST, from 11 Nov 2026)
+A separate test collector, modpi-juwai-local.service, reads the Shed and Garage Juwai meters
+straight over Dad's LAN every 60 seconds (Tuya local protocol 3.5, read-only status queries
+only; code in router/juwai_local.py, standard library plus python3-cryptography). It writes to
+its own database, /var/lib/modpi/data/juwai_local.sqlite3. The cloud collector (modpi-tuya), its
+15-minute schedule, request caps, 23 November stop and tuya.sqlite3 are untouched.
+
+- Private settings: /var/lib/modpi/private/juwai-local.json (modpi:modpi, 0600) holds each
+  meter's LAN address and protocol version, the LAN range to search if a meter moves, and
+  `interval_seconds` (60; change it and restart the test unit). Keys stay in tuya-local-keys.json.
+  None of this is ever committed.
+- If a meter stops answering five times in a row the collector looks once (at most hourly) for
+  it at a new address, proves it with the key, saves the new address privately and records an
+  `address_changed` event (no addresses in the database or the journal).
+- Also in that database, for the test report only: `read_stats` (reads that worked and failed per
+  day), `events`, and `compare` (each cloud sample paired with the local sample nearest in time).
+- One supervised read, nothing stored (stop the unit first; they share a lock):
+  `sudo -u modpi python3 /opt/modpi/router/juwai_local.py --probe`
+- Switch the test off: `sudo systemctl disable --now modpi-juwai-local`. Nothing else depends on it.
+- The unit is installed by hand (copy pi/modpi-juwai-local.service to /etc/systemd/system, then
+  `sudo systemctl daemon-reload && sudo systemctl enable --now modpi-juwai-local`). Auto-deploy
+  updates its code with the rest of router/ but does not restart it; restart it by hand after a
+  change to juwai_local.py.
+
+The Juwai page reads one source, set by `"juwai_source": "cloud"` (the default) or `"local"` in
+/etc/modpi/monitor.json, followed by a modpi restart. While local reads are on test, signed-in
+users get a Cloud / Local switch at the top of the page; each card shows its source and the time
+of its reading, and local readings older than five minutes are marked Delayed. Do not set
+`"local"` until Gareth has signed off the switchover.

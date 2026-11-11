@@ -5,7 +5,7 @@ Single branch: main (production runs on ModPi). Everything else was merged in on
 
 ## Blockers
 - Meter reachability depends on Dad's dynamic public IP and a router port-forward; any IP change stops readings until it's updated.
-- Tuya cloud trial ends 23 November; local Juwai access is still unproven.
+- Tuya cloud trial ends 23 November; local Juwai reads work (proven 11 Nov) and are on a 24-hour test before any switchover.
 - Dad's Wi-Fi profile on the Pi is untested; the Pi has no Ethernet, so a wrong password needs a site visit.
 
 ## This week (before the Pi moves to Dad's)
@@ -17,6 +17,11 @@ UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer pa
 - Shut the Pi down cleanly, check Dad's Wi-Fi details against his router, and move ModPi to Dad's house.
 - Job 1: find the meter on Dad's LAN, switch the Pi to the local address, then remove the port-forward and add a DHCP reservation. Once the Pi is on Dad's network no port-forward is needed at all: the website goes out through the Cloudflare tunnel and maintenance through Tailscale, both outbound. Removing it also stops the meter's Modbus port being open to the internet.
 - Job 2: test local reads of the two Juwai meters with the saved local keys; if they work, replace Tuya cloud polling before 23 November.
+  - 11 Nov: local reads proven for both meters from the Pi on Dad's LAN (Tuya local protocol 3.5, saved keys accepted, same three readings with the same scaling as cloud). Both meters sit behind a Wi-Fi extender, so they can't be found by MAC address; they are found by trying the key.
+  - 11 Nov: a separate test collector (modpi-juwai-local) reads both meters every 60 seconds into its own database, and logs read failures, address changes and the local-versus-cloud difference in the background. The cloud collector is unchanged.
+  - 11 Nov: the Juwai page has a Cloud / Local switch for signed-in users; Cloud stays the default. The source is one setting (juwai_source) on the Pi.
+  - Next: after about 24 hours, the report (failure rate, match with cloud, address changes, extra readings such as a kWh counter) and a recommendation. No switchover without Gareth's go-ahead; the cloud collector stays as the fallback. Cloud requests stop at 00:00 UTC on 23 November.
+  - The meters expose about 30 extra local readings the cloud doesn't give, including several that look like running totals. Not on the site; to be identified in the report.
 - Job 3 (added 4 Nov, Dad wants it): replace the Elfin RS485-to-Wi-Fi box with a Waveshare RS485 CAN HAT (The Pi Hut, WAV-14882, about £12.60) wired straight to the meter. Dad has to reset the Elfin daily because it gets maxed out; the Pi would become the only Modbus master. HAT purchased 4 Nov, due Fri 6 or Sat 7 Nov. Notes:
   - Wiring: the meter's RS485 A/B screw terminals go to the HAT's A/B terminals. No special cable: move the Elfin's existing wires if the Pi sits by the meter, otherwise any twisted pair (Cat5/6 offcut). Add ground if the meter has one. Unplug the Elfin completely, since two masters on one bus clash.
   - Elfin serial settings (from Dad's screenshot of its web page, 4 Nov): EW11 at 192.168.4.38 on Dad's LAN; 9600 baud, 8 data bits, 1 stop bit, parity None (9600 8N1). Dad says the ID is 1 or 0; the collector already reads slave ID 1, and 0 is the Modbus broadcast address (no replies), so use 1. Dad confirmed (4 Nov) nothing else reads through the Elfin, so it can be removed outright. Job 1 can use 192.168.4.38 as the meter's local address until the HAT is fitted.

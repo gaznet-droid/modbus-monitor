@@ -11,6 +11,7 @@ import threading
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "router"))
 import monitor
 from tuya_cached import CachedTuya
+from juwai_local import CachedLocal
 from ewelink import Ewelink
 from auth import Auth
 from storage import Storage
@@ -30,6 +31,8 @@ def load_config(path):
     bonds = config.get("bonds_port")
     if bonds is not None and (type(bonds) is not int or not 1 <= bonds <= 65535 or bonds == config.get("port", 8096)):
         raise ValueError("Invalid bonds_port")
+    if config.get("juwai_source", "cloud") not in ("cloud", "local"):
+        raise ValueError("juwai_source must be cloud or local")
     if config.get("bind", "127.0.0.1") != "127.0.0.1":
         raise ValueError("Use loopback and an SSH tunnel until public handover")
     return config
@@ -63,7 +66,9 @@ def main():
             server = monitor.WebServer(("127.0.0.1", config.get("port", 8096)),
                 monitor.handler(store, Path(monitor.__file__).parent / "web", voltage, tuya, ewelink,
                     Auth("/var/lib/modpi/private/auth.json", "/var/lib/modpi/private/auth.sqlite3"),
-                    config.get("bonds_port")))
+                    config.get("bonds_port"),
+                    juwai_local=CachedLocal(storage.directory, storage.check),
+                    juwai_source=config.get("juwai_source", "cloud")))
             def stop(*_):
                 for worker in workers:
                     worker.stop.set()
