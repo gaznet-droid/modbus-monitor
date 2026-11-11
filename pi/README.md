@@ -216,20 +216,27 @@ users get a Cloud / Local switch at the top of the page; each card shows its sou
 of its reading, and local readings older than five minutes are marked Delayed. Do not set
 `"local"` until Gareth has signed off the switchover.
 
-## Meter over the RS485 HAT (Job 3, code ready 11 Nov 2026, NOT switched on)
+## Meter over the RS485 HAT (Job 3, live since 11 Nov 2026)
 router/modbus_rtu.py reads the meter over the Pi's serial port (Modbus RTU, 9600 8N1, unit 1,
 read functions 03 and 04 only), using the standard library. The same three reads as over the
 Elfin: power (register 146), voltage (register 16) and the combined kWh (register 1792).
 
-Already in place on the Pi: `enable_uart=1` and `dtoverlay=disable-bt` in /boot/firmware/config.txt,
-no serial console or login on the port, /dev/serial0 is the full UART, and the modpi user is in
-the dialout group. Checked on 11 Nov with nothing wired: the port opens at 9600 and a read times
-out cleanly. Not yet proven: a real read through the HAT, which needs the HAT fitted and wired.
+The HAT is a Waveshare RS485 CAN HAT Rev2.1. It does NOT switch between sending and receiving by
+itself: GPIO4 high sends, low listens, and the HAT pulls it high (send) when nothing drives it.
+The reader drives GPIO4 through the kernel GPIO device, holding it high only for the request.
+Proven on site on 11 Nov: 60 reads out of 60 with the Elfin still on the same pair.
 
-Switching over, on the day the HAT is fitted (Elfin unplugged first; two masters clash):
-1. `sudo systemctl stop modpi`, then a supervised read:
-   `sudo -u modpi python3 /opt/modpi/router/modbus_rtu.py /dev/serial0 9600`
-   It prints power, voltage and kWh, or says what failed. No answer at all: swap the A and B wires.
-2. Add `"meter_serial": "/dev/serial0"` to /etc/modpi/monitor.json (optional `"meter_baud"`, default
-   9600) and `sudo systemctl start modpi`. While meter_serial is set, meter_host is ignored.
-3. Roll back: remove meter_serial, wire the Elfin back, restart modpi.
+On the Pi: `enable_uart=1`, `dtoverlay=disable-bt` and `gpio=4=op,dl` (HAT listening from power-on)
+in /boot/firmware/config.txt; no serial console or login on the port; the modpi user is in the
+dialout and gpio groups. Settings in /etc/modpi/monitor.json:
+
+    "meter_serial": "/dev/serial0", "meter_direction_gpio": 4      (optional "meter_baud", default 9600)
+
+While meter_serial is set, meter_host is ignored. Wiring: the meter's RS485 pair on the HAT's A and
+B terminals (not the CAN H and L pair).
+
+Supervised read (stop modpi first; they cannot share the port):
+`sudo -u modpi python3 /opt/modpi/router/modbus_rtu.py /dev/serial0 9600 4`
+
+Roll back to the Elfin: remove meter_serial from monitor.json and restart modpi; the Elfin must be
+wired to the meter and reachable at meter_host.

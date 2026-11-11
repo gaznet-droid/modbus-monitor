@@ -27,6 +27,9 @@ def load_config(path):
         raise ValueError("meter_serial must be a serial device path")
     if config.get("meter_baud", 9600) not in BAUDS or type(config.get("meter_baud", 9600)) is not int:
         raise ValueError("Unsupported meter_baud")
+    pin = config.get("meter_direction_gpio")
+    if pin is not None and (type(pin) is not int or not 2 <= pin <= 27):
+        raise ValueError("Invalid meter_direction_gpio")
     if config.get("meter_enabled", False) and serial is None:
         host = config.get("meter_host")
         if not isinstance(host, str) or not host.strip():
@@ -63,7 +66,8 @@ def main():
             voltage = None
             if config.get("meter_enabled", False):
                 # meter_serial (the RS485 HAT) takes over from meter_host (the Elfin over TCP) when set.
-                meter = (SerialBus(config["meter_serial"], config.get("meter_baud", 9600))
+                meter = (SerialBus(config["meter_serial"], config.get("meter_baud", 9600),
+                                   direction_gpio=config.get("meter_direction_gpio"))
                          if config.get("meter_serial") else config["meter_host"])
                 workers.append(monitor.Monitor(store, meter, config.get("meter_port", 8838)))
                 voltage = monitor.VoltageReader(meter, config.get("meter_port", 8838))

@@ -27,13 +27,43 @@ def crc16(data):
     return struct.pack("<H", crc)
 
 
+class DirectionPin:
+    """The HAT's send/receive pin (GPIO4 on the Waveshare RS485 CAN HAT): high sends, low listens.
+
+    Uses the kernel's GPIO character device, so no extra library and no root.
+    """
+    GET_LINE, SET_VALUES, OUTPUT = 0xC250B407, 0xC010B40F, 1 << 3
+
+    def __init__(self, gpio, chip="/dev/gpiochip0"):
+        request = bytearray(592)                       # struct gpio_v2_line_request
+        struct.pack_into("<I", request, 0, gpio)       # offsets[0]
+        request[256:256 + 15] = b"modpi-rs485-dir"     # consumer
+        struct.pack_into("<Q", request, 288, self.OUTPUT)  # config.flags; starts low (listening)
+        struct.pack_into("<I", request, 560, 1)        # num_lines
+        chip_fd = os.open(chip, os.O_RDONLY)
+        try:
+            fcntl.ioctl(chip_fd, self.GET_LINE, request)
+        finally:
+            os.close(chip_fd)
+        self.fd = struct.unpack_from("<i", request, 588)[0]
+        self.set(False)
+
+    def set(self, sending):
+        fcntl.ioctl(self.fd, self.SET_VALUES, struct.pack("<QQ", int(sending), 1))
+
+    def close(self):
+        os.close(self.fd)
+
+
 class SerialBus:
     """One serial line, 8 data bits, no parity, 1 stop bit. One request at a time."""
 
-    def __init__(self, path="/dev/serial0", baud=9600, timeout=1.0):
+    def __init__(self, path="/dev/serial0", baud=9600, timeout=1.0, direction_gpio=None,
+                 direction_pin=DirectionPin):
         if baud not in BAUDS:
             raise ValueError("Unsupported baud rate")
         self.path, self.baud, self.timeout = path, baud, timeout
+        self.direction_gpio, self.direction_pin, self.direction = direction_gpio, direction_pin, None
         self.gap = max(0.005, 38.5 / baud)  # 3.5 character times of silence between frames
         self.lock = threading.Lock()
         self.fd = None
@@ -49,6 +79,8 @@ class SerialBus:
             attrs[4] = attrs[5] = BAUDS[self.baud]
             attrs[6][termios.VMIN], attrs[6][termios.VTIME] = 0, 0
             termios.tcsetattr(fd, termios.TCSANOW, attrs)
+            if self.direction_gpio is not None and self.direction is None:
+                self.direction = self.direction_pin(self.direction_gpio)
         except BaseException:
             os.close(fd)
             raise
@@ -65,6 +97,13 @@ class SerialBus:
             except OSError:
                 pass
             self.fd = None
+        if self.direction is not None:
+            try:
+                self.direction.set(False)  # never leave the HAT holding the line
+                self.direction.close()
+            except OSError:
+                pass
+            self.direction = None
 
     def _receive(self, count, deadline):
         data = bytearray()
@@ -94,8 +133,20 @@ class SerialBus:
                 if wait > 0:
                     time.sleep(wait)
                 termios.tcflush(self.fd, termios.TCIOFLUSH)  # drop anything left from an earlier exchange
-                os.write(self.fd, request)
-                termios.tcdrain(self.fd)
+                if self.direction is None:
+                    os.write(self.fd, request)
+                    termios.tcdrain(self.fd)
+                else:
+                    # Hold the HAT in send mode for exactly the request (10 bits a byte) plus 2 ms,
+                    # then listen. Measured on the meter: it answers well after that, and replies
+                    # were read cleanly with holds from 0.2 ms to 15 ms past the end of the request.
+                    self.direction.set(True)
+                    try:
+                        sent = time.monotonic()
+                        os.write(self.fd, request)
+                        time.sleep(max(0, sent + len(request) * 10 / self.baud + 0.002 - time.monotonic()))
+                    finally:
+                        self.direction.set(False)
                 deadline = time.monotonic() + self.timeout
                 head = self._receive(5, deadline)
                 if head == request[:5]:
@@ -124,9 +175,10 @@ class SerialBus:
 
 if __name__ == "__main__":
     # Supervised check on fit day (stop modpi first; they cannot share the port):
-    #   sudo -u modpi python3 /opt/modpi/router/modbus_rtu.py /dev/serial0 9600
+    #   sudo -u modpi python3 /opt/modpi/router/modbus_rtu.py /dev/serial0 9600 4
     bus = SerialBus(sys.argv[1] if len(sys.argv) > 1 else "/dev/serial0",
-                    int(sys.argv[2]) if len(sys.argv) > 2 else 9600)
+                    int(sys.argv[2]) if len(sys.argv) > 2 else 9600,
+                    direction_gpio=int(sys.argv[3]) if len(sys.argv) > 3 else None)
     failed = 0
     for label, register, function in (("power W", 146, 4), ("voltage V", 16, 3), ("meter kWh", 1792, 4)):
         try:

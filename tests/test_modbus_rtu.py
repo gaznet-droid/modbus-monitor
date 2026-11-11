@@ -92,6 +92,20 @@ class ModbusRtuTests(unittest.TestCase):
         with self.assertRaises(OSError):
             rtu.SerialBus('/dev/does-not-exist').read_input_float()
 
+    def test_direction_pin_sends_for_the_request_only_and_is_released_on_failure(self):
+        events = []
+        class Pin:
+            def __init__(self, gpio): events.append('open %d' % gpio)
+            def set(self, sending): events.append('send' if sending else 'listen')
+            def close(self): events.append('close')
+        fake = FakeMeter(self, [[frame(struct.pack('>BBBf', 1, 4, 4, 42.0))], []])
+        bus = rtu.SerialBus(fake.path, 9600, timeout=0.3, direction_gpio=4, direction_pin=Pin)
+        self.assertEqual(bus.read_input_float(), 42.0)
+        self.assertEqual(events, ['open 4', 'send', 'listen'])
+        with self.assertRaises(OSError):
+            bus.read_input_float()                       # silent meter: the pin must end up listening
+        self.assertEqual(events[3:], ['send', 'listen', 'listen', 'close'])
+
     def test_pi_config_accepts_serial_instead_of_a_host(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'monitor.json'
@@ -99,7 +113,8 @@ class ModbusRtuTests(unittest.TestCase):
                 path.write_text(json.dumps(config)); return run.load_config(path)
             self.assertEqual(load(meter_enabled=True, meter_serial='/dev/serial0')['meter_serial'], '/dev/serial0')
             for bad in (dict(meter_serial='serial0'), dict(meter_serial=5), dict(meter_baud=1234),
-                        dict(meter_baud='9600'), dict(meter_enabled=True)):
+                        dict(meter_baud='9600'), dict(meter_enabled=True), dict(meter_direction_gpio=40),
+                        dict(meter_direction_gpio='4')):
                 with self.assertRaises(ValueError):
                     load(**bad)
 
