@@ -215,3 +215,21 @@ The Juwai page reads one source, set by `"juwai_source": "cloud"` (the default) 
 users get a Cloud / Local switch at the top of the page; each card shows its source and the time
 of its reading, and local readings older than five minutes are marked Delayed. Do not set
 `"local"` until Gareth has signed off the switchover.
+
+## Meter over the RS485 HAT (Job 3, code ready 11 Nov 2026, NOT switched on)
+router/modbus_rtu.py reads the meter over the Pi's serial port (Modbus RTU, 9600 8N1, unit 1,
+read functions 03 and 04 only), using the standard library. The same three reads as over the
+Elfin: power (register 146), voltage (register 16) and the combined kWh (register 1792).
+
+Already in place on the Pi: `enable_uart=1` and `dtoverlay=disable-bt` in /boot/firmware/config.txt,
+no serial console or login on the port, /dev/serial0 is the full UART, and the modpi user is in
+the dialout group. Checked on 11 Nov with nothing wired: the port opens at 9600 and a read times
+out cleanly. Not yet proven: a real read through the HAT, which needs the HAT fitted and wired.
+
+Switching over, on the day the HAT is fitted (Elfin unplugged first; two masters clash):
+1. `sudo systemctl stop modpi`, then a supervised read:
+   `sudo -u modpi python3 /opt/modpi/router/modbus_rtu.py /dev/serial0 9600`
+   It prints power, voltage and kWh, or says what failed. No answer at all: swap the A and B wires.
+2. Add `"meter_serial": "/dev/serial0"` to /etc/modpi/monitor.json (optional `"meter_baud"`, default
+   9600) and `sudo systemctl start modpi`. While meter_serial is set, meter_host is ignored.
+3. Roll back: remove meter_serial, wire the Elfin back, restart modpi.

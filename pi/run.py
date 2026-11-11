@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "router"))
 import monitor
 from tuya_cached import CachedTuya
 from juwai_local import CachedLocal
+from modbus_rtu import BAUDS, SerialBus
 from ewelink import Ewelink
 from auth import Auth
 from storage import Storage
@@ -21,7 +22,12 @@ def load_config(path):
     for key in ("meter_enabled", "ewelink_enabled"):
         if type(config.get(key, False)) is not bool:
             raise ValueError(key + " must be a boolean")
-    if config.get("meter_enabled", False):
+    serial = config.get("meter_serial")
+    if serial is not None and (not isinstance(serial, str) or not serial.startswith("/dev/")):
+        raise ValueError("meter_serial must be a serial device path")
+    if config.get("meter_baud", 9600) not in BAUDS or type(config.get("meter_baud", 9600)) is not int:
+        raise ValueError("Unsupported meter_baud")
+    if config.get("meter_enabled", False) and serial is None:
         host = config.get("meter_host")
         if not isinstance(host, str) or not host.strip():
             raise ValueError("meter_host required before enabling collection")
@@ -56,8 +62,11 @@ def main():
             store = monitor.Store("/proc/self/fd/" + str(directory) + "/monitor.sqlite3", storage.check)
             voltage = None
             if config.get("meter_enabled", False):
-                workers.append(monitor.Monitor(store, config["meter_host"], config.get("meter_port", 8838)))
-                voltage = monitor.VoltageReader(config["meter_host"], config.get("meter_port", 8838))
+                # meter_serial (the RS485 HAT) takes over from meter_host (the Elfin over TCP) when set.
+                meter = (SerialBus(config["meter_serial"], config.get("meter_baud", 9600))
+                         if config.get("meter_serial") else config["meter_host"])
+                workers.append(monitor.Monitor(store, meter, config.get("meter_port", 8838)))
+                voltage = monitor.VoltageReader(meter, config.get("meter_port", 8838))
             tuya = CachedTuya(storage.directory, storage.check)
             ewelink = Ewelink(storage.directory, storage.check,
                               config="/var/lib/modpi/private/ewelink.json")

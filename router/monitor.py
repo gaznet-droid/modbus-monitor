@@ -73,6 +73,9 @@ def read_input_float(host, port=8838, unit=1, register=146, function=4):
     """Read two registers using function 03 or 04. Never write to the meter."""
     if function not in (3,4):
         raise ValueError("Only read functions are allowed")
+    if hasattr(host, "read_input_float"):
+        # host is a serial line (modbus_rtu.SerialBus): the meter wired to the Pi's RS485 HAT.
+        return host.read_input_float(unit, register, function)
     transaction = int.from_bytes(os.urandom(2), "big")
     request = struct.pack(">HHHBBHH", transaction, 0, 6, unit, function, register, 2)
     with socket.create_connection((host, port), timeout=3) as sock:

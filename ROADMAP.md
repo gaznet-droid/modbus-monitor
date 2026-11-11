@@ -29,6 +29,7 @@ UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer pa
   - Collector: switch the meter read from Modbus TCP (port 8838) to Modbus RTU on `/dev/serial0`, same slave ID and register 146. Needs a modpi restart and a backup of private files first.
   - Side benefits: removes the public IP and port-forward dependency for the meter (Job 1) and may explain the evening dropouts. Interim option if the HAT is delayed: keep one persistent TCP connection to the Elfin instead of reconnecting each poll.
   - Pi must have Wi-Fi coverage at the meter's location.
+  - 11 Nov: the serial reader is written and tested (router/modbus_rtu.py, switched on by meter_serial in the Pi's config; fit-day steps in pi/README.md). The Pi's serial port was already set up, and modpi can now open it. Still to prove: a real read through the HAT once it is fitted and wired. Check on fit day whether this HAT switches between sending and receiving by itself; the code assumes it does.
 
 ## Later
 - Summer house temperature (added 11 Nov, Gareth asked). No summer house sensor is in the eWeLink scan of 4 Nov, so this needs one bought and paired to Dad's eWeLink account, ideally the same temp and humidity model as Outside and Freezer (1770). Then add it to the private mapping and show it in the Outside/Loft box on the Home plan with a graph. It goes in the existing batched request, so no extra API calls. First check with Dad whether a sensor is already out there under another name.
