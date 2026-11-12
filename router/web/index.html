@@ -317,37 +317,39 @@
         .home-plan .doors > g[data-shut] .leaf, .home-plan .doors > g[data-shut] .swing { display:none; }
         .home-plan .doors > g[data-shut] .shut { display:inline; }
         .home-plan .slide { stroke:var(--text-main); stroke-width:3; stroke-linecap:round; }
-        .home-plan .room-labels text, .home-outdoor .outdoor-label { fill:var(--text-main); font-weight:700; letter-spacing:.08em; text-transform:uppercase; text-anchor:middle; dominant-baseline:middle; font-family:inherit; paint-order:stroke; stroke:var(--bg-base); stroke-width:6px; stroke-linejoin:round; }
-        .home-outdoor .outdoor-label { stroke:none; }
+        .home-plan .room-labels text { fill:var(--text-main); font-weight:700; letter-spacing:.08em; text-transform:uppercase; text-anchor:middle; dominant-baseline:middle; font-family:inherit; paint-order:stroke; stroke:var(--bg-base); stroke-width:6px; stroke-linejoin:round; }
         .home-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1rem; align-items:start; }
-        .home-chip rect { fill:var(--card-bg); stroke:var(--border); stroke-width:2; }
+        .home-chip > rect { fill:var(--card-bg); stroke:var(--border); stroke-width:2; }
         .home-chip text { fill:var(--text-main); font-size:24px; font-weight:700; text-anchor:middle; dominant-baseline:middle; font-family:inherit; }
         .home-chip[data-kind="temp"] text { fill:var(--import-color); }
-        .home-chip[data-state="open"] rect { stroke:#f59e0b; } .home-chip[data-state="open"] text { fill:#fbbf24; }
+        .home-chip[data-state="open"] > rect { stroke:#f59e0b; } .home-chip[data-state="open"] text { fill:#fbbf24; }
         .home-chip[data-state="on"] text { fill:var(--export-color); }
         .home-chip[data-state="stale"] { opacity:.5; }
         /* Tappable temperatures and their 24-hour graph */
         .home-chip[role="button"] { cursor:pointer; outline:none; }
-        .home-chip[aria-expanded="true"] rect { stroke:var(--import-color); stroke-width:4; }
-        .home-chip:focus-visible rect { stroke:var(--text-main); stroke-width:3; }
+        .home-chip[aria-expanded="true"] > rect { stroke:var(--import-color); stroke-width:4; }
+        .home-chip:focus-visible > rect { stroke:var(--text-main); stroke-width:3; }
         .home-row[role="button"] { cursor:pointer; border-radius:8px; margin:-.25rem -.45rem; padding:.25rem .45rem; }
         .home-row[role="button"]:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
         .home-row[aria-expanded="true"] { background:#1e293b; box-shadow:inset 0 0 0 1px var(--import-color); }
         /* Home: full browser width; plan and graph view side by side on desktop, graph replaces the plan on mobile */
         body:has(#homePanel:not([hidden])) > .container { max-width:none; }
         .home-body, .home-plan-view { width:100%; display:flex; flex-direction:column; align-items:center; }
-        .home-plan .room-icons svg, .home-outdoor svg { color:var(--text-main); }
+        .home-plan .room-icons svg { color:var(--text-main); }
         /* Outside and Loft sit on the plan, top right, styled like the room labels */
-        .home-outdoor .outdoor-label { text-anchor:start; }
-        .home-plan .corner-box { fill:var(--card-bg); stroke:var(--border); stroke-width:2; }
-        .home-outdoor .outdoor-temp { font-size:28px; font-weight:700; dominant-baseline:middle; font-family:inherit; fill:var(--text-main); }
-        .home-outdoor[data-state="open"] .outdoor-temp { fill:#fbbf24; }
-        .home-outdoor .outdoor-temp tspan { font-size:18px; font-weight:600; fill:var(--text-muted); }
-        .home-outdoor .hit { fill:transparent; stroke:none; }
-        .home-outdoor[role="button"] { cursor:pointer; outline:none; }
-        .home-outdoor[aria-expanded="true"] .hit { stroke:var(--import-color); stroke-width:3; }
-        .home-outdoor:focus-visible .hit { stroke:var(--text-main); stroke-width:3; }
-        .home-outdoor[data-state="stale"] { opacity:.5; }
+        .home-batt { color:var(--text-muted); } .home-batt[data-level="low"] { color:#f59e0b; } .home-batt[data-level="crit"] { color:#ef4444; }
+        .home-chip .home-batt text.home-batt-pct { font-size:17px; font-weight:600; fill:currentColor; text-anchor:start; }
+        .home-offplan { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem; width:100%; max-width:640px; margin:.6rem 0 .8rem; }
+        .home-tile { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.1rem .5rem; min-width:0; padding:.5rem .7rem; border:1px solid var(--border); border-radius:12px; background:var(--card-bg); color:var(--text-main); }
+        .home-tile > svg { width:22px; height:22px; grid-row:span 2; }
+        .home-tile-name { font-size:.72rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .home-tile-value { grid-column:2/-1; font-weight:700; font-size:1.15rem; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .home-tile-value small { font-size:.75rem; font-weight:600; color:var(--text-muted); margin-left:.3rem; }
+        .home-tile .home-batt { display:inline-flex; align-items:center; gap:.2rem; font-size:.72rem; font-weight:600; font-variant-numeric:tabular-nums; }
+        .home-tile .home-batt svg { width:20px; height:10px; }
+        .home-tile[data-state="open"] .home-tile-value { color:#fbbf24; } .home-tile[data-state="stale"] { opacity:.5; }
+        .home-tile[role="button"] { cursor:pointer; } .home-tile[aria-expanded="true"] { border-color:var(--import-color); background:#1e293b; }
+        .home-tile:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
         /* No boxes: the plan card and the graph view sit straight on the page to use the full width */
         .card.home-plan-card { background:transparent; border:0; border-radius:0; padding:0; box-shadow:none; }
         /* Graph view: the chart uses the full width, with the rooms as a grid of buttons below it */
@@ -564,7 +566,8 @@
 <div class="card home-plan-card">
 <div class="juwai-group-heading"><h1>Home</h1><span id="homeStatus" class="period-note home-plan-note" role="status">Loading readings…</span></div>
 <div id="homeBody" class="home-body"><div class="home-plan-view">
-<svg class="home-plan" viewBox="80 40 830 1500" role="img" aria-labelledby="homePlanTitle">
+<div id="homeOffPlan" class="home-offplan"></div>
+<svg class="home-plan" viewBox="80 125 830 1415" role="img" aria-labelledby="homePlanTitle">
 <title id="homePlanTitle">Floor plan of the bungalow: Conservatory at the rear, then Bedroom 1, Kitchen, Hall and Front Porch, Lounge, Shower Room, Guest Bedroom and a second porch at the front</title>
 <g class="walls">
 <polygon points="150,150 675,150 675,415 150,415"/>
@@ -1106,7 +1109,7 @@ document.addEventListener('visibilitychange',()=>{
 window.addEventListener('pagehide',()=>{stopJuwai();stopHome();});
 window.addEventListener('pageshow',event=>{if(event.persisted&&!document.hidden&&activeTab==='juwai')readJuwai(juwaiVersion);});
 // Home tab: read-only eWeLink overlays on the floor plan; placement comes from the Pi's private mapping.
-const homeAnchors={'room:conservatory':[412,340],'room:bedroom-1':[257,700],'room:kitchen':[600,612],'room:hall':[620,860],
+const homeAnchors={'room:conservatory':[412,340],'room:bedroom-1':[257,700],'room:kitchen':[600,612],'room:hall':[590,860],
   'room:lounge':[295,1182],'room:shower-room':[662,1165],'room:guest-bedroom':[642,1462],'room:lower-porch':[820,1352],'room:front-porch':[805,840],
   'door:conservatory':[412,190],'door:front-porch-outside':[807,1008],'door:front-porch-hall':[690,912],
   'door:lower-porch-outside':[822,1455],'door:lower-porch-guest':[690,1342]};
@@ -1140,17 +1143,18 @@ function homeDetail(d){
   const parts=[];
   if(d.ts!=null&&d.online!==false){if(Number.isFinite(d.humidity_pct))parts.push(Math.round(d.humidity_pct)+'% humidity');if(Number.isFinite(d.power_w)&&d.switch==='on')parts.push(d.power_w.toFixed(1)+' W');}
   parts.push(d.ts==null?'Not linked yet':(d.stale?'No update since ':'Updated ')+homeTime(d.ts));
-  if(Number.isFinite(d.battery_pct)&&d.battery_pct<=20)parts.push('Battery low ('+Math.round(d.battery_pct)+'%)');
   return parts.join(' · ');
 }
 function homeChip(d,place,x,y){
   let text=homeValue(d);
   if(d.kind==='temp'&&!homeCompact.has(place)&&homeState(d)==='ok'&&Number.isFinite(d.humidity_pct))text+=' · '+Math.round(d.humidity_pct)+'%';
   if(place.startsWith('room:')&&d.name!==homeRoomLabels[place])text=d.name+' '+text;
-  const w=text.length*13+30;
+  const batt=homeBattery(d),pct=batt?Math.round(d.battery_pct)+'%':'',bw=batt?30+pct.length*10+8:0,tw=text.length*13,w=tw+30+bw;
   const g=svgEl('g',{class:'home-chip','data-kind':d.kind,'data-state':homeState(d),transform:`translate(${x},${y})`});
-  const label=svgEl('text',{x:0,y:1},text);if(d.kind==='temp'&&homeState(d)==='ok'&&Number.isFinite(d.temperature_c))label.style.fill=homeLineColour(d.temperature_c);
+  const label=svgEl('text',{x:-bw/2,y:1},text);if(d.kind==='temp'&&homeState(d)==='ok'&&Number.isFinite(d.temperature_c))label.style.fill=homeLineColour(d.temperature_c);
   g.append(svgEl('title',{},d.name+' · '+homeDetail(d)),svgEl('rect',{x:-w/2,y:-19,width:w,height:38,rx:19}),label);
+  if(batt){const bx=-bw/2+tw/2+10;for(const [k,v] of Object.entries({x:bx,y:-6,width:24,height:12}))batt.setAttribute(k,v);
+    const b=svgEl('g',{class:'home-batt','data-level':batt.dataset.level});b.append(batt,svgEl('text',{class:'home-batt-pct',x:bx+28,y:1},pct));g.append(b);}
   if(d.kind==='temp')homeTempControl(g,d);
   return g;
 }
@@ -1166,23 +1170,31 @@ function renderHomeSection(key,devices){
     if(d.kind==='temp')homeTempControl(row,d);
   }
 }
-// Outside, Loft and the garage door: a small box in the empty top-right corner of the plan.
-function homeOutdoor(key,y,d){
-  const ok=d&&d.kind==='temp'&&homeState(d)==='ok'&&Number.isFinite(d.temperature_c);
-  const g=svgEl('g',{class:'home-outdoor','data-kind':d?.kind||'temp','data-state':d?homeState(d):'stale',transform:`translate(716,${y})`});
-  const value=svgEl('text',{class:'outdoor-temp',x:0,y:42},d?homeValue(d):'—');
-  if(ok){value.style.fill=homeLineColour(d.temperature_c);if(Number.isFinite(d.humidity_pct))value.append(svgEl('tspan',{dx:8},'· '+Math.round(d.humidity_pct)+'%'));}
-  const icon=homeIcon(key);for(const [k,v] of Object.entries({x:0,y:-14,width:28,height:28}))icon.setAttribute(k,v);
-  g.append(svgEl('rect',{class:'hit',x:-8,y:-32,width:182,height:98,rx:12}),icon,svgEl('text',{class:'outdoor-label','font-size':24,x:36,y:0},key[0].toUpperCase()+key.slice(1)),value);
-  if(d){g.prepend(svgEl('title',{},(d.kind==='temp'?homeSensorLabel(d):d.name)+' · '+homeDetail(d)));if(d.kind==='temp')homeTempControl(g,d);}
-  return g;
+// Battery: a small icon with its percentage; amber at 20% or below, red at 10% or below. Devices that don't report one get nothing.
+function homeBattery(d){
+  if(!Number.isFinite(d?.battery_pct))return null;const p=Math.max(0,Math.min(100,d.battery_pct)),level=p<=10?'crit':p<=20?'low':'ok';
+  const icon=svgEl('svg',{viewBox:'0 0 24 12','aria-hidden':'true',focusable:'false','data-level':level});
+  icon.append(svgEl('rect',{x:1,y:1,width:19,height:10,rx:2,fill:'none',stroke:'currentColor','stroke-width':1.6}),svgEl('rect',{x:21,y:4,width:2,height:4,rx:.5,fill:'currentColor'}),
+    svgEl('rect',{x:3,y:3,width:Math.max(1,15*p/100),height:6,rx:1,fill:'currentColor'}));
+  return icon;
 }
-function homeCorner(byPlace){
-  const find=(place,kind)=>(byPlace[place]||[]).find(d=>d.kind===kind);
-  const rows=[['outside',find('section:outside','temp')],['loft',find('section:loft','temp')],['garage',find('section:garage','door')]];
-  const g=svgEl('g',{class:'home-corner'});g.append(svgEl('rect',{class:'corner-box',x:700,y:48,width:206,height:rows.length*110+14,rx:18}));
-  rows.forEach(([key,d],i)=>g.append(homeOutdoor(key,94+i*110,d)));
-  return g;
+// Off-plan sensors: a 2x2 panel above the plan. Summer house only appears once its sensor is in the Pi's mapping.
+const homeOffPlanSlots=[['outside','Outside','section:outside','temp',true],['loft','Loft','section:loft','temp',true],['garage','Garage door','section:garage','door',true],['summerhouse','Summer house','section:summer-house','temp',false]];
+function homeTile(key,label,d){
+  const tile=document.createElement('div');tile.className='home-tile';tile.dataset.kind=d?.kind||'temp';tile.dataset.state=d?homeState(d):'stale';
+  const name=document.createElement('span');name.className='home-tile-name';name.textContent=label;
+  const value=document.createElement('span');value.className='home-tile-value';value.textContent=d?homeValue(d):'—';
+  if(d&&d.kind==='temp'&&homeState(d)==='ok'&&Number.isFinite(d.temperature_c)){value.style.color=homeLineColour(d.temperature_c);
+    if(Number.isFinite(d.humidity_pct)){const h=document.createElement('small');h.textContent=Math.round(d.humidity_pct)+'%';value.append(h);}}
+  const batt=document.createElement('span');const icon=homeBattery(d);
+  if(icon){batt.className='home-batt';batt.dataset.level=icon.dataset.level;batt.append(icon,Math.round(d.battery_pct)+'%');}
+  tile.append(homeIcon(key),name,batt,value);tile.title=d?(d.kind==='temp'?homeSensorLabel(d):d.name)+' · '+homeDetail(d):label+' · Not linked yet';
+  if(d?.kind==='temp')homeTempControl(tile,d);
+  return tile;
+}
+function renderHomeOffPlan(byPlace){
+  const box=$('homeOffPlan');box.replaceChildren();
+  for(const [key,label,place,kind,always] of homeOffPlanSlots){const d=(byPlace[place]||[]).find(x=>x.kind===kind);if(d||always)box.append(homeTile(key,label,d));}
 }
 function renderHome(data){
   homeLastData=data;
@@ -1199,7 +1211,7 @@ function renderHome(data){
   document.querySelectorAll('.home-plan .doors > g').forEach(g=>g.removeAttribute('data-shut'));
   for(const d of data.devices||[])if(d.kind==='door'&&homeDoorSensors[d.place]&&homeState(d)==='closed')
     document.querySelector(`.home-plan .doors > g[aria-label="${homeDoorSensors[d.place]}"]`)?.setAttribute('data-shut','');
-  layer.append(homeCorner(byPlace));
+  renderHomeOffPlan(byPlace);
   renderHomeSection('garage',(byPlace['section:garage']||[]).filter(d=>d.kind!=='door'));
   $('homeStatus').textContent=data.configured?'Updated '+homeTime(data.server_time)+' · refreshes every minute':'Devices not linked yet';
   placeHomeRoomIcons();if(homeGraphSlug)renderHomeTabs();
@@ -1219,16 +1231,17 @@ const homeIcons={ // 24-unit line icons in the site's icon style
   shower:'M5 21V7a4 4 0 0 1 8 0M10 7h6M16 7l-3 4M10 14v.5M13 14v.5M16 14v.5M11.5 17.5v.5M14.5 17.5v.5M17.5 17.5v.5',
   loft:'M2 12 12 4l10 8M5 10v10h14V10M9.5 12h5L12 9.5z',
   garage:'M3 21V9l9-6 9 6v12M7 21v-9h10v9M7 15h10M7 18h10',
+  summerhouse:'M3 10l9-6 9 6M5 9v12h14V9M3 21h18M10 21v-6h4v6M7 12h2M15 12h2',
   outside:'M12 21v-5M8 16h8a4 4 0 0 0 1-7.9 5 5 0 0 0-9.8 0A4 4 0 0 0 8 16z'};
 const homePlaceIcons={'room:conservatory':'conservatory','room:bedroom-1':'bed','room:kitchen':'kitchen','room:hall':'door','room:front-porch':'porch',
-  'room:lounge':'sofa','room:shower-room':'shower','room:guest-bedroom':'guestbed','room:lower-porch':'porch','section:loft':'loft','section:outside':'outside'};
+  'room:lounge':'sofa','room:shower-room':'shower','room:guest-bedroom':'guestbed','room:lower-porch':'porch','section:loft':'loft','section:outside':'outside','section:summer-house':'summerhouse'};
 const homeLabelPlaces={Conservatory:'room:conservatory','Bedroom 1':'room:bedroom-1',Kitchen:'room:kitchen',Hall:'room:hall',Front:'room:front-porch',
   Lounge:'room:lounge',Shower:'room:shower-room',Guest:'room:guest-bedroom',Back:'room:lower-porch'};
-const homeSensorOrder=['room:conservatory','room:bedroom-1','room:kitchen','room:hall','room:front-porch','room:lounge','room:shower-room','room:guest-bedroom','section:loft','section:outside'];
+const homeSensorOrder=['room:conservatory','room:bedroom-1','room:kitchen','room:hall','room:front-porch','room:lounge','room:shower-room','room:guest-bedroom','section:loft','section:outside','section:summer-house'];
 function homeIcon(key,size){const icon=svgEl('svg',{viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'1.6','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',focusable:'false'});
   if(size)icon.setAttribute('width',size),icon.setAttribute('height',size);icon.append(svgEl('path',{d:homeIcons[key]||homeIcons.door}));return icon;}
 function homeIconKey(d){return d.name==='Freezer'?'freezer':homePlaceIcons[d.place]||'door';}
-function homeSensorLabel(d){return d.place.startsWith('section:')?d.place[8].toUpperCase()+d.place.slice(9):d.name;}
+function homeSensorLabel(d){return d.place.startsWith('section:')?(d.place[8].toUpperCase()+d.place.slice(9)).replaceAll('-',' '):d.name;}
 function homeSensor(slug){return (homeLastData?.devices||[]).find(d=>d.id===slug);}
 function homeSensors(){
   const temps=(homeLastData?.devices||[]).filter(d=>d.kind==='temp'),rank=d=>{const i=homeSensorOrder.indexOf(d.place);return (i<0?99:i)*2+(d.name===homeRoomLabels[d.place]||d.place.startsWith('section:')?0:1);};
