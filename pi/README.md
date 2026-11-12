@@ -219,8 +219,8 @@ its own database, /var/lib/modpi/data/juwai_local.sqlite3. The cloud collector (
 The Juwai page reads one source, set by `"juwai_source": "cloud"` (the default) or `"local"` in
 /etc/modpi/monitor.json, followed by a modpi restart. While local reads are on test, signed-in
 users get a Cloud / Local switch at the top of the page; each card shows its source and the time
-of its reading, and local readings older than five minutes are marked Delayed. Do not set
-`"local"` until Gareth has signed off the switchover.
+of its reading, and local readings older than five minutes are marked Delayed. Since 12 Nov 2026 the
+Pi is set to `"local"`; the cloud collector runs on as the fallback until 23 November.
 
 ## Meter over the RS485 HAT (Job 3, live since 11 Nov 2026)
 router/modbus_rtu.py reads the meter over the Pi's serial port (Modbus RTU, 9600 8N1, unit 1,
