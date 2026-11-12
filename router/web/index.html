@@ -180,8 +180,9 @@
         .juwai-power, .juwai-kwh { font-size:clamp(1.15rem,3vw,1.9rem); line-height:1.2; font-variant-numeric:tabular-nums; font-weight:700; margin:.35rem 0 .5rem; overflow-wrap:anywhere; }
         .juwai-energy { text-align:right; }
         .juwai-kwh { color:var(--export-color); }
-        #totalCard { grid-column:1 / -1; border-color:#345046; }
-        #totalCard .juwai-kwh { color:var(--export-color); }
+        #totalCard, #outputCard { border-color:#345046; }
+        #totalCard .juwai-kwh, #outputCard .juwai-kwh { color:var(--export-color); }
+        #outputCard .period-note { margin:.3rem 0; }
         #epeverCard { grid-column:1 / -1; cursor:pointer; }
         #epeverCard[hidden] { display:none; }
         #epeverToggle { display:flex; align-items:center; gap:.5rem; width:100%; min-height:44px; background:none; border:0; padding:0; color:inherit; font:inherit; text-align:left; cursor:pointer; }
@@ -236,8 +237,8 @@
           .juwai-metrics dt { font-size:.75rem; margin:0; }
           .juwai-metrics dd { font-size:.875rem; }
           .juwai-card > .period-note { font-size:.7rem; }
-          #totalCard { grid-column:1 / -1; }
-          #totalCard .juwai-power { font-size:1.25rem; margin:.2rem 0; }
+          #totalCard, #outputCard { grid-column:1 / -1; }
+          #totalCard .juwai-power, #outputCard .juwai-power { font-size:1.25rem; margin:.2rem 0; }
           .mobile-generation-disclaimer { color:var(--text-muted); font-size:.75rem; margin:-.5rem 0 .8rem; }
         }
 
@@ -514,7 +515,9 @@
 <h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m2 9 10-6 10 6M4 8v13h16V8M7 21V11h10v10M7 14h10M7 17h10"/></svg><span>Garage</span></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="garagePower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="garageEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
 <dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="garageVoltage">— V</dd></div><div><dt>Current</dt><dd id="garageCurrent">— A</dd></div></dl><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="garageState">Loading…</span></span><time id="garageAge">Waiting for readings</time></div></article><article class="card juwai-card" id="totalCard" data-stale="true">
 <h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2" y="4" width="8" height="8" rx="1"/><rect x="14" y="4" width="8" height="8" rx="1"/><path d="M6 15v4h12v-4m-6 1v6"/></svg><span>Shed and garage total</span></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="totalPower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="totalEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
-<div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="totalState">Loading…</span></span><time id="totalAge">Waiting for readings</time></div></article><article class="card juwai-card" id="epeverCard" data-stale="true" hidden>
+<div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="totalState">Loading…</span></span><time id="totalAge">Waiting for readings</time></div></article><article class="card juwai-card" id="outputCard" data-stale="true">
+<h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m13 6-4 6h6l-4 6M1 8h3m-3 8h3m16-8h3m-3 8h3"/></svg><span>Output</span></h2><p class="period-note">1000 watt inverter minus 600 watt inverter</p><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="outputPower">— W</div></div><div class="juwai-energy"><div class="label">Output energy</div><div id="outputEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
+<p class="period-note" id="outputPowerParts">1000 watt inverter — · 600 watt inverter —</p><p class="period-note" id="outputEnergyParts"></p><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="outputState">Loading…</span></span><time id="outputAge">Waiting for readings</time></div></article><article class="card juwai-card" id="epeverCard" data-stale="true" hidden>
 <h2 class="device-title"><button type="button" id="epeverToggle" aria-expanded="false" aria-controls="epeverDetail"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="7" width="16" height="11" rx="2"/><path d="M19 11h2v3h-2M11 9l-3 4h4l-3 4"/></svg><span id="epeverName">Epever</span><span class="epever-hint" id="epeverHint">Show details</span></button></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="epeverPower">— W</div></div><div class="juwai-energy"><div class="label">Generation</div><div id="epeverEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
 <div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="epeverState">Loading…</span></span><time id="epeverAge">Waiting for readings</time><span>Not counted in the total above</span></div>
 <div id="epeverDetail" hidden><dl class="juwai-metrics epever-metrics"><div><dt>Battery voltage</dt><dd id="epeverBattV">— V</dd></div><div><dt>Battery current</dt><dd id="epeverBattA">— A</dd></div><div><dt>Charging</dt><dd id="epeverCharge">—</dd></div><div><dt>Load</dt><dd id="epeverLoad">—</dd></div><div><dt>Battery level</dt><dd id="epeverSoc">— %</dd></div><div><dt>Panel voltage</dt><dd id="epeverPvV">— V</dd></div></dl>
@@ -780,6 +783,31 @@ function drawJuwai(){
     (['today','yesterday'].includes($('juwaiWindow').value)?'Calendar days use UK time.':'')):'Loading generation…';
   drawMobileJuwai();
 }
+// Output = 1000 watt inverter plug minus 600 watt inverter plug (eWeLink), shown signed and never clamped. Energy uses the Inverters tab's method: sum(mean_w*samples)*interval/3600 over the history bins.
+let outputLatest=null, outputHistory={}, outputHistoryKey='', outputTime=0;
+const OUTPUT_IDS=['inverter-1000','inverter-600'];
+function outputWh(r,interval){let sum=0,any=false;for(const b of (r?.bins||[]))if(b.samples&&Number.isFinite(b.mean_w)){sum+=b.mean_w*b.samples;any=true;}return any?sum*interval/3600:null;}
+function renderOutput(){
+  const num=(v,unit,digits)=>Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:digits})+' '+unit:'—',kwh=wh=>Number.isFinite(wh)?(wh/1000).toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})+' kWh':'—';
+  const devs=OUTPUT_IDS.map(id=>outputLatest?.devices?.find(d=>d.id===id)),usable=d=>!!d&&!!d.ts&&!d.stale&&!!d.online&&Number.isFinite(d.power_w);
+  const both=devs.every(usable),interval=outputLatest?.interval_seconds||300,wh=OUTPUT_IDS.map(id=>outputWh(outputHistory[id],interval));
+  $('outputPower').textContent=both?num(devs[0].power_w-devs[1].power_w,'W',2):'— W';
+  $('outputPowerParts').textContent='1000 watt inverter '+(usable(devs[0])?num(devs[0].power_w,'W',2):'—')+' · 600 watt inverter '+(usable(devs[1])?num(devs[1].power_w,'W',2):'—');
+  $('outputCard').dataset.stale=String(!both);
+  $('outputState').textContent=!outputLatest?'Unavailable':both?'Current':'Delayed';
+  const stamps=devs.map(d=>d?.ts).filter(Number.isFinite),stamp=stamps.length===2?Math.min(...stamps):null;
+  $('outputAge').textContent=stamp?'Cloud · '+new Date(stamp).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'Waiting for readings';
+  if(stamp)$('outputAge').dateTime=new Date(stamp).toISOString();
+  const ok=wh.every(Number.isFinite),have=outputHistoryKey===$('juwaiWindow').value;
+  $('outputEnergy').textContent=ok&&have?kwh(wh[0]-wh[1]):'— kWh';
+  $('outputEnergyParts').textContent=!have?'':ok?'Energy: 1000 watt inverter '+kwh(wh[0])+' − 600 watt inverter '+kwh(wh[1]):'Output energy unavailable: no readings from '+(wh[0]==null&&wh[1]==null?'either inverter':wh[0]==null?'the 1000 watt inverter':'the 600 watt inverter')+' for this period.';
+}
+async function readOutput(signal,window){
+  const tasks=[getJSON('/api/ewelink/latest',signal).then(d=>{outputLatest=d;}).catch(e=>{if(signal.aborted)throw e;outputLatest=null;})];
+  if(outputHistoryKey!==window||Date.now()-outputTime>=300000)tasks.push(Promise.all(OUTPUT_IDS.map(id=>getJSON('/api/ewelink/history?device='+id+'&window='+window,signal))).then(rows=>{outputHistory=Object.fromEntries(OUTPUT_IDS.map((id,i)=>[id,rows[i]]));outputHistoryKey=window;outputTime=Date.now();}).catch(e=>{if(signal.aborted)throw e;outputHistory={};outputHistoryKey=window;outputTime=Date.now();}));
+  try{await Promise.all(tasks);}catch(e){return;}
+  if(!signal.aborted&&activeTab==='juwai'&&!document.hidden)renderOutput();
+}
 function renderJuwai(data){
   const sourceName=juwaiSourceNames[data.source]||'Cloud';
   $('juwaiSource').hidden=!data.switchable;
@@ -818,7 +846,7 @@ async function readJuwai(version){
         juwaiHistory=Object.fromEntries(rows);juwaiHistoryKey=window;juwaiHistoryTime=Date.now();drawJuwai();
       }));
     }
-    readEpever(version,aborter.signal);
+    readEpever(version,aborter.signal);readOutput(aborter.signal,window);
     const results=await Promise.allSettled(tasks);
     if(version!==juwaiVersion||activeTab!=='juwai'||document.hidden)return;
     if(results[0].status==='rejected'){
@@ -890,7 +918,7 @@ $('juwaiMetric').addEventListener('change',drawJuwai);
 $('juwaiSource').addEventListener('click',e=>{const button=e.target.closest('button[data-source]');if(!button||button.getAttribute('aria-pressed')==='true')return;
   juwaiSource=button.dataset.source;for(const b of $('juwaiSource').children)b.setAttribute('aria-pressed',String(b===button));
   mobileWeek=null;mobileBinIndex=null;stopJuwai();juwaiHistoryKey='';juwaiHistory={};drawJuwai();readJuwai(juwaiVersion);});
-$('juwaiWindow').addEventListener('change',()=>{epeverKey='';epeverHistory=null;mobileWeek=null;mobileBinIndex=null;mobileMeter='total';stopJuwai();juwaiHistoryKey='';juwaiHistory={};drawJuwai();readJuwai(juwaiVersion);});
+$('juwaiWindow').addEventListener('change',()=>{epeverKey='';epeverHistory=null;mobileWeek=null;mobileBinIndex=null;mobileMeter='total';stopJuwai();juwaiHistoryKey='';juwaiHistory={};drawJuwai();renderOutput();readJuwai(juwaiVersion);});
 
 let mobileChart=null, mobileMeter='total', mobileWeek=null, mobileBinIndex=null, mobileBins=[];
 const mobileMedia=matchMedia('(max-width:600px)');
