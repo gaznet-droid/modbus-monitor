@@ -796,7 +796,7 @@ function renderOutput(){
   $('outputCard').dataset.stale=String(!both);
   $('outputState').textContent=!outputLatest?'Unavailable':both?'Current':'Delayed';
   const stamps=devs.map(d=>d?.ts).filter(Number.isFinite),stamp=stamps.length===2?Math.min(...stamps):null;
-  $('outputAge').textContent=stamp?'Cloud · '+new Date(stamp).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'Waiting for readings';
+  $('outputAge').textContent=stamp?'eWeLink · '+new Date(stamp).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'Waiting for readings';
   if(stamp)$('outputAge').dateTime=new Date(stamp).toISOString();
   const ok=wh.every(Number.isFinite),have=outputHistoryKey===$('juwaiWindow').value;
   $('outputEnergy').textContent=ok&&have?kwh(wh[0]-wh[1]):'— kWh';
