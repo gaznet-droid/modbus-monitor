@@ -197,13 +197,19 @@ its own database, /var/lib/modpi/data/juwai_local.sqlite3. The cloud collector (
   meter's LAN address and protocol version, the LAN range to search if a meter moves, and
   `interval_seconds` (60; change it and restart the test unit). Keys stay in tuya-local-keys.json.
   None of this is ever committed.
-- If a meter stops answering five times in a row the collector looks once (at most hourly) for
-  it at a new address, proves it with the key, saves the new address privately and records an
+- If a meter stops answering five times in a row the collector looks (then again at most every
+  5 minutes while it is still missing) for it at a new address, proves it with the key, saves the new address privately and records an
   `address_changed` event (no addresses in the database or the journal).
 - Also in that database, for the test report only: `read_stats` (reads that worked and failed per
   day), `events`, and `compare` (each cloud sample paired with the local sample nearest in time).
 - One supervised read, nothing stored (stop the unit first; they share a lock):
   `sudo -u modpi python3 /opt/modpi/router/juwai_local.py --probe`
+- One-off, before switching the page to local: copy the cloud history from before the local
+  history starts (router/juwai_history_import.py; cloud database opened read-only, safe to run
+  twice, refuses while the collector holds its lock). Stop the unit, dry-run, apply, start it:
+  `sudo systemctl stop modpi-juwai-local`, then `sudo -u modpi python3 /opt/modpi/router/juwai_history_import.py
+  --dry-run|--apply --cloud-db <data dir>/tuya.sqlite3 --local-db <data dir>/juwai_local.sqlite3
+  --lock-file /var/lib/modpi/private/juwai-local.lock`, then `sudo systemctl start modpi-juwai-local`.
 - Switch the test off: `sudo systemctl disable --now modpi-juwai-local`. Nothing else depends on it.
 - The unit is installed by hand (copy pi/modpi-juwai-local.service to /etc/systemd/system, then
   `sudo systemctl daemon-reload && sudo systemctl enable --now modpi-juwai-local`). Auto-deploy
