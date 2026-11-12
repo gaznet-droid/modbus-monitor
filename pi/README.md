@@ -240,3 +240,36 @@ Supervised read (stop modpi first; they cannot share the port):
 
 Roll back to the Elfin: remove meter_serial from monitor.json and restart modpi; the Elfin must be
 wired to the meter and reachable at meter_host.
+
+## Epever solar charger (listen-only, from 12 Nov 2026)
+Dad's EPEVER Tracer-AN charger has a Wi-Fi dongle (Hi-Flying HF-LPT270, HuiNeng firmware) that feeds
+the Solar Guardian app over its own link to EPEVER's server. That link is untouched. The dongle's
+unused second connection ("socket B") is pointed at the Pi, and the dongle copies the charger's Modbus
+replies to it. router/epever.py (modpi-epever.service) accepts that connection, reads, and stores; it
+has no code that sends, so it cannot switch the load or change a setting. Registers and scaling follow
+EPEVER's Controller Communication Instruction V2.5. Only replies arrive, not requests, so each reply
+is recognised by its length and place in the burst (see the top of router/epever.py).
+
+- What arrives: battery voltage and charging state about once a minute; panel power, battery current,
+  load, temperatures, state of charge and the energy counters every few minutes, and more often while
+  someone has the app open.
+- Data: /var/lib/modpi/data/epever.sqlite3. Generation for a period is the difference in the charger's
+  own lifetime counter, not an estimate from power.
+- Private settings: /var/lib/modpi/private/epever.json (modpi:modpi, 0600): `{"port": 15001, "name": "Epever"}`.
+  The name is the card's title. The saved dongle settings pages, setup-command output and the first
+  raw capture are in /var/lib/modpi/private/epever/. Never commit any of it.
+- Site: a fourth card on the Generation page, shown only once readings exist; tap it for the battery
+  detail and graph. It is NOT added to the Shed and garage total (Dad to confirm whether its panels overlap).
+- The unit is installed by hand, like modpi-juwai-local: copy pi/modpi-epever.service to
+  /etc/systemd/system, then `sudo systemctl daemon-reload && sudo systemctl enable --now modpi-epever`.
+  Auto-deploy updates its code but does not restart it; restart it by hand after a change to epever.py.
+  It is separate from modpi so a site deploy does not drop the dongle's connection.
+- The dongle's setup commands are Hi-Flying AT commands over UDP port 48899 on the LAN (send the
+  discovery text, then `+ok`, then commands, then `AT+Q`). Socket B was set with
+  `AT+SOCKB=TCP,<port>,<the Pi's LAN address>` then `AT+Z` to restart; the dongle takes about five
+  minutes to rejoin. Undo: `AT+SOCKB=NONE` then `AT+Z`. The Pi needs a fixed address on Dad's router
+  (reserved 12 Nov). The dongle's own address can change; it calls the Pi.
+- Do not fill in the MQTT fields on the dongle's Account page. They look blank but hold the Solar
+  Guardian settings; saving over them cuts the app off.
+- pi/epever_tap.py is the raw logger and relay used for the first test; keep it for fault-finding
+  (stop modpi-epever first; they use the same port).

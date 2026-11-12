@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "router"))
 import monitor
 from tuya_cached import CachedTuya
 from juwai_local import CachedLocal
+from epever import CachedEpever
 from modbus_rtu import BAUDS, SerialBus
 from ewelink import Ewelink
 from auth import Auth
@@ -81,7 +82,8 @@ def main():
                     Auth("/var/lib/modpi/private/auth.json", "/var/lib/modpi/private/auth.sqlite3"),
                     config.get("bonds_port"),
                     juwai_local=CachedLocal(storage.directory, storage.check),
-                    juwai_source=config.get("juwai_source", "cloud")))
+                    juwai_source=config.get("juwai_source", "cloud"),
+                    epever=CachedEpever(storage.directory, storage.check)))
             def stop(*_):
                 for worker in workers:
                     worker.stop.set()

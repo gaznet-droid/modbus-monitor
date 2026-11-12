@@ -1,0 +1,30 @@
+[Unit]
+Description=ModPi Epever solar charger: listen-only collector (never sends to the charger)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=modpi
+Group=modpi
+WorkingDirectory=/opt/modpi
+ExecStart=/usr/bin/python3 /opt/modpi/router/epever.py --config /var/lib/modpi/private/epever.json --lock-file /var/lib/modpi/private/epever.lock
+# Separate from the dashboard so a site deploy does not drop the dongle. Switch off with
+#   sudo systemctl disable --now modpi-epever
+Restart=on-failure
+RestartSec=15
+Nice=10
+MemoryMax=64M
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/modpi
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET
+TasksMax=16
+
+[Install]
+WantedBy=multi-user.target

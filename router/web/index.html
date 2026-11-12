@@ -182,6 +182,13 @@
         .juwai-kwh { color:var(--export-color); }
         #totalCard { grid-column:1 / -1; border-color:#345046; }
         #totalCard .juwai-kwh { color:var(--export-color); }
+        #epeverCard { grid-column:1 / -1; cursor:pointer; }
+        #epeverCard[hidden] { display:none; }
+        #epeverToggle { display:flex; align-items:center; gap:.5rem; width:100%; min-height:44px; background:none; border:0; padding:0; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+        #epeverToggle:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        #epeverToggle .epever-hint { margin-left:auto; color:var(--text-muted); font-size:.75rem; font-weight:400; }
+        #epeverDetail { margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border); cursor:default; }
+        .epever-metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(7.5rem,1fr)); gap:.8rem 1.2rem; }
         .juwai-chart-section { margin-top:1.3rem; padding-top:1.2rem; border-top:1px solid var(--border); }
         .juwai-period { margin:0; }
 
@@ -505,7 +512,12 @@
 <h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m2 9 10-6 10 6M4 8v13h16V8M7 21V11h10v10M7 14h10M7 17h10"/></svg><span>Garage</span></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="garagePower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="garageEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
 <dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="garageVoltage">— V</dd></div><div><dt>Current</dt><dd id="garageCurrent">— A</dd></div></dl><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="garageState">Loading…</span></span><time id="garageAge">Waiting for readings</time></div></article><article class="card juwai-card" id="totalCard" data-stale="true">
 <h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2" y="4" width="8" height="8" rx="1"/><rect x="14" y="4" width="8" height="8" rx="1"/><path d="M6 15v4h12v-4m-6 1v6"/></svg><span>Shed and garage total</span></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="totalPower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="totalEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
-<div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="totalState">Loading…</span></span><time id="totalAge">Waiting for readings</time></div></article></div>
+<div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="totalState">Loading…</span></span><time id="totalAge">Waiting for readings</time></div></article><article class="card juwai-card" id="epeverCard" data-stale="true" hidden>
+<h2 class="device-title"><button type="button" id="epeverToggle" aria-expanded="false" aria-controls="epeverDetail"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="7" width="16" height="11" rx="2"/><path d="M19 11h2v3h-2M11 9l-3 4h4l-3 4"/></svg><span id="epeverName">Epever</span><span class="epever-hint" id="epeverHint">Show details</span></button></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="epeverPower">— W</div></div><div class="juwai-energy"><div class="label">Generation</div><div id="epeverEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
+<div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="epeverState">Loading…</span></span><time id="epeverAge">Waiting for readings</time><span>Not counted in the total above</span></div>
+<div id="epeverDetail" hidden><dl class="juwai-metrics epever-metrics"><div><dt>Battery voltage</dt><dd id="epeverBattV">— V</dd></div><div><dt>Battery current</dt><dd id="epeverBattA">— A</dd></div><div><dt>Charging</dt><dd id="epeverCharge">—</dd></div><div><dt>Load</dt><dd id="epeverLoad">—</dd></div><div><dt>Battery level</dt><dd id="epeverSoc">— %</dd></div><div><dt>Panel voltage</dt><dd id="epeverPvV">— V</dd></div></dl>
+<div class="juwai-chart"><canvas id="epeverChart" role="img" aria-label="Solar charger panel power and battery voltage for the selected period"></canvas></div>
+<p id="epeverNote" class="period-note" aria-live="polite"></p></div></article></div>
 <div class="juwai-chart-section"><div class="juwai-controls"><label for="juwaiMetric">Chart <select id="juwaiMetric"><option value="power_w">Power (W)</option><option value="voltage_v">Voltage (V)</option><option value="current_a">Current (A)</option></select></label></div>
 <div class="juwai-mobile-only" id="mobileGenerationView">
 <div class="mobile-generation-summary"><span id="mobileGenerationPeriod">Today</span><strong id="mobileGenerationTotal">— kWh</strong><span>estimated generation</span><div id="mobileGenerationSplit"></div></div>
@@ -803,6 +815,7 @@ async function readJuwai(version){
         juwaiHistory=Object.fromEntries(rows);juwaiHistoryKey=window;juwaiHistoryTime=Date.now();drawJuwai();
       }));
     }
+    readEpever(version,aborter.signal);
     const results=await Promise.allSettled(tasks);
     if(version!==juwaiVersion||activeTab!=='juwai'||document.hidden)return;
     if(results[0].status==='rejected'){
@@ -814,11 +827,67 @@ async function readJuwai(version){
     if(version===juwaiVersion&&activeTab==='juwai'&&!document.hidden){juwaiController=null;juwaiTimer=setTimeout(()=>readJuwai(version),30000);}
   }
 }
+// Epever solar charger: a fourth card, shown only once the Pi has stored readings from it. Read-only.
+let epeverChart=null, epeverHistory=null, epeverKey='', epeverTime=0;
+const epeverText=(v,unit,digits)=>Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:digits})+' '+unit:'— '+unit;
+function renderEpever(data){
+  const v=data.values;
+  $('epeverCard').hidden=false;$('epeverName').textContent=data.name;
+  $('epeverPower').textContent=epeverText(v.pv_w,'W',2);
+  $('epeverCard').dataset.stale=String(data.stale);$('epeverState').textContent=data.stale?'Delayed':'Current';
+  $('epeverAge').textContent=data.observed_at?new Date(data.observed_at).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'No recorded sample';
+  if(data.observed_at)$('epeverAge').dateTime=new Date(data.observed_at).toISOString();
+  $('epeverBattV').textContent=epeverText(v.batt_v,'V',2);$('epeverBattA').textContent=epeverText(v.batt_a,'A',2);
+  $('epeverCharge').textContent=v.charge_state_name||'—';
+  $('epeverLoad').textContent=v.load_on==null?'—':v.load_on?'On'+(Number.isFinite(v.load_w)?' · '+epeverText(v.load_w,'W',1):''):'Off';
+  $('epeverSoc').textContent=epeverText(v.soc,'%',0);$('epeverPvV').textContent=epeverText(v.pv_v,'V',2);
+}
+function drawEpever(){
+  const energy=epeverHistory?.energy;
+  $('epeverEnergy').textContent=Number.isFinite(energy?.generated_kwh)?energy.generated_kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' kWh':'— kWh';
+  if($('epeverDetail').hidden)return;
+  if(!epeverChart)epeverChart=new Chart($('epeverChart'),{type:'line',data:{datasets:[['Panel power (W)','#fbbf24','y'],['Battery voltage (V)','#38bdf8','y1']].map(([label,colour,axis])=>({label,data:[],parsing:false,yAxisID:axis,borderColor:colour,backgroundColor:colour,pointRadius:2,pointHitRadius:10,borderWidth:2,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:v=>new Date(v).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})},grid:{color:'#1e293b'}},y:{min:0,title:{display:true,text:'Power (W)',color:'#94a3b8'},ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}},y1:{position:'right',title:{display:true,text:'Battery (V)',color:'#94a3b8'},ticks:{color:'#94a3b8'},grid:{drawOnChartArea:false}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()}}}}});
+  for(const [i,column] of [1,2].entries()){
+    const points=[];
+    for(const row of epeverHistory?.points||[]){
+      if(!Number.isFinite(row[column]))continue;
+      const prev=points[points.length-1];
+      if(prev&&row[0]-prev.x>Math.max(1800000,epeverHistory.step_ms*2.1))points.push({x:prev.x+epeverHistory.step_ms,y:null});
+      points.push({x:row[0],y:row[column]});
+    }
+    epeverChart.data.datasets[i].data=points;
+  }
+  if(epeverHistory){epeverChart.options.scales.x.min=epeverHistory.start;epeverChart.options.scales.x.max=epeverHistory.end;}
+  epeverChart.update('none');
+  $('epeverNote').textContent=epeverHistory?'Generation is the charger’s own meter reading'+(energy?.partial?', counted from the first reading stored in this period':'')+'. Readings arrive every few minutes. This charger is not added to the Shed and garage total.':'Loading…';
+}
+async function readEpever(version,signal){
+  const window=$('juwaiWindow').value,live=()=>version===juwaiVersion&&activeTab==='juwai'&&!document.hidden;
+  try{
+    const data=await getJSON('/api/epever/latest',signal);
+    if(!live())return;
+    renderEpever(data);
+    if(epeverKey!==window||Date.now()-epeverTime>=120000){
+      const history=await getJSON('/api/epever/history?window='+window,signal);
+      if(!live())return;
+      epeverHistory=history;epeverKey=window;epeverTime=Date.now();
+    }
+    drawEpever();
+  }catch(error){
+    if(live()&&!$('epeverCard').hidden){$('epeverCard').dataset.stale='true';$('epeverState').textContent='Unavailable';}
+  }
+}
+$('epeverCard').addEventListener('click',event=>{
+  if(event.target.closest('#epeverDetail'))return;
+  const open=$('epeverDetail').hidden;
+  $('epeverDetail').hidden=!open;$('epeverToggle').setAttribute('aria-expanded',String(open));$('epeverHint').textContent=open?'Hide details':'Show details';
+  if(open){drawEpever();epeverChart?.resize();}
+});
 $('juwaiMetric').addEventListener('change',drawJuwai);
 $('juwaiSource').addEventListener('click',e=>{const button=e.target.closest('button[data-source]');if(!button||button.getAttribute('aria-pressed')==='true')return;
   juwaiSource=button.dataset.source;for(const b of $('juwaiSource').children)b.setAttribute('aria-pressed',String(b===button));
   mobileWeek=null;mobileBinIndex=null;stopJuwai();juwaiHistoryKey='';juwaiHistory={};drawJuwai();readJuwai(juwaiVersion);});
-$('juwaiWindow').addEventListener('change',()=>{mobileWeek=null;mobileBinIndex=null;mobileMeter='total';stopJuwai();juwaiHistoryKey='';juwaiHistory={};drawJuwai();readJuwai(juwaiVersion);});
+$('juwaiWindow').addEventListener('change',()=>{epeverKey='';epeverHistory=null;mobileWeek=null;mobileBinIndex=null;mobileMeter='total';stopJuwai();juwaiHistoryKey='';juwaiHistory={};drawJuwai();readJuwai(juwaiVersion);});
 
 let mobileChart=null, mobileMeter='total', mobileWeek=null, mobileBinIndex=null, mobileBins=[];
 const mobileMedia=matchMedia('(max-width:600px)');

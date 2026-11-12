@@ -367,7 +367,7 @@ def rewrite_bonds_html(body):
     return body.replace(b"<header>",b"<header>"+BONDS_BACK,1)
 
 def handler(store, web, voltage=None, tuya=None, ewelink=None, auth=None, bonds_port=None,
-            juwai_local=None, juwai_source="cloud"):
+            juwai_local=None, juwai_source="cloud", epever=None):
     # Juwai readings come from one source: juwai_source ("cloud" or "local") picks what everyone sees.
     juwai_sources={"cloud":tuya,"local":juwai_local}
     class Handler(BaseHTTPRequestHandler):
@@ -618,6 +618,16 @@ def handler(store, web, voltage=None, tuya=None, ewelink=None, auth=None, bonds_
                     if set(query)!={"device","window"} or any(len(v)!=1 for v in query.values()):
                         raise ValueError()
                     return self.send(200,dict(reader.history(query["device"][0],query["window"][0]),source=source))
+                if parsed.path in ("/api/epever/latest","/api/epever/history") and epever is not None:
+                    if parsed.path=="/api/epever/latest":
+                        if query: raise ValueError()
+                        result=epever.latest()
+                    else:
+                        if set(query)!={"window"} or len(query["window"])!=1: raise ValueError()
+                        result=epever.history(query["window"][0])
+                    if result is None:
+                        return self.send(404,{"error":"Not found"})
+                    return self.send(200,result)
                 if parsed.path=="/api/live":
                     since=int(query.get("since",["0"])[0])
                     if not 0<=since<=int(time.time()*1000)+60000:
