@@ -302,6 +302,30 @@
 .site-footer { margin:2.5rem 0 1rem; font-size:.8rem; display:flex; gap:1.5rem; }
         .site-footer a { color:var(--text-muted); text-decoration:none; padding:.5rem; }
         .site-footer a:hover, .site-footer a:focus-visible { color:var(--text-main); }
+        /* System tab: Dad's wiring sketch as a portrait schematic with live readings. */
+        .sys-card { display:flex; flex-direction:column; align-items:center; }
+        .sys-card .juwai-group-heading { width:100%; }
+        .sys-plan { width:100%; max-width:470px; height:auto; display:block; font-family:inherit; }
+        .sys-plan rect { fill:var(--card-bg); stroke:var(--border); stroke-width:1.5; }
+        .sys-plan .sys-bus rect { fill:#1e293b; stroke:#475569; }
+        .sys-plan text { fill:var(--text-main); text-anchor:middle; }
+        .sys-plan .sys-name { font-size:12px; fill:var(--text-muted); }
+        .sys-plan .sys-big { font-size:20px; font-weight:700; font-variant-numeric:tabular-nums; }
+        .sys-plan .sys-small { font-size:11.5px; fill:var(--text-muted); font-variant-numeric:tabular-nums; }
+        .sys-plan .sys-out { font-size:12px; fill:var(--text-muted); }
+        .sys-plan [data-state="stale"] .sys-big, .sys-plan [data-state="stale"] .sys-small { fill:#64748b; }
+        .sys-plan [data-state="stale"] rect { stroke-dasharray:4 3; }
+        .sys-plan .sys-nometer { font-size:11px; fill:var(--amber-zero); font-style:italic; }
+        .sys-plan [data-goto] { cursor:pointer; }
+        .sys-plan [data-goto]:hover rect { stroke:var(--import-color); }
+        .sys-plan [data-goto]:focus { outline:none; }
+        .sys-plan [data-goto]:focus-visible rect { stroke:var(--import-color); stroke-width:2.5; }
+        .sys-line { stroke:#475569; stroke-width:2.5; fill:none; marker-end:url(#sysArrow); }
+        .sys-line.sys-unmetered { stroke-dasharray:5 4; }
+        .sys-line.on { stroke:var(--import-color); marker-end:url(#sysArrowOn); stroke-dasharray:7 5; animation:sysFlow 1s linear infinite; }
+        @keyframes sysFlow { to { stroke-dashoffset:-12; } }
+        @media(prefers-reduced-motion:reduce) { .sys-line.on { animation:none; stroke-dasharray:none; } }
+        .sys-key { max-width:640px; margin:1rem auto 0; color:var(--text-muted); font-size:.9rem; line-height:1.5; }
         .home-plan-card { display:flex; flex-direction:column; align-items:center; }
         .home-plan-card .juwai-group-heading { width:100%; }
         .home-plan-note { width:auto; margin:0; }
@@ -454,6 +478,7 @@
           <button id="juwaiTab" type="button" role="tab" aria-selected="false" aria-controls="juwaiPanel" aria-label="Juwai" title="Juwai" tabindex="-1"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3.5 14 6.5 4h14l-3 10h-14z"/><path d="M5 9h14M11 4l-3 10M15.5 4l-3 10M10.5 14v4M6.5 21h8M10.5 18v3"/></svg></button>
           <button id="ewelinkTab" type="button" role="tab" aria-selected="false" aria-controls="ewelinkPanel" aria-label="eWeLink" title="eWeLink" tabindex="-1"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 2v5M15 2v5M6 7h12v4a6 6 0 0 1-12 0V7zM12 17v5"/></svg></button>
           <button id="homeTab" type="button" role="tab" aria-selected="false" aria-controls="homePanel" aria-label="Home" title="Home" tabindex="-1"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5.5v-6h-5v6H4a1 1 0 0 1-1-1v-9.5z"/></svg></button>
+          <button id="systemTab" type="button" role="tab" aria-selected="false" aria-controls="systemPanel" aria-label="System" title="System" tabindex="-1"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="8.5" y="16" width="7" height="5" rx="1"/><path d="M6.5 8v4h11V8M12 12v4"/></svg></button>
           <select id="timeWindow" class="time-select tab-window" aria-label="Time window">
             <option value="15m" selected>15 Mins</option>
             <option value="30m">30 Mins</option>
@@ -696,6 +721,37 @@
 </div>
 <div class="home-cards"><article class="card home-card" id="homeSection-garage"><h2>Garage</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article></div>
 </section>
+<section id="systemPanel" class="tab-panel" role="tabpanel" aria-labelledby="systemTab" hidden>
+<div class="card sys-card">
+<div class="juwai-group-heading"><h1>System</h1><span id="systemStatus" class="period-note home-plan-note" role="status">Loading readings…</span></div>
+<svg class="sys-plan" viewBox="0 0 360 750" role="img" aria-labelledby="sysTitle">
+<title id="sysTitle">Solar wiring: Shed, Garage and a third set of panels join in parallel; one way out through the 1000 watt inverter, the other through the Epever charger, 24 volt battery and 600 watt inverter</title>
+<defs><marker id="sysArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 10 5 0 10z" fill="#475569"/></marker><marker id="sysArrowOn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 10 5 0 10z" fill="#38bdf8"/></marker></defs>
+<text class="sys-out" x="284" y="22">240 V out</text>
+<path id="sysL1000out" class="sys-line" d="M284 68V32"/>
+<g id="sysInv1000" data-goto="ewelink" tabindex="0" role="link" aria-label="1000 watt inverter: open Inverters and fridge" data-state="stale"><rect x="214" y="70" width="140" height="90" rx="8"/><text class="sys-name" x="284" y="92">1000 W inverter</text><text class="sys-big" x="284" y="120" id="sysInv1000Big">—</text><text class="sys-small" x="284" y="142" id="sysInv1000Small"></text></g>
+<path id="sysL1000" class="sys-line" d="M284 200V163"/>
+<g class="sys-bus"><rect x="214" y="200" width="140" height="180" rx="8"/><text class="sys-name" x="284" y="284" style="fill:var(--text-main)">DC join</text><text class="sys-small" x="284" y="302">all in parallel</text></g>
+<g data-goto="juwai" tabindex="0" role="link" aria-label="Shed panels: open Generation"><rect x="6" y="204" width="62" height="52" rx="8"/><text class="sys-name" x="37" y="227">Shed</text><text class="sys-name" x="37" y="242">panels</text></g>
+<g data-goto="juwai" tabindex="0" role="link" aria-label="Garage panels: open Generation"><rect x="6" y="264" width="62" height="52" rx="8"/><text class="sys-name" x="37" y="287">Garage</text><text class="sys-name" x="37" y="302">panels</text></g>
+<g><rect x="6" y="324" width="62" height="52" rx="8"/><text class="sys-name" x="37" y="347">Third</text><text class="sys-name" x="37" y="362">panels</text></g>
+<g id="sysShed" data-goto="juwai" tabindex="0" role="link" aria-label="Shed meter: open Generation" data-state="stale"><rect x="84" y="203" width="94" height="54" rx="8"/><text class="sys-name" x="131" y="218">Shed meter</text><text class="sys-big" x="131" y="238" id="sysShedBig">—</text><text class="sys-small" x="131" y="251" id="sysShedSmall"></text></g>
+<g id="sysGarage" data-goto="juwai" tabindex="0" role="link" aria-label="Garage meter: open Generation" data-state="stale"><rect x="84" y="263" width="94" height="54" rx="8"/><text class="sys-name" x="131" y="278">Garage meter</text><text class="sys-big" x="131" y="298" id="sysGarageBig">—</text><text class="sys-small" x="131" y="311" id="sysGarageSmall"></text></g>
+<path id="sysLShedIn" class="sys-line" d="M68 230H82"/><path id="sysLGarageIn" class="sys-line" d="M68 290H82"/>
+<path id="sysLShed" class="sys-line" d="M178 230H212"/><path id="sysLGarage" class="sys-line" d="M178 290H212"/>
+<path class="sys-line sys-unmetered" d="M68 350H212"/><text class="sys-nometer" x="140" y="342">no meter</text><text class="sys-nometer" x="140" y="368">not measured</text>
+<path id="sysLEpever" class="sys-line" d="M284 380V408"/>
+<g id="sysEpever" data-goto="juwai" tabindex="0" role="link" aria-label="Epever charge controller: open Generation" data-state="stale"><rect x="214" y="410" width="140" height="90" rx="8"/><text class="sys-name" x="284" y="432">Epever charger</text><text class="sys-big" x="284" y="460" id="sysEpeverBig">—</text><text class="sys-small" x="284" y="482" id="sysEpeverSmall"></text></g>
+<path id="sysLBatt" class="sys-line" d="M284 500V528"/>
+<g id="sysBatt" data-goto="juwai" tabindex="0" role="link" aria-label="24 volt battery: open Generation" data-state="stale"><rect x="214" y="530" width="140" height="90" rx="8"/><text class="sys-name" x="284" y="552">24 V battery</text><text class="sys-big" x="284" y="580" id="sysBattBig">—</text><text class="sys-small" x="284" y="602" id="sysBattSmall"></text></g>
+<path id="sysL600" class="sys-line" d="M284 620V648"/>
+<g id="sysInv600" data-goto="ewelink" tabindex="0" role="link" aria-label="600 watt inverter: open Inverters and fridge" data-state="stale"><rect x="214" y="650" width="140" height="90" rx="8"/><text class="sys-name" x="284" y="672">600 W inverter</text><text class="sys-big" x="284" y="700" id="sysInv600Big">—</text><text class="sys-small" x="284" y="722" id="sysInv600Small"></text></g>
+<path id="sysL600out" class="sys-line" d="M214 695H184"/><text class="sys-out" x="178" y="699" style="text-anchor:end">240 V out</text>
+<g id="sysOutput" data-goto="ewelink" tabindex="0" role="link" aria-label="Output, the 1000 watt inverter minus the 600 watt inverter: open Inverters and fridge" data-state="stale"><rect x="6" y="420" width="172" height="90" rx="8"/><text class="sys-name" x="92" y="442">Output</text><text class="sys-big" x="92" y="470" id="sysOutputBig">—</text><text class="sys-small" x="92" y="492" id="sysOutputSmall"></text></g>
+</svg>
+<p class="sys-key">Power comes in from three sets of panels joined together: the Shed and Garage panels each pass through a meter, but the third set has no meter, so it is not measured. It goes out two ways: up through the 1000 watt inverter to 240 volts, or down through the Epever charger into the 24 volt battery and out through the 600 watt inverter. The Generation total is Shed plus Garage only, because the Epever and the 600 watt inverter carry energy already counted at those meters. Output is the 1000 watt inverter reading minus the 600 watt inverter reading, and the drawing follows Dad's sketch.</p>
+</div>
+</section>
       </div>
       <footer id="siteFooter" class="site-footer" hidden><a id="bondsLink" href="/bonds/" hidden>Premium Bonds</a><a href="/admin">Admin</a></footer>
 
@@ -705,11 +761,11 @@ const $ = id => document.getElementById(id);
 {const plainFetch=window.fetch.bind(window);window.fetch=(...args)=>plainFetch(...args).then(r=>{if(r.status===401&&!location.pathname.startsWith('/login'))location.replace('/login');return r;});}
 fetch('/auth/state',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(s=>{if(!s)return;$('siteFooter').hidden=false;$('bondsLink').hidden=!s.bonds;}).catch(()=>{});
 let activeTab = 'power';
-const views = ['power','juwai','ewelink','home'];
+const views = ['power','juwai','ewelink','home','system'];
 function connectionLost(){$('currentVal').style.opacity='.55';$('meterKwh').style.opacity='.55';}
 function selectTab(name) {
   if(activeTab===name)return;
-  activeTab=name;stopJuwai();stopHome();window.stopEwelink?.();
+  activeTab=name;stopJuwai();stopHome();stopSystem();window.stopEwelink?.();
   $('timeWindow').hidden=name!=='power';
   if(location.hash!=='#'+name)history.replaceState(null,'','#'+name);
   if(name!=='power'){generation++;controller?.abort();}
@@ -724,6 +780,8 @@ function selectTab(name) {
     makeJuwaiChart();juwaiChart.resize();readJuwai(juwaiVersion);
   } else if(name==='home') {
     readHome(homeVersion);
+  } else if(name==='system') {
+    readSystem(systemVersion);
   } else if(name==='power') {
     chart.resize();lastHistory=0;
     loadHistory().catch(e=>{if(e.name!=='AbortError')connectionLost();});
@@ -1127,14 +1185,15 @@ async function tick(){
   finally{setTimeout(tick,3000);}
 }
 document.addEventListener('visibilitychange',()=>{
-  stopJuwai();stopHome();
+  stopJuwai();stopHome();stopSystem();
   if(!document.hidden){
+    if(activeTab==='system')readSystem(systemVersion);
     if(activeTab==='juwai')readJuwai(juwaiVersion);
     else if(activeTab==='home')readHome(homeVersion);
     else if(activeTab==='power'&&selected!=='custom')lastHistory=0;
   }
 });
-window.addEventListener('pagehide',()=>{stopJuwai();stopHome();});
+window.addEventListener('pagehide',()=>{stopJuwai();stopHome();stopSystem();});
 window.addEventListener('pageshow',event=>{if(event.persisted&&!document.hidden&&activeTab==='juwai')readJuwai(juwaiVersion);});
 // Home tab: read-only eWeLink overlays on the floor plan; placement comes from the Pi's private mapping.
 const homeAnchors={'room:conservatory':[412,340],'room:bedroom-1':[257,700],'room:kitchen':[600,612],'room:hall':[590,860],
@@ -1360,6 +1419,53 @@ async function readHome(version){
   try{const data=await getJSON('/api/home/latest',homeController.signal);if(version===homeVersion){renderHome(data);if(homeGraphSlug)loadHomeGraph(false);}}
   catch(e){if(e.name!=='AbortError'&&version===homeVersion)$('homeStatus').textContent='Readings unavailable · retrying';}
   finally{if(version===homeVersion&&activeTab==='home'&&!document.hidden){homeController=null;homeTimer=setTimeout(()=>readHome(version),60000);}}
+}
+// System tab: Dad's wiring sketch with read-only meter, Epever and plug readings; anything stale or missing shows "—".
+let systemTimer=null,systemController=null,systemVersion=0;
+function stopSystem(){systemVersion++;clearTimeout(systemTimer);systemTimer=null;systemController?.abort();systemController=null;}
+function sysNum(v,unit,digits){return Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:digits??(Math.abs(v)<10?1:0)})+' '+unit:'—';}
+function sysSet(id,live,big,small){$('sys'+id).dataset.state=live?'live':'stale';$('sys'+id+'Big').textContent=live?big:'—';$('sys'+id+'Small').textContent=small;}
+function sysLine(id,on){$('sysL'+id).classList.toggle('on',!!on);}
+function renderSystem([tuya,epever,plugs]){
+  const meters=Object.fromEntries((tuya?.devices||[]).map(d=>[d.id,d])),times=[];
+  for(const [id,name] of [['shed','Shed'],['garage','Garage']]){
+    const d=meters[id],w=d?.values?.power_w,live=!!d&&!d.stale&&Number.isFinite(w);
+    if(live)times.push(d.observed_at);
+    sysSet(name,live,sysNum(w,'W'),live?sysNum(d.values.voltage_v,'V',1):d?.observed_at?'Old reading':'No reading');
+    sysLine(name+'In',live&&w>0);sysLine(name,live&&w>0);
+  }
+  const ev=epever?.values||{},fresh=!!epever&&!epever.stale,eLive=fresh&&Number.isFinite(ev.pv_w),gone=epever?'Old reading':'No reading';
+  if(eLive)times.push(epever.observed_at);
+  sysSet('Epever',eLive,sysNum(ev.pv_w,'W')+' in',eLive?(ev.charge_state_name||'State unknown'):gone);
+  sysLine('Epever',eLive&&ev.pv_w>0);sysLine('Batt',eLive&&ev.pv_w>0);
+  const bLive=fresh&&Number.isFinite(ev.batt_v),bits=[];
+  if(Number.isFinite(ev.batt_a))bits.push(sysNum(ev.batt_a,'A',1));if(Number.isFinite(ev.soc))bits.push(Math.round(ev.soc)+'%');
+  sysSet('Batt',bLive,sysNum(ev.batt_v,'V',1),bLive?bits.join(' · '):gone);
+  const plugsById=Object.fromEntries((plugs?.devices||[]).map(d=>[d.id,d])),power={};
+  for(const [id,name] of [['inverter-1000','Inv1000'],['inverter-600','Inv600']]){
+    const d=plugsById[id],live=!!d&&!!d.ts&&!d.stale&&d.online!==false&&Number.isFinite(d.power_w);
+    power[name]=live?d.power_w:null;if(live)times.push(d.ts);
+    sysSet(name,live,sysNum(d?.power_w,'W'),!d||!d.ts?'No reading':d.stale?'Old reading':d.online===false?'Offline':d.switch==='on'?'On':d.switch==='off'?'Off':'');
+  }
+  sysLine('1000',power.Inv1000>0);sysLine('1000out',power.Inv1000>0);sysLine('600',power.Inv600>0);sysLine('600out',power.Inv600>0);
+  // Output as Dad defines it: the 1000 watt inverter reading minus the 600 watt inverter reading.
+  const out=power.Inv1000!=null&&power.Inv600!=null?power.Inv1000-power.Inv600:null;
+  sysSet('Output',out!=null,sysNum(out,'W'),'1000 W minus 600 W');
+  const seen=times.filter(Number.isFinite);
+  $('systemStatus').textContent=seen.length?'Latest reading '+homeTime(Math.max(...seen)):'No live readings';
+}
+async function readSystem(version){
+  if(version!==systemVersion||activeTab!=='system'||document.hidden)return;
+  systemController=new AbortController();const signal=systemController.signal;
+  try{
+    const results=await Promise.allSettled(['/api/tuya/latest','/api/epever/latest','/api/ewelink/latest'].map(url=>getJSON(url,signal)));
+    if(version===systemVersion&&!signal.aborted)renderSystem(results.map(r=>r.status==='fulfilled'?r.value:null));
+  }catch(e){if(version===systemVersion)$('systemStatus').textContent='Readings unavailable · retrying';}
+  finally{if(version===systemVersion&&activeTab==='system'&&!document.hidden){systemController=null;systemTimer=setTimeout(()=>readSystem(version),30000);}}
+}
+for(const g of document.querySelectorAll('.sys-plan [data-goto]')){
+  g.addEventListener('click',()=>selectTab(g.dataset.goto));
+  g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectTab(g.dataset.goto);}});
 }
 // Open the tab named in the URL (e.g. #home); default stays Power.
 function openHashTab(){const name=location.hash.slice(1);if(views.includes(name))selectTab(name);}
