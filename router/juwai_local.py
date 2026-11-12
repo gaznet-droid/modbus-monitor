@@ -35,6 +35,8 @@ SESS_START, SESS_RESP, SESS_FINISH, DP_QUERY, DP_QUERY_NEW = 3, 4, 5, 0x0A, 0x10
 # Same data points and scaling as the cloud fields cur_current, cur_power and cur_voltage.
 DPS = {"voltage_v": ("20", 100.0), "current_a": ("18", 1000.0), "power_w": ("19", 100.0)}
 STALE_SECONDS = 300
+# A meter that keeps failing is searched for at most this often (seconds).
+SEARCH_INTERVAL = 300
 EXTRA_SCHEMA = """
 CREATE TABLE IF NOT EXISTS read_stats (
     device TEXT NOT NULL, day TEXT NOT NULL, ok INTEGER NOT NULL, failed INTEGER NOT NULL,
@@ -422,9 +424,9 @@ def run(conf, store, stop, cloud_uri=None, read=read_meter, find=find_meter):
                 note(store, alias, False, "failing" if failures[alias] == 3 else None)
                 if failures[alias] in (1, 3) or failures[alias] % 60 == 0:
                     LOG.warning("Local read of %s failed (%s), %d in a row", alias, exc, failures[alias])
-                # After five misses look once for a new address; at most hourly.
+                # After five misses look for a new address, then again every few minutes while it stays missing.
                 if (conf.get("network") and failures[alias] >= 5
-                        and time.monotonic() - last_search[alias] >= 3600):
+                        and time.monotonic() - last_search[alias] >= SEARCH_INTERVAL):
                     last_search[alias] = time.monotonic()
                     try:
                         hit = find(device, conf["network"])

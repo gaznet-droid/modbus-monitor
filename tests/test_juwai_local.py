@@ -10,6 +10,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest import mock
 import binascii
 
 sys.path.insert(0, str(Path(__file__).parents[1] / 'router'))
@@ -187,13 +188,28 @@ class CollectorTests(unittest.TestCase):
         def find(device, network):
             searches.append(network); return '192.168.0.99', '3.5'
         self.cycles(8, read, find)
-        self.assertEqual(len(searches), 1)  # at most one search an hour
+        self.assertEqual(len(searches), 1)  # found on the first search, so no repeat
         saved = json.loads(self.config.read_text())
         self.assertEqual(saved['devices']['garage']['host'], '192.168.0.99')
         self.assertEqual(os.stat(self.config).st_mode & 0o777, 0o600)
         kinds = [r[0] for r in self.store.db.execute("SELECT kind FROM events WHERE device='garage'")]
         self.assertIn('address_changed', kinds)
         self.assertNotIn('192.168', json.dumps(self.store.db.execute('SELECT * FROM events').fetchall()))
+
+    def test_missing_meter_is_searched_for_every_few_minutes_not_every_cycle(self):
+        clock = [1000.0]; searches = []
+        def read(device):
+            if device['host'].endswith('.3'): raise J.LocalError('Meter unreachable')
+            clock[0] += 60  # one cycle a minute (the shed is read each cycle)
+            return {'voltage_v': 24.0, 'current_a': 0.0, 'power_w': 0.0}, {'20': 2400}
+        def find(device, network):
+            searches.append(clock[0]); return None
+        with mock.patch.object(J.time, 'monotonic', lambda: clock[0]):
+            self.cycles(24, read, find)
+        self.assertGreaterEqual(len(searches), 3)  # repeats while the meter stays missing
+        self.assertLessEqual(len(searches), 5)  # but not every cycle
+        self.assertTrue(all(b - a >= J.SEARCH_INTERVAL for a, b in zip(searches, searches[1:])))
+        self.assertLessEqual(J.SEARCH_INTERVAL, 300)
 
     def test_comparison_pairs_cloud_samples_with_nearby_local_ones_only(self):
         cloud = collector.USBStore(self.root / 'tuya.sqlite3', lambda: None)
