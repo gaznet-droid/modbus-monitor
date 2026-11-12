@@ -185,9 +185,11 @@
         #outputCard .period-note { margin:.3rem 0; }
         #epeverCard { grid-column:1 / -1; cursor:pointer; }
         #epeverCard[hidden] { display:none; }
-        #epeverToggle { display:flex; align-items:center; gap:.5rem; width:100%; min-height:44px; background:none; border:0; padding:0; color:inherit; font:inherit; text-align:left; cursor:pointer; }
-        #epeverToggle:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
-        #epeverToggle .epever-hint { margin-left:auto; color:var(--text-muted); font-size:.75rem; font-weight:400; }
+        #outputCard { cursor:pointer; }
+        #outputDetail { margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border); cursor:default; }
+        #epeverToggle, #outputToggle { display:flex; align-items:center; gap:.5rem; width:100%; min-height:44px; background:none; border:0; padding:0; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+        #epeverToggle:focus-visible, #outputToggle:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        #epeverToggle .epever-hint, #outputToggle .epever-hint { margin-left:auto; color:var(--text-muted); font-size:.75rem; font-weight:400; }
         #epeverDetail { margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border); cursor:default; }
         .epever-metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(7.5rem,1fr)); gap:.8rem 1.2rem; }
         .juwai-chart-section { margin-top:1.3rem; padding-top:1.2rem; border-top:1px solid var(--border); }
@@ -543,8 +545,9 @@
 <dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="garageVoltage">— V</dd></div><div><dt>Current</dt><dd id="garageCurrent">— A</dd></div></dl><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="garageState">Loading…</span></span><time id="garageAge">Waiting for readings</time></div></article><article class="card juwai-card" id="totalCard" data-stale="true">
 <h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2" y="4" width="8" height="8" rx="1"/><rect x="14" y="4" width="8" height="8" rx="1"/><path d="M6 15v4h12v-4m-6 1v6"/></svg><span>Shed and garage total</span></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="totalPower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="totalEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
 <div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="totalState">Loading…</span></span><time id="totalAge">Waiting for readings</time></div></article><article class="card juwai-card" id="outputCard" data-stale="true">
-<h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m13 6-4 6h6l-4 6M1 8h3m-3 8h3m16-8h3m-3 8h3"/></svg><span>Total solar power to house</span></h2><p class="period-note">1000 watt inverter + Garage inverter + 600 watt inverter</p><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="outputPower">— W</div></div><div class="juwai-energy"><div class="label">Energy to house</div><div id="outputEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
-<p class="period-note" id="outputPowerParts">1000 watt inverter — + Garage inverter — + 600 watt inverter —</p><p class="period-note" id="outputEnergyParts"></p><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="outputState">Loading…</span></span><time id="outputAge">Waiting for readings</time></div></article><article class="card juwai-card" id="epeverCard" data-stale="true" hidden>
+<h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m13 6-4 6h6l-4 6M1 8h3m-3 8h3m16-8h3m-3 8h3"/></svg><button type="button" id="outputToggle" aria-expanded="false" aria-controls="outputDetail"><span>Total solar power to house</span><span class="epever-hint" id="outputHint">Show graph</span></button></h2><p class="period-note">1000 watt inverter + Garage inverter + 600 watt inverter − Epever</p><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="outputPower">— W</div></div><div class="juwai-energy"><div class="label">Energy to house</div><div id="outputEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
+<p class="period-note" id="outputPowerParts">1000 watt inverter — + Garage inverter — + 600 watt inverter — − Epever —</p><p class="period-note" id="outputEnergyParts"></p><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="outputState">Loading…</span></span><time id="outputAge">Waiting for readings</time></div>
+<div id="outputDetail" hidden><div class="juwai-chart"><canvas id="outputChart" role="img" aria-label="Total solar power to house for the selected period, with the inverters and the Epever"></canvas></div><p id="outputNote" class="period-note" aria-live="polite"></p></div></article><article class="card juwai-card" id="epeverCard" data-stale="true" hidden>
 <h2 class="device-title"><button type="button" id="epeverToggle" aria-expanded="false" aria-controls="epeverDetail"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="7" width="16" height="11" rx="2"/><path d="M19 11h2v3h-2M11 9l-3 4h4l-3 4"/></svg><span id="epeverName">Epever</span><span class="epever-hint" id="epeverHint">Show details</span></button></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="epeverPower">— W</div></div><div class="juwai-energy"><div class="label">Generation</div><div id="epeverEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
 <div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="epeverState">Loading…</span></span><time id="epeverAge">Waiting for readings</time><span>Not counted in the total above</span></div>
 <div id="epeverDetail" hidden><dl class="juwai-metrics epever-metrics"><div><dt>Battery voltage</dt><dd id="epeverBattV">— V</dd></div><div><dt>Battery current</dt><dd id="epeverBattA">— A</dd></div><div><dt>Charging</dt><dd id="epeverCharge">—</dd></div><div><dt>Load</dt><dd id="epeverLoad">—</dd></div><div><dt>Battery level</dt><dd id="epeverSoc">— %</dd></div><div><dt>Panel voltage</dt><dd id="epeverPvV">— V</dd></div></dl>
@@ -754,9 +757,9 @@
 <path id="sysL600" class="sys-line" d="M284 620V648"/>
 <g id="sysInv600" data-goto="ewelink" tabindex="0" role="link" aria-label="600 watt inverter, fed from the Epever battery: open Inverters and fridge" data-state="stale"><rect x="214" y="650" width="140" height="90" rx="8"/><text class="sys-name" x="284" y="667">600 W inverter</text><text class="sys-small" x="284" y="681" style="font-size:10.5px">from the Epever battery</text><text class="sys-big" x="284" y="706" id="sysInv600Big">—</text><text class="sys-small" x="284" y="727" id="sysInv600Small"></text></g>
 <path id="sysL600out" class="sys-line" d="M214 695H184"/><text class="sys-out" x="178" y="699" style="text-anchor:end">240 V out</text><g class="sys-num"><circle cx="111" cy="695" r="8"/><text x="111" y="699">3</text></g>
-<g id="sysOutput" data-goto="ewelink" tabindex="0" role="link" aria-label="Total solar power to house, outputs 1, 2 and 3 added together: open Inverters and fridge" data-state="stale"><rect x="6" y="420" width="172" height="90" rx="8"/><text class="sys-name" x="92" y="442">Total solar power to house</text><text class="sys-big" x="92" y="470" id="sysOutputBig">—</text><text class="sys-small" x="92" y="492" id="sysOutputSmall"></text></g>
+<g id="sysOutput" data-goto="juwai" tabindex="0" role="link" aria-label="Total solar power to house, outputs 1, 2 and 3 added together minus the Epever: open Generation" data-state="stale"><rect x="6" y="420" width="172" height="90" rx="8"/><text class="sys-name" x="92" y="442">Total solar power to house</text><text class="sys-big" x="92" y="470" id="sysOutputBig">—</text><text class="sys-small" x="92" y="492" id="sysOutputSmall"></text></g>
 </svg>
-<p class="sys-key">Power comes in from four sources. Three sets of panels are joined together: the Shed and Garage panels each pass through a meter, but the third set has no meter, so it is not measured. The fourth, the Garage inverter panel, is separate and feeds the Garage inverter directly, with no meter between them. Power goes to the house at 240 volts three ways: 1, up through the 1000 watt inverter; 2, through the Garage inverter; and 3, down through the Epever charger into the 24 volt battery and out through the 600 watt inverter. The Generation total is Shed plus Garage only, because the Epever and the 600 watt inverter carry energy already counted at those meters. The total solar power to the house is the three inverter outputs, 1, 2 and 3, added together, and the drawing follows Dad's sketch.</p>
+<p class="sys-key">Power comes in from four sources. Three sets of panels are joined together: the Shed and Garage panels each pass through a meter, but the third set has no meter, so it is not measured. The fourth, the Garage inverter panel, is separate and feeds the Garage inverter directly, with no meter between them. Power goes to the house at 240 volts three ways: 1, up through the 1000 watt inverter; 2, through the Garage inverter; and 3, down through the Epever charger into the 24 volt battery and out through the 600 watt inverter. The Generation total is Shed plus Garage only, because the Epever and the 600 watt inverter carry energy already counted at those meters. The total solar power to the house is the three inverter outputs, 1, 2 and 3, added together, minus what the Epever charger is taking in, and the drawing follows Dad's sketch.</p>
 </div>
 </section>
       </div>
@@ -848,24 +851,46 @@ function drawJuwai(){
     (['today','yesterday'].includes($('juwaiWindow').value)?'Calendar days use UK time.':'')):'Loading generation…';
   drawMobileJuwai();
 }
-// Total solar power to house (Dad's 1 + 2 + 3) = 1000 watt inverter + Garage inverter + 600 watt inverter plugs (eWeLink); any plug missing, stale or offline shows "—", never a partial sum. Energy uses the Inverters tab's method: sum(mean_w*samples)*interval/3600 over the history bins.
-let outputLatest=null, outputHistory={}, outputHistoryKey='', outputTime=0;
+// Total solar power to house (Dad's 1 + 2 + 3 − Epever) = 1000 watt inverter + Garage inverter + 600 watt inverter plugs (eWeLink) minus the Epever charger's input power; any part missing, stale or offline shows "—", never a partial figure. Energy uses the Inverters tab's method: sum(mean_w*samples)*interval/3600 over the history bins.
+let outputLatest=null, outputHistory={}, outputHistoryKey='', outputTime=0, outputChart=null, epeverLatest=null;
 const OUTPUT_IDS=['inverter-1000','garage-inverter','inverter-600'],OUTPUT_NAMES=['1000 watt inverter','Garage inverter','600 watt inverter'];
 function outputWh(r,interval){let sum=0,any=false;for(const b of (r?.bins||[]))if(b.samples&&Number.isFinite(b.mean_w)){sum+=b.mean_w*b.samples;any=true;}return any?sum*interval/3600:null;}
 function renderOutput(){
   const num=(v,unit,digits)=>Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:digits})+' '+unit:'—',kwh=wh=>Number.isFinite(wh)?(wh/1000).toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})+' kWh':'—';
   const devs=OUTPUT_IDS.map(id=>outputLatest?.devices?.find(d=>d.id===id)),usable=d=>!!d&&!!d.ts&&!d.stale&&!!d.online&&Number.isFinite(d.power_w);
-  const all=devs.every(usable),interval=outputLatest?.interval_seconds||300,wh=OUTPUT_IDS.map(id=>outputWh(outputHistory[id],interval));
-  $('outputPower').textContent=all?num(devs.reduce((t,d)=>t+d.power_w,0),'W',2):'— W';
-  $('outputPowerParts').textContent=OUTPUT_NAMES.map((n,i)=>n+' '+(usable(devs[i])?num(devs[i].power_w,'W',2):'—')).join(' + ');
+  const ev=epeverLatest?.values,eOk=!!epeverLatest&&!epeverLatest.stale&&Number.isFinite(ev?.pv_w);
+  const all=devs.every(usable)&&eOk,interval=outputLatest?.interval_seconds||300,wh=OUTPUT_IDS.map(id=>outputWh(outputHistory[id],interval));
+  $('outputPower').textContent=all?num(devs.reduce((t,d)=>t+d.power_w,0)-ev.pv_w,'W',2):'— W';
+  $('outputPowerParts').textContent=OUTPUT_NAMES.map((n,i)=>n+' '+(usable(devs[i])?num(devs[i].power_w,'W',2):'—')).join(' + ')+' − Epever '+(eOk?num(ev.pv_w,'W',2):'—');
   $('outputCard').dataset.stale=String(!all);
   $('outputState').textContent=!outputLatest?'Unavailable':all?'Current':'Delayed';
-  const stamps=devs.map(d=>d?.ts).filter(Number.isFinite),stamp=stamps.length===OUTPUT_IDS.length?Math.min(...stamps):null;
-  $('outputAge').textContent=stamp?'eWeLink · '+new Date(stamp).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'Waiting for readings';
+  const stamps=[...devs.map(d=>d?.ts),epeverLatest?.observed_at].filter(Number.isFinite),stamp=stamps.length===OUTPUT_IDS.length+1?Math.min(...stamps):null;
+  $('outputAge').textContent=stamp?new Date(stamp).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'Waiting for readings';
   if(stamp)$('outputAge').dateTime=new Date(stamp).toISOString();
-  const ok=wh.every(Number.isFinite),have=outputHistoryKey===$('juwaiWindow').value;
-  $('outputEnergy').textContent=ok&&have?kwh(wh[0]+wh[1]+wh[2]):'— kWh';
-  $('outputEnergyParts').textContent=!have?'':ok?'Energy: '+OUTPUT_NAMES.map((n,i)=>n+' '+kwh(wh[i])).join(' + '):'Energy to house unavailable: no readings from the '+OUTPUT_NAMES.filter((n,i)=>wh[i]==null).join(' or the ')+' for this period.';
+  const period=$('juwaiWindow').value,have=outputHistoryKey===period&&epeverKey===period,energy=epeverHistory?.energy,eWh=Number.isFinite(energy?.generated_kwh)?energy.generated_kwh*1000:null;
+  const ok=wh.every(Number.isFinite)&&eWh!=null;
+  $('outputEnergy').textContent=ok&&have?kwh(wh[0]+wh[1]+wh[2]-eWh):'— kWh';
+  $('outputEnergyParts').textContent=!have?'':ok?'Energy: '+OUTPUT_NAMES.map((n,i)=>n+' '+kwh(wh[i])).join(' + ')+' − Epever '+kwh(eWh)+'.'+(energy.partial?' The Epever part is counted only from its first stored reading in this period.':''):'Energy to house unavailable: no readings from the '+[...OUTPUT_NAMES.filter((n,i)=>wh[i]==null),...(eWh==null?['Epever']:[])].join(' or the ')+' for this period.';
+  drawOutput();
+}
+// Graph of the total on the plugs' time buckets: a bucket counts only when all three plugs and the Epever have a reading in it; anything else is left as a gap.
+function drawOutput(){
+  if($('outputDetail').hidden)return;
+  if(!outputChart)outputChart=new Chart($('outputChart'),{type:'line',data:{datasets:[['Total to house','#fbbf24',3],['Inverters 1 + 2 + 3','#34d399',1.5],['Epever','#38bdf8',1.5]].map(([label,colour,width])=>({label,data:[],parsing:false,borderColor:colour,backgroundColor:colour,pointRadius:width>2?2:0,pointHitRadius:10,borderWidth:width,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:v=>new Date(v).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})},grid:{color:'#1e293b'}},y:{title:{display:true,text:'Power (W)',color:'#94a3b8'},ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString(undefined,{maximumFractionDigits:1})+' W'}}}}});
+  const period=$('juwaiWindow').value,ready=outputHistoryKey===period&&epeverKey===period&&!!epeverHistory,first=outputHistory[OUTPUT_IDS[0]],bucket=first?.bucket_ms||300000,lines=[[],[],[]];
+  if(ready&&first){
+    const plugs=OUTPUT_IDS.map(id=>new Map((outputHistory[id]?.points||[]).filter(r=>Number.isFinite(r[1])).map(r=>[r[0],r[1]]))),sums=new Map();
+    for(const row of epeverHistory.points||[])if(Number.isFinite(row[1])){const key=Math.floor(row[0]/bucket)*bucket,sum=sums.get(key)||[0,0];sum[0]+=row[1];sum[1]++;sums.set(key,sum);}
+    for(const ts of [...plugs[0].keys()].sort((a,b)=>a-b)){
+      const e=sums.get(ts);if(!e||!plugs.every(m=>m.has(ts)))continue;
+      const inverters=plugs.reduce((t,m)=>t+m.get(ts),0),epever=e[0]/e[1],values=[inverters-epever,inverters,epever];
+      for(const [i,line] of lines.entries()){const prev=line[line.length-1];if(prev&&ts-prev.x>bucket*2.1)line.push({x:prev.x+bucket,y:null});line.push({x:ts,y:values[i]});}
+    }
+    outputChart.options.scales.x.min=first.start;outputChart.options.scales.x.max=first.end;
+  }
+  lines.forEach((line,i)=>{outputChart.data.datasets[i].data=line;});
+  outputChart.update('none');
+  $('outputNote').textContent=!ready?'Loading…':lines[0].length?'Total to house is the three inverter readings added together, minus the Epever charger’s input. The inverters report every five minutes and the Epever every few minutes; times with a reading missing are left as gaps.':'No times in this period have readings from all three inverters and the Epever.';
 }
 async function readOutput(signal,window){
   const tasks=[getJSON('/api/ewelink/latest',signal).then(d=>{outputLatest=d;}).catch(e=>{if(signal.aborted)throw e;outputLatest=null;})];
@@ -962,17 +987,25 @@ async function readEpever(version,signal){
   try{
     const data=await getJSON('/api/epever/latest',signal);
     if(!live())return;
-    renderEpever(data);
+    epeverLatest=data;renderEpever(data);
     if(epeverKey!==window||Date.now()-epeverTime>=120000){
       const history=await getJSON('/api/epever/history?window='+window,signal);
       if(!live())return;
       epeverHistory=history;epeverKey=window;epeverTime=Date.now();
     }
-    drawEpever();
+    drawEpever();renderOutput();
   }catch(error){
-    if(live()&&!$('epeverCard').hidden){$('epeverCard').dataset.stale='true';$('epeverState').textContent='Unavailable';}
+    if(!live())return;
+    epeverLatest=null;renderOutput();
+    if(!$('epeverCard').hidden){$('epeverCard').dataset.stale='true';$('epeverState').textContent='Unavailable';}
   }
 }
+$('outputCard').addEventListener('click',event=>{
+  if(event.target.closest('#outputDetail'))return;
+  const open=$('outputDetail').hidden;
+  $('outputDetail').hidden=!open;$('outputToggle').setAttribute('aria-expanded',String(open));$('outputHint').textContent=open?'Hide graph':'Show graph';
+  if(open){drawOutput();outputChart?.resize();}
+});
 $('epeverCard').addEventListener('click',event=>{
   if(event.target.closest('#epeverDetail'))return;
   const open=$('epeverDetail').hidden;
@@ -1455,9 +1488,9 @@ function renderSystem([tuya,epever,plugs]){
     sysSet(name,live,sysNum(d?.power_w,'W'),!d||!d.ts?'No reading':d.stale?'Old reading':d.online===false?'Offline':d.switch==='on'?'On':d.switch==='off'?'Off':'');
   }
   sysLine('1000',power.Inv1000>0);sysLine('1000out',power.Inv1000>0);sysLine('600',power.Inv600>0);sysLine('GarInvIn',power.GarInv>0);sysLine('GarInvOut',power.GarInv>0);sysLine('600out',power.Inv600>0);
-  // Total solar power to house as Dad defines it: outputs 1 + 2 + 3; "—" unless all three plugs are live.
-  const parts=[power.Inv1000,power.GarInv,power.Inv600],out=parts.every(v=>v!=null)?parts.reduce((t,v)=>t+v,0):null;
-  sysSet('Output',out!=null,sysNum(out,'W'),'1 + 2 + 3');
+  // Total solar power to house as Dad defines it: outputs 1 + 2 + 3 minus the Epever's input; "—" unless all four readings are live.
+  const parts=[power.Inv1000,power.GarInv,power.Inv600],out=parts.every(v=>v!=null)&&eLive?parts.reduce((t,v)=>t+v,0)-ev.pv_w:null;
+  sysSet('Output',out!=null,sysNum(out,'W'),'1 + 2 + 3 − Epever');
   const seen=times.filter(Number.isFinite);
   $('systemStatus').textContent=seen.length?'Latest reading '+homeTime(Math.max(...seen)):'No live readings';
 }
