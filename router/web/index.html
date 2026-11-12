@@ -315,6 +315,8 @@
         .sys-plan .sys-out { font-size:12px; fill:var(--text-muted); }
         .sys-plan [data-state="stale"] .sys-big, .sys-plan [data-state="stale"] .sys-small { fill:#64748b; }
         .sys-plan [data-state="stale"] rect { stroke-dasharray:4 3; }
+        .sys-plan .sys-num circle { fill:none; stroke:var(--text-muted); stroke-width:1.2; }
+        .sys-plan .sys-num text { font-size:11px; font-weight:700; fill:var(--text-muted); }
         .sys-plan .sys-nometer { font-size:11px; fill:var(--amber-zero); font-style:italic; }
         .sys-plan [data-goto] { cursor:pointer; }
         .sys-plan [data-goto]:hover rect { stroke:var(--import-color); }
@@ -541,8 +543,8 @@
 <dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="garageVoltage">— V</dd></div><div><dt>Current</dt><dd id="garageCurrent">— A</dd></div></dl><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="garageState">Loading…</span></span><time id="garageAge">Waiting for readings</time></div></article><article class="card juwai-card" id="totalCard" data-stale="true">
 <h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2" y="4" width="8" height="8" rx="1"/><rect x="14" y="4" width="8" height="8" rx="1"/><path d="M6 15v4h12v-4m-6 1v6"/></svg><span>Shed and garage total</span></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="totalPower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="totalEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
 <div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="totalState">Loading…</span></span><time id="totalAge">Waiting for readings</time></div></article><article class="card juwai-card" id="outputCard" data-stale="true">
-<h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m13 6-4 6h6l-4 6M1 8h3m-3 8h3m16-8h3m-3 8h3"/></svg><span>Output</span></h2><p class="period-note">1000 watt inverter minus 600 watt inverter</p><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="outputPower">— W</div></div><div class="juwai-energy"><div class="label">Output energy</div><div id="outputEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
-<p class="period-note" id="outputPowerParts">1000 watt inverter — · 600 watt inverter —</p><p class="period-note" id="outputEnergyParts"></p><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="outputState">Loading…</span></span><time id="outputAge">Waiting for readings</time></div></article><article class="card juwai-card" id="epeverCard" data-stale="true" hidden>
+<h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m13 6-4 6h6l-4 6M1 8h3m-3 8h3m16-8h3m-3 8h3"/></svg><span>Total solar power to house</span></h2><p class="period-note">1000 watt inverter + Garage inverter + 600 watt inverter</p><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="outputPower">— W</div></div><div class="juwai-energy"><div class="label">Energy to house</div><div id="outputEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
+<p class="period-note" id="outputPowerParts">1000 watt inverter — + Garage inverter — + 600 watt inverter —</p><p class="period-note" id="outputEnergyParts"></p><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="outputState">Loading…</span></span><time id="outputAge">Waiting for readings</time></div></article><article class="card juwai-card" id="epeverCard" data-stale="true" hidden>
 <h2 class="device-title"><button type="button" id="epeverToggle" aria-expanded="false" aria-controls="epeverDetail"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="7" width="16" height="11" rx="2"/><path d="M19 11h2v3h-2M11 9l-3 4h4l-3 4"/></svg><span id="epeverName">Epever</span><span class="epever-hint" id="epeverHint">Show details</span></button></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="epeverPower">— W</div></div><div class="juwai-energy"><div class="label">Generation</div><div id="epeverEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
 <div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="epeverState">Loading…</span></span><time id="epeverAge">Waiting for readings</time><span>Not counted in the total above</span></div>
 <div id="epeverDetail" hidden><dl class="juwai-metrics epever-metrics"><div><dt>Battery voltage</dt><dd id="epeverBattV">— V</dd></div><div><dt>Battery current</dt><dd id="epeverBattA">— A</dd></div><div><dt>Charging</dt><dd id="epeverCharge">—</dd></div><div><dt>Load</dt><dd id="epeverLoad">—</dd></div><div><dt>Battery level</dt><dd id="epeverSoc">— %</dd></div><div><dt>Panel voltage</dt><dd id="epeverPvV">— V</dd></div></dl>
@@ -725,9 +727,14 @@
 <div class="card sys-card">
 <div class="juwai-group-heading"><h1>System</h1><span id="systemStatus" class="period-note home-plan-note" role="status">Loading readings…</span></div>
 <svg class="sys-plan" viewBox="0 0 360 750" role="img" aria-labelledby="sysTitle">
-<title id="sysTitle">Solar wiring: Shed, Garage and a third set of panels join in parallel; one way out through the 1000 watt inverter, the other through the Epever charger, 24 volt battery and 600 watt inverter</title>
+<title id="sysTitle">Solar wiring: Shed, Garage and a third set of panels join in parallel and go out through the 1000 watt inverter (1) or the Epever charger, 24 volt battery and 600 watt inverter (3); a separate Garage inverter panel feeds the Garage inverter (2); 1, 2 and 3 add up to the total solar power to the house</title>
 <defs><marker id="sysArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 10 5 0 10z" fill="#475569"/></marker><marker id="sysArrowOn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 10 5 0 10z" fill="#38bdf8"/></marker></defs>
-<text class="sys-out" x="284" y="22">240 V out</text>
+<text class="sys-out" x="284" y="22">240 V out</text><g class="sys-num"><circle cx="243" cy="18" r="8"/><text x="243" y="22">1</text></g>
+<text class="sys-out" x="162" y="22">240 V out</text><g class="sys-num"><circle cx="121" cy="18" r="8"/><text x="121" y="22">2</text></g>
+<path id="sysLGarInvOut" class="sys-line" d="M162 84V32"/>
+<g id="sysGarInv" data-goto="ewelink" tabindex="0" role="link" aria-label="Garage inverter: open Inverters and fridge" data-state="stale"><rect x="116" y="86" width="92" height="80" rx="8"/><text class="sys-name" x="162" y="105">Garage inverter</text><text class="sys-big" x="162" y="131" id="sysGarInvBig">—</text><text class="sys-small" x="162" y="152" id="sysGarInvSmall"></text></g>
+<g><rect x="6" y="100" width="58" height="52" rx="8"/><text class="sys-name" x="35" y="115">Garage</text><text class="sys-name" x="35" y="130">inverter</text><text class="sys-name" x="35" y="145">panel</text></g>
+<path id="sysLGarInvIn" class="sys-line sys-unmetered" d="M64 126H114"/><text class="sys-nometer" x="89" y="118">no meter</text>
 <path id="sysL1000out" class="sys-line" d="M284 68V32"/>
 <g id="sysInv1000" data-goto="ewelink" tabindex="0" role="link" aria-label="1000 watt inverter: open Inverters and fridge" data-state="stale"><rect x="214" y="70" width="140" height="90" rx="8"/><text class="sys-name" x="284" y="92">1000 W inverter</text><text class="sys-big" x="284" y="120" id="sysInv1000Big">—</text><text class="sys-small" x="284" y="142" id="sysInv1000Small"></text></g>
 <path id="sysL1000" class="sys-line" d="M284 200V163"/>
@@ -746,10 +753,10 @@
 <g id="sysBatt" data-goto="juwai" tabindex="0" role="link" aria-label="24 volt battery: open Generation" data-state="stale"><rect x="214" y="530" width="140" height="90" rx="8"/><text class="sys-name" x="284" y="552">24 V battery</text><text class="sys-big" x="284" y="580" id="sysBattBig">—</text><text class="sys-small" x="284" y="602" id="sysBattSmall"></text></g>
 <path id="sysL600" class="sys-line" d="M284 620V648"/>
 <g id="sysInv600" data-goto="ewelink" tabindex="0" role="link" aria-label="600 watt inverter: open Inverters and fridge" data-state="stale"><rect x="214" y="650" width="140" height="90" rx="8"/><text class="sys-name" x="284" y="672">600 W inverter</text><text class="sys-big" x="284" y="700" id="sysInv600Big">—</text><text class="sys-small" x="284" y="722" id="sysInv600Small"></text></g>
-<path id="sysL600out" class="sys-line" d="M214 695H184"/><text class="sys-out" x="178" y="699" style="text-anchor:end">240 V out</text>
-<g id="sysOutput" data-goto="ewelink" tabindex="0" role="link" aria-label="Output, the 1000 watt inverter minus the 600 watt inverter: open Inverters and fridge" data-state="stale"><rect x="6" y="420" width="172" height="90" rx="8"/><text class="sys-name" x="92" y="442">Output</text><text class="sys-big" x="92" y="470" id="sysOutputBig">—</text><text class="sys-small" x="92" y="492" id="sysOutputSmall"></text></g>
+<path id="sysL600out" class="sys-line" d="M214 695H184"/><text class="sys-out" x="178" y="699" style="text-anchor:end">240 V out</text><g class="sys-num"><circle cx="111" cy="695" r="8"/><text x="111" y="699">3</text></g>
+<g id="sysOutput" data-goto="ewelink" tabindex="0" role="link" aria-label="Total solar power to house, outputs 1, 2 and 3 added together: open Inverters and fridge" data-state="stale"><rect x="6" y="420" width="172" height="90" rx="8"/><text class="sys-name" x="92" y="442">Total solar power to house</text><text class="sys-big" x="92" y="470" id="sysOutputBig">—</text><text class="sys-small" x="92" y="492" id="sysOutputSmall"></text></g>
 </svg>
-<p class="sys-key">Power comes in from three sets of panels joined together: the Shed and Garage panels each pass through a meter, but the third set has no meter, so it is not measured. It goes out two ways: up through the 1000 watt inverter to 240 volts, or down through the Epever charger into the 24 volt battery and out through the 600 watt inverter. The Generation total is Shed plus Garage only, because the Epever and the 600 watt inverter carry energy already counted at those meters. Output is the 1000 watt inverter reading minus the 600 watt inverter reading, and the drawing follows Dad's sketch.</p>
+<p class="sys-key">Power comes in from four sources. Three sets of panels are joined together: the Shed and Garage panels each pass through a meter, but the third set has no meter, so it is not measured. The fourth, the Garage inverter panel, is separate and feeds the Garage inverter directly, with no meter between them. Power goes to the house at 240 volts three ways: 1, up through the 1000 watt inverter; 2, through the Garage inverter; and 3, down through the Epever charger into the 24 volt battery and out through the 600 watt inverter. The Generation total is Shed plus Garage only, because the Epever and the 600 watt inverter carry energy already counted at those meters. The total solar power to the house is the three inverter outputs, 1, 2 and 3, added together, and the drawing follows Dad's sketch.</p>
 </div>
 </section>
       </div>
@@ -841,24 +848,24 @@ function drawJuwai(){
     (['today','yesterday'].includes($('juwaiWindow').value)?'Calendar days use UK time.':'')):'Loading generation…';
   drawMobileJuwai();
 }
-// Output = 1000 watt inverter plug minus 600 watt inverter plug (eWeLink), shown signed and never clamped. Energy uses the Inverters tab's method: sum(mean_w*samples)*interval/3600 over the history bins.
+// Total solar power to house (Dad's 1 + 2 + 3) = 1000 watt inverter + Garage inverter + 600 watt inverter plugs (eWeLink); any plug missing, stale or offline shows "—", never a partial sum. Energy uses the Inverters tab's method: sum(mean_w*samples)*interval/3600 over the history bins.
 let outputLatest=null, outputHistory={}, outputHistoryKey='', outputTime=0;
-const OUTPUT_IDS=['inverter-1000','inverter-600'];
+const OUTPUT_IDS=['inverter-1000','garage-inverter','inverter-600'],OUTPUT_NAMES=['1000 watt inverter','Garage inverter','600 watt inverter'];
 function outputWh(r,interval){let sum=0,any=false;for(const b of (r?.bins||[]))if(b.samples&&Number.isFinite(b.mean_w)){sum+=b.mean_w*b.samples;any=true;}return any?sum*interval/3600:null;}
 function renderOutput(){
   const num=(v,unit,digits)=>Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:digits})+' '+unit:'—',kwh=wh=>Number.isFinite(wh)?(wh/1000).toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})+' kWh':'—';
   const devs=OUTPUT_IDS.map(id=>outputLatest?.devices?.find(d=>d.id===id)),usable=d=>!!d&&!!d.ts&&!d.stale&&!!d.online&&Number.isFinite(d.power_w);
-  const both=devs.every(usable),interval=outputLatest?.interval_seconds||300,wh=OUTPUT_IDS.map(id=>outputWh(outputHistory[id],interval));
-  $('outputPower').textContent=both?num(devs[0].power_w-devs[1].power_w,'W',2):'— W';
-  $('outputPowerParts').textContent='1000 watt inverter '+(usable(devs[0])?num(devs[0].power_w,'W',2):'—')+' · 600 watt inverter '+(usable(devs[1])?num(devs[1].power_w,'W',2):'—');
-  $('outputCard').dataset.stale=String(!both);
-  $('outputState').textContent=!outputLatest?'Unavailable':both?'Current':'Delayed';
-  const stamps=devs.map(d=>d?.ts).filter(Number.isFinite),stamp=stamps.length===2?Math.min(...stamps):null;
+  const all=devs.every(usable),interval=outputLatest?.interval_seconds||300,wh=OUTPUT_IDS.map(id=>outputWh(outputHistory[id],interval));
+  $('outputPower').textContent=all?num(devs.reduce((t,d)=>t+d.power_w,0),'W',2):'— W';
+  $('outputPowerParts').textContent=OUTPUT_NAMES.map((n,i)=>n+' '+(usable(devs[i])?num(devs[i].power_w,'W',2):'—')).join(' + ');
+  $('outputCard').dataset.stale=String(!all);
+  $('outputState').textContent=!outputLatest?'Unavailable':all?'Current':'Delayed';
+  const stamps=devs.map(d=>d?.ts).filter(Number.isFinite),stamp=stamps.length===OUTPUT_IDS.length?Math.min(...stamps):null;
   $('outputAge').textContent=stamp?'eWeLink · '+new Date(stamp).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'Waiting for readings';
   if(stamp)$('outputAge').dateTime=new Date(stamp).toISOString();
   const ok=wh.every(Number.isFinite),have=outputHistoryKey===$('juwaiWindow').value;
-  $('outputEnergy').textContent=ok&&have?kwh(wh[0]-wh[1]):'— kWh';
-  $('outputEnergyParts').textContent=!have?'':ok?'Energy: 1000 watt inverter '+kwh(wh[0])+' − 600 watt inverter '+kwh(wh[1]):'Output energy unavailable: no readings from '+(wh[0]==null&&wh[1]==null?'either inverter':wh[0]==null?'the 1000 watt inverter':'the 600 watt inverter')+' for this period.';
+  $('outputEnergy').textContent=ok&&have?kwh(wh[0]+wh[1]+wh[2]):'— kWh';
+  $('outputEnergyParts').textContent=!have?'':ok?'Energy: '+OUTPUT_NAMES.map((n,i)=>n+' '+kwh(wh[i])).join(' + '):'Energy to house unavailable: no readings from the '+OUTPUT_NAMES.filter((n,i)=>wh[i]==null).join(' or the ')+' for this period.';
 }
 async function readOutput(signal,window){
   const tasks=[getJSON('/api/ewelink/latest',signal).then(d=>{outputLatest=d;}).catch(e=>{if(signal.aborted)throw e;outputLatest=null;})];
@@ -1442,15 +1449,15 @@ function renderSystem([tuya,epever,plugs]){
   if(Number.isFinite(ev.batt_a))bits.push(sysNum(ev.batt_a,'A',1));if(Number.isFinite(ev.soc))bits.push(Math.round(ev.soc)+'%');
   sysSet('Batt',bLive,sysNum(ev.batt_v,'V',1),bLive?bits.join(' · '):gone);
   const plugsById=Object.fromEntries((plugs?.devices||[]).map(d=>[d.id,d])),power={};
-  for(const [id,name] of [['inverter-1000','Inv1000'],['inverter-600','Inv600']]){
+  for(const [id,name] of [['inverter-1000','Inv1000'],['garage-inverter','GarInv'],['inverter-600','Inv600']]){
     const d=plugsById[id],live=!!d&&!!d.ts&&!d.stale&&d.online!==false&&Number.isFinite(d.power_w);
     power[name]=live?d.power_w:null;if(live)times.push(d.ts);
     sysSet(name,live,sysNum(d?.power_w,'W'),!d||!d.ts?'No reading':d.stale?'Old reading':d.online===false?'Offline':d.switch==='on'?'On':d.switch==='off'?'Off':'');
   }
-  sysLine('1000',power.Inv1000>0);sysLine('1000out',power.Inv1000>0);sysLine('600',power.Inv600>0);sysLine('600out',power.Inv600>0);
-  // Output as Dad defines it: the 1000 watt inverter reading minus the 600 watt inverter reading.
-  const out=power.Inv1000!=null&&power.Inv600!=null?power.Inv1000-power.Inv600:null;
-  sysSet('Output',out!=null,sysNum(out,'W'),'1000 W minus 600 W');
+  sysLine('1000',power.Inv1000>0);sysLine('1000out',power.Inv1000>0);sysLine('600',power.Inv600>0);sysLine('GarInvIn',power.GarInv>0);sysLine('GarInvOut',power.GarInv>0);sysLine('600out',power.Inv600>0);
+  // Total solar power to house as Dad defines it: outputs 1 + 2 + 3; "—" unless all three plugs are live.
+  const parts=[power.Inv1000,power.GarInv,power.Inv600],out=parts.every(v=>v!=null)?parts.reduce((t,v)=>t+v,0):null;
+  sysSet('Output',out!=null,sysNum(out,'W'),'1 + 2 + 3');
   const seen=times.filter(Number.isFinite);
   $('systemStatus').textContent=seen.length?'Latest reading '+homeTime(Math.max(...seen)):'No live readings';
 }
