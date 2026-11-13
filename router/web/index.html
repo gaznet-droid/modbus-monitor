@@ -342,6 +342,17 @@
         .sys-plan g[data-state="lit"] text[id^="sysP"][id$="S1"] { fill:var(--import-color); }
         .sys-plan #sysEpever[data-state="lit"] #sysEpeverS3 { fill:var(--export-color); }
         .sys-plan #sysOutputS1, .sys-plan #sysOutputS2, .sys-plan #sysP275S1 { font-weight:400; }
+        .sys-plan #sysBatt rect.sys-bat-body { fill:#0b1220; stroke:#64748b; stroke-width:1.5; }
+        .sys-plan #sysBatt[data-state="lit"] rect.sys-bat-body { stroke:var(--import-color); }
+        .sys-plan #sysBatt rect.sys-bat-nub { fill:#64748b; stroke:none; }
+        .sys-plan #sysBatt rect.sys-bat-fill { stroke:none; fill:var(--export-color); transition:width .6s; }
+        .sys-plan #sysBatt rect.sys-bat-fill[data-level="amber"] { fill:var(--amber-zero); }
+        .sys-plan #sysBatt rect.sys-bat-fill[data-level="red"] { fill:#ef4444; }
+        .sys-plan #sysBatt rect.sys-bat-fill[data-level="na"] { fill:#475569; }
+        .sys-plan #sysBatt rect.sys-bat-fill.charging { animation:batPulse 1.6s ease-in-out infinite; }
+        .sys-plan .sys-bat-pct { font-size:12px; font-weight:700; fill:#fff; paint-order:stroke; stroke:#0b1220; stroke-width:2.5px; stroke-linejoin:round; }
+        @keyframes batPulse { 0%,100% { opacity:1; } 50% { opacity:.45; } }
+        @media(prefers-reduced-motion:reduce) { .sys-plan #sysBatt rect.sys-bat-fill.charging { animation:none; } }
         .sys-plan .sys-ic { color:var(--text-muted); }
         .sys-plan [data-state="lit"] rect { fill:#0f2a3d; stroke:var(--import-color); }
         .sys-plan [data-state="lit"] .sys-ic { color:var(--import-color); }
@@ -796,7 +807,7 @@
 <g id="sysPGarage" data-goto="juwai:garage" tabindex="0" role="link" aria-label="400 watt Garage panel: open the Garage card on Generation" data-state="idle"><rect x="6" y="436" width="74" height="108" rx="8"/><use class="sys-ic" href="#sysIcPanel" x="35" y="443" width="16" height="16"/><text class="sys-name" x="43" y="480">Garage panel</text><text class="sys-rate" x="43" y="504">400 W</text><text class="sys-small" x="43" y="520" id="sysPGarageS1"></text><text class="sys-small" x="43" y="533" id="sysPGarageS2"></text></g>
 <g id="sysGarage" data-goto="juwai:garage" tabindex="0" role="link" aria-label="Garage meter: open the Garage card on Generation" data-state="stale"><rect x="98" y="436" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcMeter" x="129" y="443" width="16" height="16"/><text class="sys-name" x="137" y="480">Garage meter</text><text class="sys-big" x="137" y="504" id="sysGarageBig">—</text><text class="sys-small" x="137" y="520" id="sysGarageS1"></text><text class="sys-small" x="137" y="533" id="sysGarageS2"></text></g>
 <g id="sysP275" data-state="nm"><rect x="6" y="572" width="74" height="84" rx="8"/><use class="sys-ic" href="#sysIcPanel" x="35" y="579" width="16" height="16"/><text class="sys-name" x="43" y="616">panel</text><text class="sys-rate" x="43" y="640">275 W</text><text class="sys-small" x="43" y="656" id="sysP275S1">Not measured</text></g>
-<g id="sysBatt" data-goto="juwai:epever" tabindex="0" role="link" aria-label="24 volt battery: open its details on the Epever card" data-state="stale"><rect x="282" y="164" width="78" height="122" rx="8"/><use class="sys-ic" href="#sysIcBattery" x="313" y="171" width="16" height="16"/><text class="sys-name" x="321" y="208">24 V battery</text><text class="sys-big" x="321" y="232" id="sysBattBig">—</text><text class="sys-small" x="321" y="248" id="sysBattS1"></text><text class="sys-small" x="321" y="261" id="sysBattS2"></text><text class="sys-small" x="321" y="274" id="sysBattS3"></text></g>
+<g id="sysBatt" data-goto="juwai:epever" tabindex="0" role="link" aria-label="24 volt battery: open its details on the Epever card" data-state="stale"><rect x="282" y="164" width="78" height="122" rx="8"/><rect class="sys-bat-body" x="297" y="172" width="44" height="24" rx="4"/><rect class="sys-bat-nub" x="341" y="180" width="4" height="8" rx="1"/><rect id="sysBattFill" class="sys-bat-fill" x="299" y="174" width="0" height="20" rx="2" data-level="na"/><text id="sysBattPct" class="sys-bat-pct" x="319" y="188">—</text><text class="sys-name" x="321" y="208">24 V battery</text><text class="sys-big" x="321" y="232" id="sysBattBig">—</text><text class="sys-small" x="321" y="248" id="sysBattS1"></text><text class="sys-small" x="321" y="261" id="sysBattS2"></text><text class="sys-small" x="321" y="274" id="sysBattS3"></text></g>
 <g id="sysEpever" data-goto="juwai:epever" tabindex="0" role="link" aria-label="Epever charge controller: open its details on Generation" data-state="stale"><rect x="282" y="324" width="78" height="122" rx="8"/><use class="sys-ic" href="#sysIcCharger" x="313" y="331" width="16" height="16"/><text class="sys-name" x="321" y="368">Epever</text><text class="sys-big" x="321" y="392" id="sysEpeverBig">—</text><text class="sys-small" x="321" y="408" id="sysEpeverS1"></text><text class="sys-small" x="321" y="421" id="sysEpeverS2"></text><text class="sys-small" x="321" y="434" id="sysEpeverS3"></text></g>
 <g id="sysDC" data-state="idle"><rect x="217" y="300" width="24" height="356" rx="6"/><text class="sys-name" x="229" y="478" style="font-weight:700">DC</text></g>
 <path class="sys-plug" transform="translate(0,16)" d="M134 102v-6M140 102v-6M131 102h12v6a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2z"/>
@@ -1688,9 +1699,13 @@ function renderSystem([tuya,epever,plugs]){
   sysSet('Epever',eLive,sysNum(ev.pv_w,'W')+' in',eLive?(ev.charge_state_name||'State unknown'):gone,eLive&&Number.isFinite(ev.pv_v)?sysNum(ev.pv_v,'V',1)+' panel':'',eLive&&Number.isFinite(ev.gen_today_kwh)?sysNum(ev.gen_today_kwh,'kWh',1)+' today':'');
   sysLine('Epever',charging);sysLine('Batt',charging);sysLit('Epever',charging);
   const bLive=fresh&&Number.isFinite(ev.batt_v),bits=[];
-  if(Number.isFinite(ev.batt_a))bits.push(sysNum(ev.batt_a,'A',1));if(Number.isFinite(ev.soc))bits.push(Math.round(ev.soc)+'%');
+  if(Number.isFinite(ev.batt_a))bits.push(sysNum(ev.batt_a,'A',1));
   const bState=!Number.isFinite(ev.batt_a)?'':ev.batt_a>0.05?'Charging':ev.batt_a<-0.05?'Discharging':'Idle';
   sysSet('Batt',bLive,sysNum(ev.batt_v,'V',1),bLive?bits.join(' · '):gone,bLive?bState:'',bLive&&Number.isFinite(ev.batt_temp_c)?sysNum(ev.batt_temp_c,'°C',0):'');
+  // Battery icon: filled left to right by the controller's state of charge; pulses while the battery is taking charge.
+  const soc=bLive&&Number.isFinite(ev.soc)?Math.max(0,Math.min(100,ev.soc)):null,fill=$('sysBattFill');
+  fill.setAttribute('width',soc==null?0:40*soc/100);fill.dataset.level=soc==null?'na':soc<=10?'red':soc<=20?'amber':'ok';
+  fill.classList.toggle('charging',bLive&&bState==='Charging');$('sysBattPct').textContent=soc==null?'—':Math.round(soc)+'%';
   const plugsById=Object.fromEntries((plugs?.devices||[]).map(d=>[d.id,d])),power={};
   for(const [id,name] of [['inverter-1000','Inv1000'],['garage-inverter','GarInv'],['inverter-600','Inv600']]){
     const d=plugsById[id],live=!!d&&!!d.ts&&!d.stale&&d.online!==false&&Number.isFinite(d.power_w),why=!d||!d.ts?'No reading':d.stale?'Old reading':d.online===false?'Offline':'';
