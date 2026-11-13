@@ -265,7 +265,8 @@
 
         .tabs { overflow-x:auto; flex-shrink:0; }
         .tabs button { flex-shrink:0; }
-        body:has(#ewelinkPanel:not([hidden])) > .container { max-width:1440px; }
+        /* Desktop: every tab uses the full page width, so the tab bar stays put when switching tabs. */
+        @media(min-width:601px) { .container { max-width:none; } }
         #ewelinkPanel { width:100%; min-width:0; align-self:stretch; }
         .ewelink-group { width:100%; }
         .ewelink-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
