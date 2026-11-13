@@ -156,10 +156,10 @@ box(4.22,4.78,0.95,1.02,0.08,0.62,mat.stone);
 // back
 box(4.6,8.5,0,0.05,16,19.3,mat.patio,{cast:false});              // small patio by back door
 box(0.3,13.0,0,0.035,19,39.6,mat.grass,{cast:false});            // back lawn
-box(0.5,1.3,0,0.055,23.2,41,mat.patio,{cast:false});             // side path
+box(0.5,1.3,0,0.055,27.4,40,mat.patio,{cast:false});             // side path
 box(3.8,8.8,0,0.055,39.6,44.8,mat.patio,{cast:false});           // end patio
 box(0.3,8.8,0,0.05,39.6,44.8,mat.patio,{cast:false});
-box(8.6,12.7,0,0.14,39.4,40.5,mat.deck);                          // summer-house deck
+box(8.6,12.7,0,0.14,23.4,24.5,mat.deck);                          // summer-house deck
 
 // ---------- house ----------
 const H0=2.6;
@@ -252,20 +252,25 @@ panel(1.45,2.95,20.6,22*D2R);panel(3.35,2.95,20.6,22*D2R);
 for(const x of[1.05,1.85,2.95,3.75]){box(x-.03,x+.03,2.56,2.7,21.3,21.36,mat.alu);box(x-.03,x+.03,2.56,3.25,19.85,19.91,mat.alu)}
 
 // ---------- shed with panels ----------
-box(0.6,3.6,0,2.0,41,44,mat.shed);
-(function(){const a=Math.atan2(0.35,3.0);const m=new THREE.Mesh(new THREE.BoxGeometry(3.4,.08,3.5),mat.felt);m.position.set(2.1,2.2,42.5);m.rotation.x=a;m.castShadow=m.receiveShadow=true;site.add(m)})();
-door('front',1.7,2.5,1.85,41,M({color:'#5f4329',roughness:.9}),false);
-win('front',2.75,3.4,1.0,1.6,41,{transom:false,frame:M({color:'#5f4329'})});
-panel(1.35,2.42,42.5,(6+15)*D2R,0.95,1.6);panel(2.85,2.42,42.5,(6+15)*D2R,0.95,1.6);
+box(0.6,3.6,0,2.0,24.2,27.2,mat.shed);
+(function(){const a=Math.atan2(0.35,3.0);const m=new THREE.Mesh(new THREE.BoxGeometry(3.4,.08,3.5),mat.felt);m.position.set(2.1,2.2,25.7);m.rotation.x=a;m.castShadow=m.receiveShadow=true;site.add(m)})();
+door('right',25.6,26.5,1.85,3.6,M({color:'#5f4329',roughness:.9}),false);
+win('right',24.5,25.3,1.0,1.6,3.6,{transom:false,frame:M({color:'#5f4329'})});
+panel(1.35,2.42,25.7,(6+15)*D2R,0.95,1.6);panel(2.85,2.42,25.7,(6+15)*D2R,0.95,1.6);
 
 // ---------- summer house ----------
-box(8.8,12.4,0.14,2.1,40.5,43.8,mat.summer);
-(function(){const p=30*D2R,L=2.38;for(const s of[-1,1]){const m=new THREE.Mesh(new THREE.BoxGeometry(L,.08,3.9),mat.felt);m.position.set(10.6+s*1.02,2.66,42.15);m.rotation.z=-s*p;m.castShadow=m.receiveShadow=true;site.add(m)}
+box(8.8,12.4,0.14,2.1,24.5,27.8,mat.summer);
+(function(){const p=30*D2R,L=2.38;for(const s of[-1,1]){const m=new THREE.Mesh(new THREE.BoxGeometry(L,.08,3.9),mat.felt);m.position.set(10.6+s*1.02,2.66,26.15);m.rotation.z=-s*p;m.castShadow=m.receiveShadow=true;site.add(m)}
   const shape=new THREE.Shape();shape.moveTo(-1.8,0);shape.lineTo(1.8,0);shape.lineTo(0,1.04);shape.closePath();
-  const g=new THREE.ExtrudeGeometry(shape,{depth:3.3,bevelEnabled:false});const m=new THREE.Mesh(g,mat.summer);m.position.set(10.6,2.1,40.5);m.castShadow=m.receiveShadow=true;site.add(m)})();
-win('front',9.6,11.6,0.2,2.0,40.5,{split:2,frame:mat.white});
-win('left',41.2,43.1,0.9,1.8,8.8,{transom:false});
-win('right',41.2,43.1,0.9,1.8,12.4,{transom:false});
+  const g=new THREE.ExtrudeGeometry(shape,{depth:3.3,bevelEnabled:false});const m=new THREE.Mesh(g,mat.summer);m.position.set(10.6,2.1,24.5);m.castShadow=m.receiveShadow=true;site.add(m)})();
+win('front',9.6,11.6,0.2,2.0,24.5,{split:2,frame:mat.white});
+win('left',25.2,27.1,0.9,1.8,8.8,{transom:false});
+win('right',25.2,27.1,0.9,1.8,12.4,{transom:false});
+
+// ---------- veg patch at the end, NW side ----------
+(function(){const soil=M({color:'#4a3324',roughness:1}),edge=M({map:boardT('#7a5838'),roughness:.9});
+  for(const [z1,z2] of [[40.4,42.2],[42.7,44.4]]){box(0.6,3.8,0,0.3,z1,z2,edge);box(0.7,3.7,0.3,0.32,z1+.1,z2-.1,soil,{cast:false});
+    for(let x=0.95;x<3.6;x+=0.45)for(let z=z1+.35;z<z2-.2;z+=0.45){const m=new THREE.Mesh(new THREE.IcosahedronGeometry(r(.12,.2),0),M({color:['#4f8a35','#6aa83c','#3f7a2e'][(rand()*3)|0],roughness:1,flatShading:true}));m.position.set(x+r(-.05,.05),0.42,z);m.castShadow=true;site.add(m)}}})();
 
 // ---------- small garden panel (100 W) ----------
 panel(6.2,0.75,34.8,40*D2R,0.7,1.0);
@@ -297,7 +302,7 @@ function tree(x,z,s=1,cols=autumn){const g=new THREE.Group();const t=new THREE.M
   g.position.set(x,0,z);g.traverse(m=>{m.castShadow=m.receiveShadow=true});site.add(g)}
 function bush(x,z,s=1,c){const m=new THREE.Mesh(new THREE.IcosahedronGeometry(.5*s,1),leaf(c||greens[(rand()*4)|0]));m.scale.y=.75;m.position.set(x,.35*s,z);m.castShadow=m.receiveShadow=true;site.add(m)}
 tree(12.0,38.2,1.15);tree(1.3,37.6,.85);
-for(const z of[22,25.5,29,32.5])bush(12.5,z,r(.9,1.3));
+for(const z of[21.5,31,34.5])bush(12.5,z,r(.9,1.3));
 for(const z of[26,30.5])bush(0.55,z,.8);
 bush(12.4,1.2,.9,'#3a6431');bush(5.2,1.3,.7);bush(8.5,0.9,.6,'#a9472a');
 // garden lamps
@@ -387,7 +392,7 @@ $('compass').onclick=()=>resetView(true);
 
 // labels: anchored in the model, filled from the site's own APIs every 10 seconds
 const LBL={};
-for(const [key,name,p] of [['house','House',[9.0,6.6,11.5]],['garage','Garage',[2.4,3.6,20]],['garden','Garden panel',[6.2,1.6,34.8]],['shed','Shed',[2.1,3.1,42.5]],['summer','Summer house',[10.6,3.8,42]]]){
+for(const [key,name,p] of [['house','House',[9.0,6.6,11.5]],['garage','Garage',[2.4,3.6,20]],['garden','Garden panel',[6.2,1.6,34.8]],['shed','Shed',[2.1,3.1,25.7]],['summer','Summer house',[10.6,3.8,26.2]]]){
   const el=document.createElement('div');el.className='lbl';el.innerHTML='<div class="n"></div><div class="v stale">—</div><div class="d"></div>';el.querySelector('.n').textContent=name;$('labels').appendChild(el);
   LBL[key]={el,p:site.localToWorld(new THREE.Vector3(...p))};
 }
