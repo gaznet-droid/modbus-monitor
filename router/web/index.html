@@ -333,12 +333,15 @@
         .sys-plan .sys-name { font-size:11px; fill:var(--text-muted); }
         /* Headline figures are small and bold like the labels; the detail lines carry the colour: power blue, generation green, totals yellow. */
         .sys-plan .sys-rate { font-size:11px; font-weight:700; }
-        .sys-plan .sys-big { font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; fill:var(--import-color); }
-        .sys-plan #sysOutputBig { fill:#fbbf24; }
-        .sys-plan .sys-small { font-size:10px; font-weight:500; font-variant-numeric:tabular-nums; fill:#cbd5e1; }
-        .sys-plan [id^="sysP"][id$="S1"]:not(#sysP275S1) { fill:var(--import-color); }
-        .sys-plan #sysEpeverS3 { fill:var(--export-color); }
-        .sys-plan #sysOutputS1, .sys-plan #sysOutputS2, .sys-plan #sysP275S1 { fill:var(--text-muted); font-weight:400; }
+        .sys-plan .sys-big { font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; fill:#94a3b8; }
+        .sys-plan .sys-small { font-size:10px; font-weight:500; font-variant-numeric:tabular-nums; fill:#94a3b8; }
+        /* Active (lit) boxes show live figures in colour; live but inactive boxes stay grey. */
+        .sys-plan [data-state="lit"] .sys-big { fill:var(--import-color); }
+        .sys-plan #sysOutput[data-state="lit"] .sys-big { fill:#fbbf24; }
+        .sys-plan [data-state="lit"] .sys-small { fill:#e2e8f0; }
+        .sys-plan g[data-state="lit"] text[id^="sysP"][id$="S1"] { fill:var(--import-color); }
+        .sys-plan #sysEpever[data-state="lit"] #sysEpeverS3 { fill:var(--export-color); }
+        .sys-plan #sysOutputS1, .sys-plan #sysOutputS2, .sys-plan #sysP275S1 { font-weight:400; }
         .sys-plan .sys-ic { color:var(--text-muted); }
         .sys-plan [data-state="lit"] rect { fill:#0f2a3d; stroke:var(--import-color); }
         .sys-plan [data-state="lit"] .sys-ic { color:var(--import-color); }
@@ -1680,7 +1683,7 @@ function renderSystem([tuya,epever,plugs]){
     sysPanel(name,live?w:NaN,400);
     flow[name]=live&&w>0;sysLine(name+'In',flow[name]);sysLine(name,flow[name]);sysLit(name,flow[name]);sysLit('P'+name,flow[name]);
   }
-  const ev=epever?.values||{},fresh=!!epever&&!epever.stale,eLive=fresh&&Number.isFinite(ev.pv_w),gone=epever?'Old reading':'No reading',charging=eLive&&ev.pv_w>0;
+  const ev=epever?.values||{},fresh=!!epever&&!epever.stale,eLive=fresh&&Number.isFinite(ev.pv_w),gone=epever?'Old reading':'No reading',charging=eLive&&ev.pv_w>0&&ev.charge_state!==0;
   if(eLive)times.push(epever.observed_at);
   sysSet('Epever',eLive,sysNum(ev.pv_w,'W')+' in',eLive?(ev.charge_state_name||'State unknown'):gone,eLive&&Number.isFinite(ev.pv_v)?sysNum(ev.pv_v,'V',1)+' panel':'',eLive&&Number.isFinite(ev.gen_today_kwh)?sysNum(ev.gen_today_kwh,'kWh',1)+' today':'');
   sysLine('Epever',charging);sysLine('Batt',charging);sysLit('Epever',charging);
