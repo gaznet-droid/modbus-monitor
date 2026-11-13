@@ -331,9 +331,14 @@
         .sys-plan .sys-band { fill:none; stroke:#334155; }
         .sys-plan text { fill:var(--text-main); text-anchor:middle; }
         .sys-plan .sys-name { font-size:11px; fill:var(--text-muted); }
-        .sys-plan .sys-rate { font-size:15px; font-weight:700; }
-        .sys-plan .sys-big { font-size:17px; font-weight:700; font-variant-numeric:tabular-nums; }
-        .sys-plan .sys-small { font-size:10px; fill:var(--text-muted); font-variant-numeric:tabular-nums; }
+        /* Headline figures are small and bold like the labels; the detail lines carry the colour: power blue, generation green, totals yellow. */
+        .sys-plan .sys-rate { font-size:11px; font-weight:700; }
+        .sys-plan .sys-big { font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; fill:var(--import-color); }
+        .sys-plan #sysOutputBig { fill:#fbbf24; }
+        .sys-plan .sys-small { font-size:10px; font-weight:500; font-variant-numeric:tabular-nums; fill:#cbd5e1; }
+        .sys-plan [id^="sysP"][id$="S1"]:not(#sysP275S1) { fill:var(--import-color); }
+        .sys-plan #sysEpeverS3 { fill:var(--export-color); }
+        .sys-plan #sysOutputS1, .sys-plan #sysOutputS2, .sys-plan #sysP275S1 { fill:var(--text-muted); font-weight:400; }
         .sys-plan .sys-ic { color:var(--text-muted); }
         .sys-plan [data-state="lit"] rect { fill:#0f2a3d; stroke:var(--import-color); }
         .sys-plan [data-state="lit"] .sys-ic { color:var(--import-color); }
