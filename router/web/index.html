@@ -512,9 +512,9 @@
           <button id="homeTab" type="button" role="tab" aria-selected="false" aria-controls="homePanel" aria-label="Home" title="Home" tabindex="-1"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5.5v-6h-5v6H4a1 1 0 0 1-1-1v-9.5z"/></svg></button>
           <button id="systemTab" type="button" role="tab" aria-selected="false" aria-controls="systemPanel" aria-label="System" title="System" tabindex="-1"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="8.5" y="16" width="7" height="5" rx="1"/><path d="M6.5 8v4h11V8M12 12v4"/></svg></button>
           <select id="timeWindow" class="time-select tab-window" aria-label="Time window">
-            <option value="15m" selected>15 Mins</option>
+            <option value="15m" selected>Live · last 15 min</option>
             <option value="30m">30 Mins</option>
-            <option value="1h">1 Hour</option>
+            <option value="1h">Past hour</option>
             <option value="2h">2 Hours</option>
             <option value="4h">4 Hours</option>
             <option value="8h">8 Hours</option>
@@ -573,7 +573,7 @@
         </section>
 <section id="juwaiPanel" class="tab-panel" role="tabpanel" aria-labelledby="juwaiTab" hidden>
 <div class="card juwai-group">
-<div class="juwai-group-heading"><h1>Generation</h1><div id="juwaiSource" class="source-toggle" role="group" aria-label="Reading source" hidden><button type="button" data-source="cloud" aria-pressed="true">Cloud</button><button type="button" data-source="local" aria-pressed="false">Local</button></div><label for="juwaiWindow">Period <select id="juwaiWindow"><option value="live" selected>Live · past hour</option><option value="today">Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
+<div class="juwai-group-heading"><h1>Generation</h1><div id="juwaiSource" class="source-toggle" role="group" aria-label="Reading source" hidden><button type="button" data-source="cloud" aria-pressed="true">Cloud</button><button type="button" data-source="local" aria-pressed="false">Local</button></div><label for="juwaiWindow">Period <select id="juwaiWindow"><option value="15m" selected>Live · last 15 min</option><option value="live">Past hour</option><option value="today">Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
 <p class="juwai-mobile-only mobile-generation-disclaimer">Generation totals are estimates.</p>
 <p id="juwaiStatus" class="period-note" role="status" hidden></p>
 <div class="juwai-grid"><article class="card juwai-card" id="shedCard" data-stale="true">
@@ -608,7 +608,7 @@
 <p class="period-note">Solar meter is not connected: Tuya permission is unresolved. Read-only monitoring.</p>
 </section>
 <section id="ewelinkPanel" class="tab-panel" role="tabpanel" aria-labelledby="ewelinkTab" hidden>
-<div class="card juwai-group ewelink-group"><div class="juwai-group-heading"><h1>Inverters &amp; fridge</h1><label for="ewelinkPeriod">Period <select id="ewelinkPeriod"><option value="live">Past hour</option><option value="2h">Past 2 hours</option><option value="4h">Past 4 hours</option><option value="8h">Past 8 hours</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
+<div class="card juwai-group ewelink-group"><div class="juwai-group-heading"><h1>Inverters &amp; fridge</h1><label for="ewelinkPeriod">Period <select id="ewelinkPeriod"><option value="15m">Live · last 15 min</option><option value="live">Past hour</option><option value="2h">Past 2 hours</option><option value="4h">Past 4 hours</option><option value="8h">Past 8 hours</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
 <div class="ewelink-layout">
 <div class="ewelink-grid"><article id="ew-inverter-1000" class="card ewelink-card" data-stale="true" role="button" tabindex="0" aria-expanded="false" aria-controls="ewelinkChartSection">
 <div class="ewelink-heading"><h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m13 6-4 6h6l-4 6M1 8h3m-3 8h3m16-8h3m-3 8h3"/></svg><span>1000 watt inverter</span></h2></div>
@@ -851,6 +851,8 @@ for(const view of views){
 
 let juwaiChart=null, juwaiTimer=null, juwaiController=null, juwaiVersion=0;
 let juwaiHistory={}, juwaiHistoryKey='', juwaiHistoryTime=0;
+// Windows the page watches live: the chart is redrawn every 20 seconds and shows power, not energy bars.
+const LIVE_WINDOWS=['15m','live'];
 // Reading source: null follows the site's setting; signed-in users can pick Cloud or Local while local reads are on test.
 let juwaiSource=null;
 const juwaiSourceNames={cloud:'Cloud',local:'Local'};
@@ -971,7 +973,7 @@ async function readJuwai(version){
   const window=$('juwaiWindow').value;
   try{
     const tasks=[getJSON('/api/tuya/latest'+(juwaiSource?'?source='+juwaiSource:''),aborter.signal).then(data=>{if(version===juwaiVersion&&activeTab==='juwai'&&!document.hidden)renderJuwai(data);})];
-    if(juwaiHistoryKey!==window||Date.now()-juwaiHistoryTime>=(window==='live'?20000:300000)){
+    if(juwaiHistoryKey!==window||Date.now()-juwaiHistoryTime>=(LIVE_WINDOWS.includes(window)?20000:300000)){
       tasks.push(Promise.all(['shed','garage'].map(id=>getJSON('/api/tuya/history?device='+id+'&window='+window+(juwaiSource?'&source='+juwaiSource:''),aborter.signal).then(data=>[id,data]))).then(rows=>{
         if(version!==juwaiVersion||activeTab!=='juwai'||document.hidden)return;
         juwaiHistory=Object.fromEntries(rows);juwaiHistoryKey=window;juwaiHistoryTime=Date.now();drawJuwai();
@@ -1109,7 +1111,7 @@ function drawMobileJuwai(){
   const hours=s=>(s/3600).toLocaleString(undefined,{maximumFractionDigits:1});
   $('mobileCoverage').textContent=juwaiHistoryKey?'Recorded: Shed '+hours(energies[0]?.coverage_s||0)+'h · Garage '+hours(energies[1]?.coverage_s||0)+'h of '+hours(duration)+'h. Hatched slots have missing or incomplete readings.':'Loading generation…';
   if(mobileChart){mobileChart.destroy();mobileChart=null;}
-  const bars=metric==='power_w'&&period!=='live';
+  const bars=metric==='power_w'&&!LIVE_WINDOWS.includes(period);
   $('juwaiMetric').querySelector('[value=power_w]').textContent=bars?'Generation (kWh)':'Power (W)';
   $('mobileMeterButtons').hidden=bars;$('mobileBinControls').hidden=!bars;$('mobileWeekBack').hidden=!bars||!mobileWeek;
   if(!bars)mobileWeek=null;
@@ -1136,7 +1138,7 @@ function drawMobileJuwai(){
     $('mobileChartHeading').textContent=(mobileMeter==='compare'?'Shed and Garage':mobileMeter[0].toUpperCase()+mobileMeter.slice(1))+' '+field.label.toLowerCase();
   }
   const series=juwaiHistory.shed||juwaiHistory.garage;
-  const tick=v=>ukDate(v,period==='live'||['today','yesterday','24h','previous24h'].includes(period)?{hour:'2-digit',minute:'2-digit'}:{day:'numeric',month:'short'});
+  const tick=v=>ukDate(v,LIVE_WINDOWS.includes(period)||['today','yesterday','24h','previous24h'].includes(period)?{hour:'2-digit',minute:'2-digit'}:{day:'numeric',month:'short'});
   mobileChart=new Chart($('mobileJuwaiChart'),{type:bars?'bar':'line',data:{labels,datasets},plugins:bars?[missingMobileBins]:[],options:{responsive:true,maintainAspectRatio:false,animation:false,
     interaction:{mode:'index',intersect:false},onClick:(event)=>{if(bars&&mobileChart?.chartArea){const i=Math.round(mobileChart.scales.x.getValueForPixel(event.x));showMobileBin(i);}},
     scales:{x:bars?{type:'category',stacked:true,grid:{display:false},ticks:{color:'#94a3b8',maxRotation:0,autoSkip:true,maxTicksLimit:unit==='hour'?5:7}}:{type:'linear',min:series?.start,max:series?.end,grid:{display:false},ticks:{color:'#94a3b8',maxTicksLimit:4,callback:tick}},
@@ -1683,7 +1685,7 @@ async function readSystem(version){
     const results=await Promise.allSettled(['/api/tuya/latest','/api/epever/latest','/api/ewelink/latest'].map(url=>getJSON(url,signal)));
     if(version===systemVersion&&!signal.aborted)renderSystem(results.map(r=>r.status==='fulfilled'?r.value:null));
   }catch(e){if(version===systemVersion)$('systemStatus').textContent='Readings unavailable · retrying';}
-  finally{if(version===systemVersion&&activeTab==='system'&&!document.hidden){systemController=null;systemTimer=setTimeout(()=>readSystem(version),30000);}}
+  finally{if(version===systemVersion&&activeTab==='system'&&!document.hidden){systemController=null;systemTimer=setTimeout(()=>readSystem(version),10000);}}
 }
 for(const g of document.querySelectorAll('.sys-plan [data-goto]')){
   g.addEventListener('click',()=>selectTab(g.dataset.goto));

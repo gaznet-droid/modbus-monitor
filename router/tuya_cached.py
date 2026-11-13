@@ -13,7 +13,7 @@ with (Path(__file__).parent / "tz/Europe-London.tzif").open("rb") as tzfile:
     LONDON = ZoneInfo.from_file(tzfile, key="Europe/London")
 
 DEVICES = {"shed": "Shed", "garage": "Garage"}
-WINDOWS = {"24h": 86400, "7d": 604800, "30d": 2592000, "365d": 31536000, "live": 3600, "2h": 7200, "4h": 14400, "8h": 28800, "today": 86400,
+WINDOWS = {"24h": 86400, "7d": 604800, "30d": 2592000, "365d": 31536000, "15m": 900, "live": 3600, "2h": 7200, "4h": 14400, "8h": 28800, "today": 86400,
            "yesterday": 86400, "previous24h": 86400}
 FIELDS = ("voltage_v", "current_a", "power_w")
 
@@ -186,4 +186,4 @@ class CachedTuya:
                     "step_ms": step, "points": [list(r) for r in rows],
                     "columns": ["ts", "samples", *FIELDS]}
         # Short windows are watched live, so they refresh sooner; long windows change slowly.
-        return self._read((device, window), 15 if window in ("live", "2h") else 300, query)
+        return self._read((device, window), 15 if window in ("15m", "live", "2h") else 300, query)

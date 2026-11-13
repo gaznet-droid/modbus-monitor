@@ -6,8 +6,8 @@
   const el=id=>document.getElementById(id), mobile=matchMedia('(max-width:600px)');
   const DEVICE_IDS=['inverter-1000','garage-inverter','inverter-600','charger-inverter','fridge'];
   const INTERVAL_S=300; // eWeLink readings arrive every 5 minutes
-  const SHORT=['live','2h','4h','8h'];
-  const PERIOD_WORD={live:'past hour','2h':'past 2 h','4h':'past 4 h','8h':'past 8 h',today:'today','24h':'past 24 h',previous24h:'previous 24 h',yesterday:'yesterday','7d':'past week','30d':'past month'};
+  const SHORT=['15m','live','2h','4h','8h'];
+  const PERIOD_WORD={'15m':'last 15 minutes',live:'past hour','2h':'past 2 h','4h':'past 4 h','8h':'past 8 h',today:'today','24h':'past 24 h',previous24h:'previous 24 h',yesterday:'yesterday','7d':'past week','30d':'past month'};
   let timer=null,controller=null,version=0,chart=null,historyAt=0,historyKey='',history=null,week=null,shownBins=[],selectedBin=0;
   const available=()=>!document.hidden&&!el('ewelinkPanel').hidden;
   const format=(v,unit)=>Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:2})+' '+unit:'Not reported';
@@ -126,7 +126,7 @@
         }catch(error){if(v!==version||!available())return;history=null;if(chart){chart.destroy();chart=null;}el('ewelinkBinControls').hidden=true;el('ewelinkBack').hidden=true;el('ewelinkHistoryNote').textContent='History is not available yet.';}
       }else drawHistory();
     }catch(error){if(v===version&&available())document.querySelectorAll('.ewelink-card').forEach(c=>c.dataset.stale='true');}
-    finally{clearTimeout(timeout);if(v===version&&available()){controller=null;timer=setTimeout(()=>read(v),30000);}}
+    finally{clearTimeout(timeout);if(v===version&&available()){controller=null;timer=setTimeout(()=>read(v),10000);}}
   }
   window.startEwelink=()=>{window.stopEwelink();read(version);};
   // Web: pick a device; its graph fills the right-hand pane. One device highlighted at a time.
