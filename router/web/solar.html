@@ -211,24 +211,35 @@ function door(face,c1,c2,h,wp,m=mat.white,glassTop=true){
   if(glassTop){const p=new THREE.Mesh(new THREE.BoxGeometry(c2-c1-.14,h*.45,.12),m);p.position.y=-h*.25;g.add(p)}
   return g}
 
-// house windows
-win('front',5.0,5.95,0.9,2.2,7);
-win('front',11.75,12.8,0.9,2.2,7);
-win('left',8.3,10.1,0.9,2.2,4.8);
-door('left',12.5,13.4,2.1,4.8);
+// house windows: front has the lounge's curved bay (party-wall side) and the guest bedroom window
+win('front',5.2,7.4,0.9,2.2,7);
+win('left',9.8,10.6,1.35,2.2,4.8,{transom:false});
 win('left',14.0,15.3,1.35,2.2,4.8,{transom:false});
 win('back',5.4,7.6,0.9,2.2,16);
-// front porch
-box(6.0,10.45,0,0.85,5.2,7.0,mat.brick);
-box(6.0,6.05,0,0.85,5.2,7.0,mat.brick);
-win('front',6.05,10.4,0.85,2.25,5.2);
-win('left',5.25,6.95,0.85,2.25,6.0,{split:2});
-win('right',5.25,6.95,0.85,2.25,11.5,{split:2});
-box(10.45,11.5,0,0.06,4.9,5.2,mat.stone,{cast:false});
-door('front',10.5,11.45,2.25,5.2);
-box(11.45,11.5,0,2.25,5.2,7.0,mat.white);
-box(5.85,11.65,2.25,2.42,5.02,7.0,mat.felt);
-box(5.85,11.65,2.22,2.42,5.0,5.06,mat.white);
+// curved bay window on the lounge
+(function(){const cx=10.7,R=1.4,sq=0.55,g=new THREE.Group();
+  const bb=mat.brick.clone();bb.map=brickT.clone();bb.map.needsUpdate=true;bb.map.repeat.set(3.4,0.9);
+  const half=(rt,rb,h,m,open=false)=>{const c=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,20,1,open,Math.PI/2,Math.PI),m);c.castShadow=c.receiveShadow=true;return c};
+  const base=half(R,R,0.85,bb);base.position.y=0.425;
+  const glass=half(R-0.04,R-0.04,1.35,mat.glass,true);glass.position.y=0.85+0.675;glassMeshes.push(glass);
+  const sill=half(R+0.06,R+0.06,0.06,mat.white);sill.position.y=0.88;
+  const head=half(R+0.04,R+0.04,0.12,mat.white);head.position.y=2.24;
+  const roof=half(0.2,R+0.12,0.4,mat.felt);roof.position.y=2.5;
+  g.add(base,glass,sill,head,roof);
+  for(let i=0;i<=6;i++){const t=Math.PI/2+i*Math.PI/6,m=new THREE.Mesh(new THREE.BoxGeometry(.07,1.35,.07),mat.white);m.position.set(R*Math.sin(t),1.525,R*Math.cos(t));m.castShadow=true;g.add(m)}
+  g.scale.z=sq;g.position.set(cx,0,7);site.add(g)})();
+// two porches on the driveway side: the front porch towards the garage, and the side porch near the gate
+function sidePorch(z1,z2,depth,doorAt){const x0=4.8-depth;
+  box(x0,4.8,0,0.8,z1,z2,mat.brick);                                   // brick base
+  win('left',z1+0.05,z2-0.05,0.8,2.2,x0,{split:2});                    // glazing on the driveway face
+  if(doorAt==='front'){win('front',x0+0.05,x0+0.3,0.8,2.2,z1);door('front',x0+0.32,4.75,2.1,z1-0.02);box(x0+0.2,4.8,0,0.08,z1-0.4,z1,mat.stone,{cast:false})}
+  else{win('back',x0+0.05,x0+0.3,0.8,2.2,z2);door('back',x0+0.32,4.75,2.1,z2+0.02);box(x0+0.2,4.8,0,0.08,z2,z2+0.4,mat.stone,{cast:false})}
+  box(x0-0.12,4.8,2.2,2.36,z1-0.12,z2+0.12,mat.felt);                 // flat roof
+  box(x0-0.14,4.8,2.18,2.36,z1-0.14,z1-0.1,mat.white,{cast:false});box(x0-0.14,4.8,2.18,2.36,z2+0.1,z2+0.14,mat.white,{cast:false});
+  box(x0-0.16,x0-0.12,2.18,2.36,z1-0.14,z2+0.14,mat.white,{cast:false});
+}
+sidePorch(11.4,13.3,0.9,'front');   // front porch (hall), door faces the street
+sidePorch(7.8,9.1,1.1,'front');     // side porch (guest bedroom end), nearer the gate
 // conservatory
 box(8.5,12.8,0,0.6,16,19,mat.brick);
 win('back',8.55,12.75,0.6,2.2,19,{transom:false});
@@ -311,7 +322,7 @@ function lamp(x,z){box(x-.04,x+.04,0,.7,z-.04,z+.04,mat.iron);const t=new THREE.
 lamp(4.7,24);lamp(8.7,39.0);lamp(4.6,1.0);
 const wallLights=[];
 function wallLight(x,y,z){const l=new THREE.PointLight('#ffcf90',0,8,1.6);l.position.set(x,y,z);site.add(l);wallLights.push(l);const m=new THREE.Mesh(new THREE.BoxGeometry(.14,.2,.1),mat.lampTop);m.position.set(x,y,z);site.add(m)}
-wallLight(10.2,2.0,5.05);wallLight(2.4,2.25,16.8);wallLight(4.7,2.05,13.0);wallLight(9.0,2.05,16.3);
+wallLight(3.9,2.0,11.25);wallLight(2.4,2.25,16.8);wallLight(3.7,2.0,7.65);wallLight(9.0,2.05,16.3);
 
 // ---------- lights ----------
 const hemi=new THREE.HemisphereLight('#cfe3ff','#6b5a45',.8);scene.add(hemi);
