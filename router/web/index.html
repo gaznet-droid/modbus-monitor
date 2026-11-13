@@ -971,7 +971,7 @@ async function readJuwai(version){
   const window=$('juwaiWindow').value;
   try{
     const tasks=[getJSON('/api/tuya/latest'+(juwaiSource?'?source='+juwaiSource:''),aborter.signal).then(data=>{if(version===juwaiVersion&&activeTab==='juwai'&&!document.hidden)renderJuwai(data);})];
-    if(juwaiHistoryKey!==window||Date.now()-juwaiHistoryTime>=300000){
+    if(juwaiHistoryKey!==window||Date.now()-juwaiHistoryTime>=(window==='live'?20000:300000)){
       tasks.push(Promise.all(['shed','garage'].map(id=>getJSON('/api/tuya/history?device='+id+'&window='+window+(juwaiSource?'&source='+juwaiSource:''),aborter.signal).then(data=>[id,data]))).then(rows=>{
         if(version!==juwaiVersion||activeTab!=='juwai'||document.hidden)return;
         juwaiHistory=Object.fromEntries(rows);juwaiHistoryKey=window;juwaiHistoryTime=Date.now();drawJuwai();
@@ -986,7 +986,7 @@ async function readJuwai(version){
     }
     if(results[1]?.status==='rejected'){$('mobileCoverage').textContent='Generation history unavailable. Please try again.';$('mobileGenerationTotal').textContent='— kWh';$('juwaiHistoryNote').textContent='Generation history unavailable. Please try again.';for(const id of ['shed','garage','total'])$(id+'Energy').textContent='— kWh';}
   }finally{
-    if(version===juwaiVersion&&activeTab==='juwai'&&!document.hidden){juwaiController=null;juwaiTimer=setTimeout(()=>readJuwai(version),30000);}
+    if(version===juwaiVersion&&activeTab==='juwai'&&!document.hidden){juwaiController=null;juwaiTimer=setTimeout(()=>readJuwai(version),10000);}
   }
 }
 // Epever solar charger: a fourth card, shown only once the Pi has stored readings from it. Read-only.

@@ -131,7 +131,7 @@ class CachedTuya:
             self.cache[key] = (self.monotonic() + ttl, value)
             return copy.deepcopy(value)
 
-    def latest(self):
+    def latest(self, ttl=30):
         def query(db):
             devices = []
             for alias, name in DEVICES.items():
@@ -144,7 +144,7 @@ class CachedTuya:
             meta = db.execute("SELECT value FROM metadata WHERE name='collection_mode'").fetchone()
             return {"devices": devices, "collection_mode":
                     "automatic" if meta and meta[0] == "automatic" else "manual"}
-        result = self._read("latest", 30, query)
+        result = self._read("latest", ttl, query)
         now = int(self.clock() * 1000)
         for device in result["devices"]:
             ts = device["observed_at"]
@@ -185,4 +185,5 @@ class CachedTuya:
                     "energy": energy,
                     "step_ms": step, "points": [list(r) for r in rows],
                     "columns": ["ts", "samples", *FIELDS]}
-        return self._read((device, window), 300, query)
+        # Short windows are watched live, so they refresh sooner; long windows change slowly.
+        return self._read((device, window), 15 if window in ("live", "2h") else 300, query)

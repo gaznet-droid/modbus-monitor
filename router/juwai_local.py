@@ -350,7 +350,7 @@ class CachedLocal(CachedTuya):
         super().__init__(storage_directory, guard, **kwargs)
 
     def latest(self):
-        result = super().latest()
+        result = super().latest(ttl=3)
         now = result["server_time"]
         for device in result["devices"]:
             ts = device["observed_at"]
