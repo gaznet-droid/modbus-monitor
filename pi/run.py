@@ -15,12 +15,13 @@ from juwai_local import CachedLocal
 from epever import CachedEpever
 from modbus_rtu import BAUDS, SerialBus
 from ewelink import Ewelink
+from ewelink_local import EwelinkLocal
 from auth import Auth
 from storage import Storage
 
 def load_config(path):
     config = json.loads(Path(path).read_text())
-    for key in ("meter_enabled", "ewelink_enabled"):
+    for key in ("meter_enabled", "ewelink_enabled", "ewelink_local_enabled"):
         if type(config.get(key, False)) is not bool:
             raise ValueError(key + " must be a boolean")
     serial = config.get("meter_serial")
@@ -77,6 +78,11 @@ def main():
                               config="/var/lib/modpi/private/ewelink.json")
             if config.get("ewelink_enabled", False):
                 workers.append(ewelink)
+            if config.get("ewelink_local_enabled", False):
+                # The five power plugs over the LAN; the cloud poll above stays as the fallback.
+                local = EwelinkLocal(ewelink, "/var/lib/modpi/private/ewelink-local.json")
+                ewelink.local_fresh = local.fresh
+                workers.append(local)
             server = monitor.WebServer(("127.0.0.1", config.get("port", 8096)),
                 monitor.handler(store, Path(monitor.__file__).parent / "web", voltage, tuya, ewelink,
                     Auth("/var/lib/modpi/private/auth.json", "/var/lib/modpi/private/auth.sqlite3"),

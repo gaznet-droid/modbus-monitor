@@ -53,3 +53,7 @@ Removed the Voltage tab. Its existing graph is a dedicated section beneath the P
 Checks: HTML structure/unique IDs/eight icons, inline JS syntax, existing responsive-chart harness, new pure-JS voltage visibility/version/lifecycle harness. Real browser shows all five icon cards and footer statuses, three generation icons/renamed total with genuine values, no overflow, removed Voltage navigation and history note. Scrolling to the new section obtained a genuine 234.96 V reading; moving offscreen showed Paused and version guards stop polling. Browser metadata-extension errors are unrelated.
 
 Published atomically as an HTML-only change with expected prior hash and local served-body equality plus healthy meter status. No service restart or credential/history changes. Private source backup is recorded in the deployment output under /etc/modbus-ui-polish-TIMESTAMP.html. Restore that HTML for rollback; no restart is required.
+
+## Local LAN reads — 13 November 2026
+
+The 1000 watt inverter and Fridge plugs (UIID 190) are now read over Dad's LAN by mDNS every few seconds, with the cloud poll as the fallback per plug; see "Local eWeLink reads" in pi/README.md. The three UIID 32 plugs stay on the cloud. Found on the day: the cloud's power, voltage and current for most plugs no longer change between polls, and port 8081 refuses read-only state requests (error 400) on these plugs. Device keys are in the Pi's private folder only.

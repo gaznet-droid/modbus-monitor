@@ -222,6 +222,29 @@ users get a Cloud / Local switch at the top of the page; each card shows its sou
 of its reading, and local readings older than five minutes are marked Delayed. Since 12 Nov 2026 the
 Pi is set to `"local"`; the cloud collector runs on as the fallback until 23 November.
 
+## Local eWeLink reads for the power plugs (from 13 Nov 2026)
+router/ewelink_local.py runs inside modpi when `"ewelink_local_enabled": true` is set in
+/etc/modpi/monitor.json (then restart modpi). It listens for the plugs' mDNS announcements
+(_ewelink._tcp), which carry their state encrypted with each plug's device key, and every 10
+seconds asks, by a standard mDNS question, for them to repeat it. Read-only: no command or
+setting is ever sent to a plug, and nothing in the eWeLink account changes.
+
+- Keys: /var/lib/modpi/private/ewelink-local.json (modpi:modpi, 0600) holds each plug's device
+  ID, key and UIID, taken once from the cloud device list. Never commit, print or log it.
+  Re-pairing a plug changes its key; fetch it again with one device-list call.
+- Only UIID 190 plugs (1000 watt inverter, Fridge) are read locally: they announce every change.
+  UIID 32 plugs (Garage, 600 watt, Charger) only repeat the state they last pushed, sometimes hours
+  old, and live power from them would need eWeLink's uiActive write command, so they stay on the
+  cloud poll.
+- Readings go into the same ewelink.sqlite3: the latest reading at most every 5 seconds, and a
+  history sample every 30 seconds (time-weighted average power). Each reading is marked
+  `"source": "local"` or `"cloud"`. History is averaged per five-minute slot before it is
+  served, so the pages' energy sums are unchanged.
+- A plug not heard for 60 seconds drops back to the 5-minute cloud poll; the cloud poll skips
+  plugs heard locally in the last minute. Changes are logged as `ewelink-local: <slug>
+  local_lost|local_back` in the modpi journal and in the `local_events` table (kept 90 days).
+- Switch off: set `"ewelink_local_enabled": false` and restart modpi. The cloud poll carries on.
+
 ## Meter over the RS485 HAT (Job 3, live since 11 Nov 2026)
 router/modbus_rtu.py reads the meter over the Pi's serial port (Modbus RTU, 9600 8N1, unit 1,
 read functions 03 and 04 only), using the standard library. The same three reads as over the

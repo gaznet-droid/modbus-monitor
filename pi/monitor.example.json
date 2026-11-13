@@ -4,5 +4,6 @@
   "meter_enabled": false,
   "meter_host": null,
   "meter_port": 8838,
-  "ewelink_enabled": false
+  "ewelink_enabled": false,
+  "ewelink_local_enabled": false
 }

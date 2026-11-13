@@ -128,6 +128,8 @@ class Ewelink:
         self.last_request = 0
         self.status = 'Awaiting account authorisation'
         self.stop = threading.Event()
+        # Set by the LAN collector (ewelink_local): plugs it heard in the last minute are not overwritten from the cloud.
+        self.local_fresh = lambda slug: False
 
     def config(self):
         data = private_json(self.config_path)
@@ -295,8 +297,9 @@ class Ewelink:
                 for slug,_ in DEVICES:
                     d = things.get(selected.get(slug,{}).get('id'))
                     if not d: continue # Preserve old sample with its original timestamp.
+                    if self.local_fresh(slug): continue # Read over the LAN; the cloud figure is the fallback.
                     uiid=d.get('extra',{}).get('uiid',selected.get(slug,{}).get('uiid'))
-                    rows.append((slug,dict(metrics(d.get('params',{}),uiid),online=d.get('online') is True)))
+                    rows.append((slug,dict(metrics(d.get('params',{}),uiid),online=d.get('online') is True,source='cloud')))
                 for slug,h in (home or {}).items():
                     d = things.get(h['id'])
                     if not d: continue
@@ -398,18 +401,25 @@ class Ewelink:
             edges={key:[b['end'] for b in rows] for key,rows in plans.items()}
             totals={key:[0.0]*len(rows) for key,rows in plans.items()}
             points={}
+            # Local readings arrive every 30 seconds, cloud ones every five minutes. Each five-minute slot
+            # is averaged into one reading first, so pages still count readings as five minutes of energy.
+            slots={}
             with self.database(readonly=True) as db:
                 rows=db.execute('SELECT ts,payload FROM samples WHERE device=? AND ts>=? AND ts<? ORDER BY ts',(slug,start,end))
                 for ts,payload in rows:
                     value=json.loads(payload)
                     power=number(value.get('power_w')) if value.get('online') else None
                     if power is None:continue
-                    group=ts//bucket*bucket
-                    total,count=points.get(group,(0,0));points[group]=(total+power,count+1)
-                    for key,bins in plans.items():
-                        index=bisect_right(edges[key],ts)
-                        if index<len(bins):
-                            totals[key][index]+=power;bins[index]['samples']+=1
+                    slot=slots.setdefault(ts//(INTERVAL*1000),[ts,0.0,0])
+                    slot[1]+=power;slot[2]+=1
+            for ts,slot_total,slot_count in slots.values():
+                power=slot_total/slot_count
+                group=ts//bucket*bucket
+                total,count=points.get(group,(0,0));points[group]=(total+power,count+1)
+                for key,bins in plans.items():
+                    index=bisect_right(edges[key],ts)
+                    if index<len(bins):
+                        totals[key][index]+=power;bins[index]['samples']+=1
             for key,bins in plans.items():
                 for i,b in enumerate(bins):
                     if b['samples']:b['mean_w']=totals[key][i]/b['samples']
