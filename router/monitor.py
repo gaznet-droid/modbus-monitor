@@ -349,6 +349,10 @@ AUTH_PUBLIC={"/login","/enrol","/auth.js","/health","/version","/api/integration
     "/auth/passkey/register-options","/auth/passkey/register","/chart.umd.min.js","/ewelink.js"}|set(ICON_FILES)
 AUTH_PAGES={"/login":"login.html","/enrol":"login.html","/admin":"admin.html"}
 
+# Signed-in pages and their scripts. three.js is vendored so the 3D solar page needs no outside host.
+PAGES={"/solar":"solar.html"}
+SCRIPTS={"/three.module.min.js":"three.module.min.js","/three-orbit.js":"three-orbit.js"}
+
 BONDS_PREFIX="/bonds"
 
 def bonds_path(path):
@@ -409,7 +413,7 @@ def handler(store, web, voltage=None, tuya=None, ewelink=None, auth=None, bonds_
                 return True
             if path in AUTH_PUBLIC:
                 return True
-            if path in ("/","/index.html","/admin") or bonds_path(path): self.redirect("/login")
+            if path in ("/","/index.html","/admin") or path in PAGES or bonds_path(path): self.redirect("/login")
             else: self.send(401,{"error":"Sign in required"})
             return False
         def auth_post(self, path):
@@ -573,6 +577,11 @@ def handler(store, web, voltage=None, tuya=None, ewelink=None, auth=None, bonds_
                     return self.proxy_bonds("GET")
                 if parsed.path in ("/","/index.html"):
                     return self.send(200,(web/"index.html").read_bytes(),"text/html; charset=utf-8")
+                if parsed.path in PAGES:
+                    if query: raise ValueError()
+                    return self.send(200,(web/PAGES[parsed.path]).read_bytes(),"text/html; charset=utf-8")
+                if parsed.path in SCRIPTS:
+                    return self.send(200,(web/SCRIPTS[parsed.path]).read_bytes(),"text/javascript; charset=utf-8")
                 if parsed.path=="/chart.umd.min.js":
                     return self.send(200,(web/"chart.umd.min.js").read_bytes(),"text/javascript; charset=utf-8")
                 if parsed.path in ICON_FILES:

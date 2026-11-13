@@ -132,6 +132,21 @@ class AuthHttpTests(AuthHttpBase):
             self.assertEqual(self.status(path)[0], 200, path)
         self.assertEqual(self.post('/auth/links', {'user': 'dad'})[0], 401)
 
+    def test_solar_page_needs_sign_in(self):
+        self.assertEqual(self.status('/solar')[0], 200)              # login off: open like the rest
+        self.enable()
+        self.assertEqual(self.status('/solar'), (303, '/login'))
+        for path in ['/three.module.min.js', '/three-orbit.js']:
+            self.assertEqual(self.status(path)[0], 401, path)
+        _, cookie = self.google()
+        for path in ['/solar', '/three.module.min.js', '/three-orbit.js']:
+            with self.request(path, cookie=cookie) as r:
+                self.assertEqual(r.status, 200, path); body = r.read()
+            self.assertTrue(body, path)
+        with self.request('/solar', cookie=cookie) as r:
+            self.assertIn('text/html', r.headers['Content-Type']); self.assertEqual(r.headers['Cache-Control'], 'no-store')
+        self.assertEqual(self.status('/solar?x=1', cookie=cookie)[0], 400)
+
     def test_broken_settings_keep_the_site_locked(self):
         self.settings.write_text('{not json')
         self.assertEqual(self.status('/'), (303, '/login'))
