@@ -101,7 +101,7 @@ class CachedTuyaTests(unittest.TestCase):
         base = 'http://127.0.0.1:' + str(server.server_port)
         try:
             with urlopen(base + '/api/tuya/latest') as response:
-                self.assertEqual(len(json.load(response)['devices']), 2)
+                self.assertEqual(len(json.load(response)['devices']), 3)
             for path, code in [('/api/tuya/latest?refresh=1', 400),
                 ('/api/tuya/history?device=solar&window=24h', 400),
                 ('/api/tuya/history?device=shed&device=garage&window=24h', 400),

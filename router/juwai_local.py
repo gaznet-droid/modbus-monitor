@@ -25,7 +25,7 @@ import sys
 import threading
 import time
 
-from tuya_cached import CachedTuya
+from tuya_cached import CachedTuya, DEVICES
 
 LOG = logging.getLogger("juwai-local")
 PORT = 6668
@@ -227,7 +227,7 @@ class Meter:
         raise LocalError("No status in the meter's reply")
 
 
-def decode_dps(dps):
+def decode_dps(dps, mapping=None):
     """Validated readings with the cloud's scaling. Missing values stay None; nothing is guessed."""
     if not isinstance(dps, dict) or len(dps) > 128:
         raise ValueError("Unexpected status shape")
@@ -241,7 +241,7 @@ def decode_dps(dps):
     if len(json.dumps(raw, separators=(",", ":"))) > 8192:
         raise ValueError("Status payload too large")
     output = {}
-    for field, (dp, scale) in DPS.items():
+    for field, (dp, scale) in (mapping or DPS).items():
         value = raw.get(dp)
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
             output[field] = None
@@ -254,7 +254,7 @@ def decode_dps(dps):
 
 def read_meter(device, connect=socket.create_connection):
     with Meter(device["host"], device["id"], device["key"], device["version"], connect=connect) as meter:
-        return decode_dps(meter.status())
+        return decode_dps(meter.status(), device.get("dps"))
 
 
 # --- finding a meter again after its address changes ---------------------------
@@ -303,7 +303,9 @@ def find_meter(device, network, versions=VERSIONS):
 # --- private configuration --------------------------------------------------
 def load_config(path):
     """{"interval_seconds": 60, "keys_file": "...", "network": "a.b.c.d/nn",
-        "devices": {"shed": {"host": "...", "version": "3.4"}, ...}}"""
+        "devices": {"shed": {"host": "...", "version": "3.4"}, ...}}
+
+    The 275 watt meter is "p275"; add "dps" only if it does not use the CW20 data points."""
     p = Path(path)
     if stat.S_IMODE(p.stat().st_mode) & 0o077:
         raise RuntimeError("Local Juwai config must be private (chmod 600)")
@@ -317,16 +319,32 @@ def load_config(path):
     keys = json.loads(keys_path.read_text())["devices"]
     devices = {}
     for alias, entry in (conf.get("devices") or {}).items():
-        if alias not in ("shed", "garage") or alias not in keys:
+        if alias not in DEVICES or alias not in keys:
             raise ValueError("Unknown device alias")
         if entry.get("version") not in VERSIONS:
             raise ValueError("Set each meter's protocol version")
         ipaddress.ip_address(entry["host"])
         devices[alias] = {"id": keys[alias]["id"], "key": keys[alias]["local_key"],
                           "host": entry["host"], "version": entry["version"]}
+        if entry.get("dps") is not None:
+            devices[alias]["dps"] = parse_dps_map(entry["dps"])
     if not devices:
         raise ValueError("No devices configured")
     return {"interval": interval, "devices": devices, "network": conf.get("network"), "path": p}
+
+
+def parse_dps_map(raw):
+    """A meter of another model may report on other data points: {"power_w": ["19", 100], ...}."""
+    if not isinstance(raw, dict) or not raw or set(raw) - set(DPS):
+        raise ValueError("dps must map voltage_v, current_a or power_w")
+    mapping = {}
+    for field, entry in raw.items():
+        if (not isinstance(entry, list) or len(entry) != 2 or not isinstance(entry[0], str)
+                or not entry[0].isdigit() or len(entry[0]) > 4 or isinstance(entry[1], bool)
+                or not isinstance(entry[1], (int, float)) or not entry[1] > 0):
+            raise ValueError("Each dps entry is [data point number as text, positive divisor]")
+        mapping[field] = (entry[0], float(entry[1]))
+    return mapping
 
 
 def save_host(conf, alias, host, version):

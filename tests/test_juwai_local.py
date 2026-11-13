@@ -139,6 +139,15 @@ class DecodeTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 J.decode_dps(bad)
 
+    def test_other_meter_models_can_map_their_own_data_points(self):
+        mapping = J.parse_dps_map({'power_w': ['101', 100], 'voltage_v': ['102', 100], 'current_a': ['103', 1000]})
+        output, _ = J.decode_dps({'101': 2129, '102': 3575, '103': 595}, mapping)
+        self.assertEqual(output, {'voltage_v': 35.75, 'current_a': 0.595, 'power_w': 21.29})
+        for bad in ({}, {'power_w': ['x', 100]}, {'power_w': ['19', 0]}, {'power_w': ['19', True]},
+                    {'resistance': ['19', 100]}, {'power_w': ['19']}, []):
+            with self.assertRaises(ValueError):
+                J.parse_dps_map(bad)
+
     def test_scan_refuses_public_or_large_networks(self):
         for network in ('8.8.8.0/24', '10.0.0.0/16'):
             with self.assertRaises(ValueError):
@@ -236,6 +245,14 @@ class CollectorTests(unittest.TestCase):
             J.load_config(self.config)
         os.chmod(self.config, 0o600)
         self.assertEqual(J.load_config(self.config)['devices']['shed']['key'], KEY)
+        keys.write_text(json.dumps({'devices': {'p275': {'id': DEVICE, 'local_key': KEY}}}))
+        self.config.write_text(json.dumps({'devices': {'p275': {'host': '192.168.0.3', 'version': '3.4',
+                                                                  'dps': {'power_w': ['19', 100]}}}}))
+        os.chmod(self.config, 0o600)
+        self.assertEqual(J.load_config(self.config)['devices']['p275']['dps'], {'power_w': ('19', 100.0)})
+        keys.write_text(json.dumps({'devices': {'shed': {'id': DEVICE, 'local_key': KEY}}}))
+        self.config.write_text(json.dumps({'interval_seconds': 60, 'devices': {'shed': {'host': '192.168.0.2', 'version': '3.5'}}}))
+        os.chmod(self.config, 0o600)
         self.config.write_text(json.dumps({'interval_seconds': 5, 'devices': {'shed': {'host': '192.168.0.2', 'version': '3.5'}}}))
         os.chmod(self.config, 0o600)
         with self.assertRaises(ValueError):
