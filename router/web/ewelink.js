@@ -146,6 +146,13 @@
     card.setAttribute('aria-expanded','true');card.after(section);section.hidden=false;
     el('ewelinkDevice').value=card.id.slice(3);historyAt=0;week=null;window.startEwelink();
   }
+  // Open one device's graph from elsewhere (the System tab); highlights the card.
+  window.selectEwelinkDevice=id=>{
+    const card=el('ew-'+id);if(!card)return;
+    if(mobile.matches){if(card.getAttribute('aria-expanded')!=='true')toggle(card);}else webSelect(card);
+    card.scrollIntoView({block:'center',behavior:'smooth'});
+    card.classList.remove('link-flash');void card.offsetWidth;card.classList.add('link-flash');setTimeout(()=>card.classList.remove('link-flash'),2500);
+  };
   // Put the page into web (list + persistent graph) or mobile (collapsed) shape.
   function initMode(){
     const section=el('ewelinkChartSection');
