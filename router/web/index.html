@@ -125,6 +125,25 @@
         #rangeError { grid-column: 1 / -1; color: #fda4af; font-size: .8rem; }
         .period-note { color: var(--text-muted); font-size: .75rem; line-height: 1.5; margin: .6rem 0; width: 100%; }
         @media (max-width: 600px) { .custom-range { grid-template-columns: minmax(0,1fr); } .custom-range input { width: 100%; box-sizing: border-box; } }
+        .flow-card h2 { font-size:1.05rem; }
+        .flow-head { display:flex; justify-content:space-between; align-items:baseline; gap:.75rem; flex-wrap:wrap; }
+        .flow-head .period-note { width:auto; margin:0; }
+        .flow-summary { display:flex; gap:1.25rem; flex-wrap:wrap; margin:.6rem 0 .2rem; }
+        .flow-summary div { font-size:.8rem; color:var(--text-muted); }
+        .flow-summary strong { display:block; color:var(--text-main); font-size:1.15rem; font-weight:700; }
+        #flowChart { width:100%; margin-top:.4rem; }
+        #flowChart svg { display:block; width:100%; height:auto; overflow:visible; }
+        #flowChart .flow-link { cursor:pointer; transition:fill-opacity .15s; }
+        #flowChart .flow-node { cursor:pointer; }
+        #flowChart .flow-link:focus-visible, #flowChart .flow-node:focus-visible { outline:none; stroke:var(--text-main); stroke-width:1.5; }
+        #flowChart text { font-size:12px; fill:var(--text-main); }
+        #flowChart text .flow-value { fill:var(--text-muted); font-size:11px; }
+        #flowDetail { min-height:1.5em; color:var(--text-main); }
+        .flow-card details { margin-top:.4rem; }
+        .flow-card summary { color:var(--text-muted); font-size:.8rem; cursor:pointer; padding:.3rem 0; }
+        .flow-card table { width:100%; border-collapse:collapse; font-size:.8rem; margin:.4rem 0; }
+        .flow-card th, .flow-card td { text-align:left; padding:.3rem .4rem; border-bottom:1px solid var(--border); }
+        .flow-card td:last-child, .flow-card th:last-child { text-align:right; font-variant-numeric:tabular-nums; }
         .chart-wrapper {
           position: relative;
           flex: 1;
@@ -540,6 +559,16 @@
             <canvas id="lineChart" role="img" aria-label="Net power over the selected time period"></canvas>
           </div>
         </div>
+
+        <article class="card flow-card" id="flowCard" aria-labelledby="flowTitle">
+          <div class="flow-head"><h2 id="flowTitle">Energy flow</h2><span id="flowPeriod" class="period-note">Loading…</span></div>
+          <div class="flow-summary" aria-label="Energy flow totals"><div>Energy in<strong id="flowIn">— kWh</strong></div><div>To house<strong id="flowHouse">— kWh</strong></div><div>Solar share<strong id="flowSolar">—</strong></div></div>
+          <div id="flowChart" role="img" aria-label="Energy flow from the panels, battery and mains charger to the house, the battery and losses, for the period chosen above"></div>
+          <p id="flowDetail" class="period-note" aria-live="polite">Tap a band or a bar for its figures.</p>
+          <p id="flowNote" class="period-note"></p>
+          <details><summary>Show as a table</summary><table><thead><tr><th scope="col">From</th><th scope="col">To</th><th scope="col">Energy</th></tr></thead><tbody id="flowTable"></tbody></table></details>
+          <details><summary>How this is worked out</summary><p class="period-note">It follows Dad&#8217;s wiring: the Shed, Garage and 275 watt panels feed the 1000 watt inverter and the Epever; the Epever and the mains charger fill the battery, which feeds the 600 watt inverter; the Garden panel feeds the Garage inverter. The house figure is the three inverter plugs. The 275 watt panels have no meter, so they are estimated as whatever the 1000 watt inverter and the Epever drew beyond what the Shed and Garage meters measured. Battery discharge is what the 600 watt inverter drew beyond what the Epever and the charger were putting in at the time. Inverters are taken as 90 percent efficient, and the rest is shown as losses, together with any measured solar nothing was drawing. Worked out in five minute steps or longer for long periods; steps without readings from the inverters, the Epever and both meters are left out. It goes back 30 days at most.</p></details>
+        </article>
 
         </section>
 <section id="juwaiPanel" class="tab-panel" role="tabpanel" aria-labelledby="juwaiTab" hidden>
@@ -1174,6 +1203,139 @@ function draw(end=Date.now()) {
   chart.options.scales.x.min=displayStart;chart.options.scales.x.max=displayEnd;chart.update('none');
 }
 async function getJSON(url,signal){const response=await fetch(url,{signal,cache:'no-store'});if(!response.ok)throw new Error('Readings unavailable');return response.json();}
+// Energy flow (Sankey) for the Power tab's period. Worked out in the page from the stored histories (Shed and Garage meters, the inverter, charger and fridge plugs, the Epever), following Dad's wiring; the method is spelled out under the diagram. Drawn as plain SVG, so no extra library.
+const FLOW_EFF=0.9,FLOW_CARRY=900000,FLOW_WINDOWS=[['live',3600],['2h',7200],['4h',14400],['8h',28800],['24h',86400],['7d',604800],['30d',2592000]];
+const FLOW_COLOURS={solar:'#c98500',battery:'#199e70',mains:'#e66767',house:'#3987e5',loss:'#64748b'};
+const FLOW_LEFT=[['shed','Shed panels','solar'],['garage','Garage panels','solar'],['garden','Garden panel','solar'],['unmetered','275 W panels','solar'],['battery','Battery','battery'],['charger','Mains charger','mains']];
+const FLOW_RIGHT=[['house','House','house'],['store','Battery charge','battery'],['loss','Losses','loss']];
+let flowData=null,flowKey='',flowTime=0,flowController=null,flowResult=null;
+function flowPeriod(){
+  const now=Date.now();
+  if(selected==='custom'){
+    if(!customBounds||customBounds.start<now-2592000000)return {error:'The energy flow covers the past 30 days only. Choose dates inside that to see it.'};
+    return {window:FLOW_WINDOWS.find(([,s])=>s*1000>=now-customBounds.start)[0],start:customBounds.start,end:customBounds.end};
+  }
+  if(selected==='1d')return {window:'today'};
+  if(selected==='90d'||selected==='365d')return {window:'30d',note:'The energy flow goes back 30 days at most, so it shows the past 30 days.'};
+  return {window:FLOW_WINDOWS.find(([,s])=>s>=ranges[selected])[0],start:now-ranges[selected]*1000,end:now};
+}
+async function readFlow(){
+  const p=flowPeriod();
+  if(p.error){flowController?.abort();flowKey='';renderFlow(p);return;}
+  if(flowKey===p.window&&Date.now()-flowTime<300000){renderFlow(p);return;}
+  flowController?.abort();const c=flowController=new AbortController(),signal=c.signal;
+  const get=url=>getJSON(url,signal).catch(e=>{if(signal.aborted)throw e;return null;});
+  let rows;
+  try{rows=await Promise.all([...['inverter-1000','garage-inverter','inverter-600','charger-inverter','fridge'].map(id=>get('/api/ewelink/history?device='+id+'&window='+p.window)),get('/api/tuya/history?device=shed&window='+p.window),get('/api/tuya/history?device=garage&window='+p.window),get('/api/epever/history?window='+p.window)]);}
+  catch(e){return;}
+  const [o1,oG,o6,ch,fr,shed,garage,ep]=rows;
+  flowData={o1,oG,o6,ch,fr,shed,garage,ep};flowKey=p.window;flowTime=Date.now();
+  renderFlow(flowPeriod());
+}
+// Mean power per time step from [ts, ...] rows, read at column col; negative readings count as zero.
+function flowSteps(rows,col,bucket,step){
+  const carry=Math.max(FLOW_CARRY,(step||0)*1.5);
+  const sums=new Map();
+  for(const r of rows||[])if(Number.isFinite(r[col])){const k=Math.floor(r[0]/bucket)*bucket,v=sums.get(k)||[0,0];v[0]+=Math.max(0,r[col]);v[1]++;sums.set(k,v);}
+  const keys=[...sums.keys()].sort((a,b)=>a-b);let i=-1;
+  // Ask in time order: the step's own mean, else the last one within 15 minutes (or one and a half of the source's own reading steps).
+  return k=>{while(i+1<keys.length&&keys[i+1]<=k)i++;if(i<0||k-keys[i]>carry)return null;const v=sums.get(keys[i]);return v[0]/v[1];};
+}
+function flowCompute(d,p){
+  const ref=d.o1;if(!ref||!d.oG||!d.o6||!d.shed||!d.garage||!d.ep)return null;
+  const bucket=ref.bucket_ms,start=Math.max(ref.start,p.start??ref.start),end=Math.min(ref.end,p.end??ref.end,Date.now());
+  if(!(end>start))return null;
+  const read={o1:flowSteps(d.o1.points,1,bucket),oG:flowSteps(d.oG.points,1,bucket),o6:flowSteps(d.o6.points,1,bucket),c:flowSteps(d.ch?.points,1,bucket),f:flowSteps(d.fr?.points,1,bucket),
+    sh:flowSteps(d.shed.points,d.shed.columns?.indexOf('power_w')??4,bucket,d.shed.step_ms),ga:flowSteps(d.garage.points,d.garage.columns?.indexOf('power_w')??4,bucket,d.garage.step_ms),E:flowSteps(d.ep.points,1,bucket,d.ep.step_ms)};
+  const flows={},add=(a,b,wh)=>{if(wh>0)flows[a+'>'+b]=(flows[a+'>'+b]||0)+wh;},parts={o1:0,oG:0,o6:0,f:0};
+  let covered=0;
+  for(let k=Math.floor(start/bucket)*bucket;k<end;k+=bucket){
+    const h=(Math.min(k+bucket,end)-Math.max(k,start))/3600000;if(h<=0)continue;
+    const v={};for(const key in read)v[key]=read[key](k);
+    if([v.o1,v.oG,v.o6,v.sh,v.ga,v.E].some(x=>x==null))continue;
+    covered+=h;
+    const C=v.c||0,i1=v.o1/FLOW_EFF,iG=v.oG/FLOW_EFF,i6=v.o6/FLOW_EFF;
+    const supply=v.E+C,pass=Math.min(i6,supply),D=i6-pass,fE=supply>0?v.E/supply:0;
+    const meas=v.sh+v.ga,S=Math.max(meas,i1+v.E),U=S-meas,X=S-i1-v.E;
+    if(S>0)for(const [id,w] of [['shed',v.sh],['garage',v.ga],['unmetered',U]]){
+      const share=w/S;
+      add(id,'house',share*(v.o1+pass*fE*FLOW_EFF)*h);
+      add(id,'store',share*(v.E-pass*fE)*h);
+      add(id,'loss',share*(i1-v.o1+pass*fE*(1-FLOW_EFF)+X)*h);
+    }
+    add('charger','house',pass*(1-fE)*FLOW_EFF*h);add('charger','store',(C-pass*(1-fE))*h);add('charger','loss',pass*(1-fE)*(1-FLOW_EFF)*h);
+    add('battery','house',D*FLOW_EFF*h);add('battery','loss',D*(1-FLOW_EFF)*h);
+    add('garden','house',v.oG*h);add('garden','loss',(iG-v.oG)*h);
+    parts.o1+=v.o1*h;parts.oG+=v.oG*h;parts.o6+=v.o6*h;if(v.f!=null)parts.f+=v.f*h;
+  }
+  return {flows,parts,covered,hours:(end-start)/3600000,start,end};
+}
+function flowKwh(wh){return (wh/1000).toLocaleString(undefined,{minimumFractionDigits:wh<10000?2:1,maximumFractionDigits:wh<10000?2:1})+' kWh';}
+function renderFlow(p){
+  const label=selected==='custom'&&customBounds?new Date(customBounds.start).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' to '+new Date(customBounds.end).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):$('timeWindow').selectedOptions[0]?.textContent||'';
+  $('flowPeriod').textContent=p.note?'Past 30 days':label;
+  const r=p.error||!flowData||flowKey!==p.window?null:flowCompute(flowData,p);flowResult=r;
+  const total=r?Object.values(r.flows).reduce((a,b)=>a+b,0):0;
+  if(!r||total<=0){
+    $('flowChart').replaceChildren();$('flowTable').replaceChildren();
+    for(const id of ['flowIn','flowHouse'])$(id).textContent='— kWh';$('flowSolar').textContent='—';
+    $('flowDetail').textContent='';
+    $('flowNote').textContent=p.error||(!flowKey||flowKey!==p.window?'Loading readings…':'Not enough readings in this period to show the energy flow. It needs the three inverters, the Epever and both meters.');
+    return;
+  }
+  const node={};for(const [k,v] of Object.entries(r.flows)){const [a,b]=k.split('>');node[a]=(node[a]||0)+v;node[b]=(node[b]||0)+v;}
+  const solar=['shed','garage','garden','unmetered'].reduce((t,k)=>t+(node[k]||0),0);
+  $('flowIn').textContent=flowKwh(total);$('flowHouse').textContent=flowKwh(node.house||0);
+  $('flowSolar').textContent=Math.round(solar/total*100)+'%';
+  const pct=Math.round(r.covered/r.hours*100);
+  $('flowNote').textContent=[p.note,pct<95?'Readings cover '+pct+' percent of this period; the rest is left out.':'', 'The 275 watt panels and the battery discharge are estimates.'].filter(Boolean).join(' ');
+  $('flowDetail').textContent='Tap a band or a bar for its figures.';
+  drawFlow(r,node,total);
+}
+function flowNodeText(id,node,r){
+  const name=[...FLOW_LEFT,...FLOW_RIGHT].find(n=>n[0]===id)[1],v=node[id]||0;
+  if(id==='house')return 'House '+flowKwh(v)+': 1000 watt inverter '+flowKwh(r.parts.o1)+', Garage inverter '+flowKwh(r.parts.oG)+', 600 watt inverter '+flowKwh(r.parts.o6)+'. The fridge plug recorded '+flowKwh(r.parts.f)+' of this.';
+  if(id==='unmetered')return '275 watt panels '+flowKwh(v)+', estimated: there is no meter on these panels.';
+  if(id==='battery')return 'Battery discharge '+flowKwh(v)+', estimated from the 600 watt inverter.';
+  if(id==='loss')return 'Losses '+flowKwh(v)+': inverter conversion, taken as 10 percent, plus any measured solar nothing was drawing.';
+  return name+' '+flowKwh(v)+'.';
+}
+function drawFlow(r,node,total){
+  const ns='http://www.w3.org/2000/svg',el=(tag,attrs,parent)=>{const e=document.createElementNS(ns,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);parent?.appendChild(e);return e;};
+  const W=Math.max(300,$('flowChart').clientWidth||600),narrow=W<520,labelW=narrow?96:150,barW=10,x0=labelW,x1=W-labelW-barW,gap=10,minSlot=34;
+  const scale=(narrow?240:300)/total,cols=[FLOW_LEFT,FLOW_RIGHT].map(list=>list.filter(([id])=>(node[id]||0)>=total*0.001));
+  const place=list=>{let y=0;return list.map(([id,name,kind])=>{const h=Math.max(2,node[id]*scale),slot=Math.max(h,minSlot),n={id,name,kind,h,y:y+(slot-h)/2,cy:y+slot/2,used:0};y+=slot+gap;return n;});};
+  const [L,R]=cols.map(place),height=c=>c.length?c[c.length-1].cy+Math.max(c[c.length-1].h,minSlot)/2:0,H=Math.max(height(L),height(R));
+  for(const c of [L,R]){const shift=(H-height(c))/2;for(const n of c){n.y+=shift;n.cy+=shift;}}
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H+4}`,width:W,height:H+4,'aria-hidden':'true'}),defs=el('defs',{},svg),links=el('g',{},svg),nodes=el('g',{},svg);
+  const detail=t=>{$('flowDetail').textContent=t;},rows=[];
+  const pick=(target,text)=>{target.addEventListener('click',()=>detail(text));target.addEventListener('mouseenter',()=>detail(text));target.addEventListener('focus',()=>detail(text));target.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();detail(text);}});};
+  let gi=0;
+  for(const s of L)for(const t of R){
+    const v=r.flows[s.id+'>'+t.id];if(!v)continue;
+    const ts=v/node[s.id]*s.h,tt=v/node[t.id]*t.h,ys=s.y+s.used,yt=t.y+t.used;s.used+=ts;t.used+=tt;
+    const g=el('linearGradient',{id:'flowGrad'+gi,gradientUnits:'userSpaceOnUse',x1:x0+barW,x2:x1,y1:0,y2:0},defs);
+    el('stop',{offset:'0','stop-color':FLOW_COLOURS[s.kind]},g);el('stop',{offset:'1','stop-color':FLOW_COLOURS[t.kind]},g);
+    const xa=x0+barW,xm=(xa+x1)/2,text=s.name+' to '+t.name.toLowerCase()+': '+flowKwh(v)+' ('+Math.round(v/total*100)+'% of the energy in).';
+    const path=el('path',{class:'flow-link',d:`M${xa},${ys}C${xm},${ys} ${xm},${yt} ${x1},${yt}L${x1},${yt+tt}C${xm},${yt+tt} ${xm},${ys+ts} ${xa},${ys+ts}Z`,fill:`url(#flowGrad${gi})`,'fill-opacity':'.45',tabindex:'0'},links);
+    el('title',{},path).textContent=text;pick(path,text);
+    path.addEventListener('mouseenter',()=>path.setAttribute('fill-opacity','.8'));path.addEventListener('mouseleave',()=>path.setAttribute('fill-opacity','.45'));
+    path.addEventListener('focus',()=>path.setAttribute('fill-opacity','.8'));path.addEventListener('blur',()=>path.setAttribute('fill-opacity','.45'));
+    rows.push([s.name,t.name,flowKwh(v)]);gi++;
+  }
+  for(const [col,x,anchor,tx] of [[L,x0,'end',x0-6],[R,x1,'start',x1+barW+6]])for(const n of col){
+    const text=flowNodeText(n.id,node,r),g=el('g',{class:'flow-node',tabindex:'0'},nodes);
+    el('rect',{x,y:n.y,width:barW,height:n.h,rx:Math.min(3,n.h/2),fill:FLOW_COLOURS[n.kind],...(n.id==='unmetered'||n.id==='battery'?{'fill-opacity':'.55',stroke:FLOW_COLOURS[n.kind],'stroke-dasharray':'3 2'}:{})},g);
+    el('rect',{x:Math.min(x,tx)-(anchor==='end'?labelW-6:0),y:n.cy-minSlot/2,width:labelW+barW,height:minSlot,fill:'transparent'},g);
+    const label=el('text',{x:tx,y:n.cy-3,'text-anchor':anchor},g);label.textContent=n.name;
+    const value=el('tspan',{x:tx,dy:'14',class:'flow-value'},label);value.textContent=flowKwh(node[n.id])+(n.id==='unmetered'||n.id==='battery'?' · est.':'');
+    el('title',{},g).textContent=text;pick(g,text);
+  }
+  $('flowChart').replaceChildren(svg);
+  $('flowTable').replaceChildren(...rows.map(cells=>{const tr=document.createElement('tr');for(const c of cells){const td=document.createElement('td');td.textContent=c;tr.appendChild(td);}return tr;}));
+}
+let flowResize=0;
+window.addEventListener('resize',()=>{clearTimeout(flowResize);flowResize=setTimeout(()=>{if(activeTab==='power'&&flowKey)renderFlow(flowPeriod());},200);});
 async function loadHistory(){
   const version=++generation;
   if(controller)controller.abort();controller=new AbortController();
@@ -1183,6 +1345,7 @@ async function loadHistory(){
   if(selected==='1d') calendarBounds={start:data.start,end:data.end};
   step=data.step_ms;points=data.points.map(p=>({x:p[0],y:p[1],low:p[2],high:p[3],n:p[4]}));
   updateLive(data.live);draw(data.end);updateEnergy(data.energy);lastHistory=Date.now();
+  readFlow().catch(()=>{});
 }
 $('timeWindow').addEventListener('change',async()=>{
   const choice=$('timeWindow').value;
