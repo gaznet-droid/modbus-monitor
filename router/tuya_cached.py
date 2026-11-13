@@ -186,4 +186,4 @@ class CachedTuya:
                     "step_ms": step, "points": [list(r) for r in rows],
                     "columns": ["ts", "samples", *FIELDS]}
         # Short windows are watched live, so they refresh sooner; long windows change slowly.
-        return self._read((device, window), 15 if window in ("15m", "live", "2h") else 300, query)
+        return self._read((device, window), 3 if window == "15m" else 15 if window in ("live", "2h") else 300, query)

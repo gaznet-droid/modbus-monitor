@@ -512,7 +512,7 @@
           <button id="homeTab" type="button" role="tab" aria-selected="false" aria-controls="homePanel" aria-label="Home" title="Home" tabindex="-1"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5.5v-6h-5v6H4a1 1 0 0 1-1-1v-9.5z"/></svg></button>
           <button id="systemTab" type="button" role="tab" aria-selected="false" aria-controls="systemPanel" aria-label="System" title="System" tabindex="-1"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="8.5" y="16" width="7" height="5" rx="1"/><path d="M6.5 8v4h11V8M12 12v4"/></svg></button>
           <select id="timeWindow" class="time-select tab-window" aria-label="Time window">
-            <option value="15m" selected>Live · last 15 min</option>
+            <option value="15m" selected>Live</option>
             <option value="30m">30 Mins</option>
             <option value="1h">Past hour</option>
             <option value="2h">2 Hours</option>
@@ -573,7 +573,7 @@
         </section>
 <section id="juwaiPanel" class="tab-panel" role="tabpanel" aria-labelledby="juwaiTab" hidden>
 <div class="card juwai-group">
-<div class="juwai-group-heading"><h1>Generation</h1><div id="juwaiSource" class="source-toggle" role="group" aria-label="Reading source" hidden><button type="button" data-source="cloud" aria-pressed="true">Cloud</button><button type="button" data-source="local" aria-pressed="false">Local</button></div><label for="juwaiWindow">Period <select id="juwaiWindow"><option value="15m" selected>Live · last 15 min</option><option value="live">Past hour</option><option value="today">Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
+<div class="juwai-group-heading"><h1>Generation</h1><div id="juwaiSource" class="source-toggle" role="group" aria-label="Reading source" hidden><button type="button" data-source="cloud" aria-pressed="true">Cloud</button><button type="button" data-source="local" aria-pressed="false">Local</button></div><label for="juwaiWindow">Period <select id="juwaiWindow"><option value="15m" selected>Live</option><option value="live">Past hour</option><option value="today">Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
 <p class="juwai-mobile-only mobile-generation-disclaimer">Generation totals are estimates.</p>
 <p id="juwaiStatus" class="period-note" role="status" hidden></p>
 <div class="juwai-grid"><article class="card juwai-card" id="shedCard" data-stale="true">
@@ -608,7 +608,7 @@
 <p class="period-note">Solar meter is not connected: Tuya permission is unresolved. Read-only monitoring.</p>
 </section>
 <section id="ewelinkPanel" class="tab-panel" role="tabpanel" aria-labelledby="ewelinkTab" hidden>
-<div class="card juwai-group ewelink-group"><div class="juwai-group-heading"><h1>Inverters &amp; fridge</h1><label for="ewelinkPeriod">Period <select id="ewelinkPeriod"><option value="15m">Live · last 15 min</option><option value="live">Past hour</option><option value="2h">Past 2 hours</option><option value="4h">Past 4 hours</option><option value="8h">Past 8 hours</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
+<div class="card juwai-group ewelink-group"><div class="juwai-group-heading"><h1>Inverters &amp; fridge</h1><label for="ewelinkPeriod">Period <select id="ewelinkPeriod"><option value="15m">Live</option><option value="live">Past hour</option><option value="2h">Past 2 hours</option><option value="4h">Past 4 hours</option><option value="8h">Past 8 hours</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
 <div class="ewelink-layout">
 <div class="ewelink-grid"><article id="ew-inverter-1000" class="card ewelink-card" data-stale="true" role="button" tabindex="0" aria-expanded="false" aria-controls="ewelinkChartSection">
 <div class="ewelink-heading"><h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m13 6-4 6h6l-4 6M1 8h3m-3 8h3m16-8h3m-3 8h3"/></svg><span>1000 watt inverter</span></h2></div>
@@ -973,7 +973,7 @@ async function readJuwai(version){
   const window=$('juwaiWindow').value;
   try{
     const tasks=[getJSON('/api/tuya/latest'+(juwaiSource?'?source='+juwaiSource:''),aborter.signal).then(data=>{if(version===juwaiVersion&&activeTab==='juwai'&&!document.hidden)renderJuwai(data);})];
-    if(juwaiHistoryKey!==window||Date.now()-juwaiHistoryTime>=(LIVE_WINDOWS.includes(window)?20000:300000)){
+    if(juwaiHistoryKey!==window||Date.now()-juwaiHistoryTime>=(LIVE_WINDOWS.includes(window)?3000:300000)){
       tasks.push(Promise.all(['shed','garage'].map(id=>getJSON('/api/tuya/history?device='+id+'&window='+window+(juwaiSource?'&source='+juwaiSource:''),aborter.signal).then(data=>[id,data]))).then(rows=>{
         if(version!==juwaiVersion||activeTab!=='juwai'||document.hidden)return;
         juwaiHistory=Object.fromEntries(rows);juwaiHistoryKey=window;juwaiHistoryTime=Date.now();drawJuwai();
@@ -988,7 +988,7 @@ async function readJuwai(version){
     }
     if(results[1]?.status==='rejected'){$('mobileCoverage').textContent='Generation history unavailable. Please try again.';$('mobileGenerationTotal').textContent='— kWh';$('juwaiHistoryNote').textContent='Generation history unavailable. Please try again.';for(const id of ['shed','garage','total'])$(id+'Energy').textContent='— kWh';}
   }finally{
-    if(version===juwaiVersion&&activeTab==='juwai'&&!document.hidden){juwaiController=null;juwaiTimer=setTimeout(()=>readJuwai(version),10000);}
+    if(version===juwaiVersion&&activeTab==='juwai'&&!document.hidden){juwaiController=null;juwaiTimer=setTimeout(()=>readJuwai(version),LIVE_WINDOWS.includes(window)?3000:10000);}
   }
 }
 // Epever solar charger: a fourth card, shown only once the Pi has stored readings from it. Read-only.
@@ -1685,7 +1685,7 @@ async function readSystem(version){
     const results=await Promise.allSettled(['/api/tuya/latest','/api/epever/latest','/api/ewelink/latest'].map(url=>getJSON(url,signal)));
     if(version===systemVersion&&!signal.aborted)renderSystem(results.map(r=>r.status==='fulfilled'?r.value:null));
   }catch(e){if(version===systemVersion)$('systemStatus').textContent='Readings unavailable · retrying';}
-  finally{if(version===systemVersion&&activeTab==='system'&&!document.hidden){systemController=null;systemTimer=setTimeout(()=>readSystem(version),10000);}}
+  finally{if(version===systemVersion&&activeTab==='system'&&!document.hidden){systemController=null;systemTimer=setTimeout(()=>readSystem(version),3000);}}
 }
 for(const g of document.querySelectorAll('.sys-plan [data-goto]')){
   g.addEventListener('click',()=>selectTab(g.dataset.goto));
