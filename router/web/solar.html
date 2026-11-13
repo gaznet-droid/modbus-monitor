@@ -437,12 +437,12 @@ function renderLive([tuya,epever,plugs,home,live]){
   const soc=eLive&&Number.isFinite(ev.soc)?Math.round(ev.soc):null,bs=!Number.isFinite(ev.batt_a)?'':ev.batt_a>0.05?' charging':ev.batt_a<-0.05?' in use':'';
   setLbl('house',total!=null?'Solar '+num(total,'W'):'Solar —',total!=null?'tot':'stale',
     [net!=null?'Net '+(net>0?'+':'')+num(net,'W'):'',soc!=null?'Battery '+soc+'%'+bs:''].filter(Boolean).join(' · '));
-  // Garage: its meter (400 W panels), the Garage inverter plug and the door sensor.
+  // Garage: its meter (400 W panels), the Garden inverter plug and the door sensor.
   const gm=meter('garage'),door=(homeBy['section:garage']||[]).find(d=>d.kind==='door'&&!d.stale&&d.ts!=null);
   setLbl('garage',gm?num(gm.values.power_w,'W'):'—',gm?'pw':'stale',[ig?'Inverter '+num(ig.power_w,'W'):'',door?'Door '+(door.door==='open'?'open':'shut'):''].filter(Boolean).join(' · ')||'No fresh reading');
   const sm=meter('shed');
   setLbl('shed',sm?num(sm.values.power_w,'W'):'—',sm?'pw':'stale',sm?num(sm.values.voltage_v,'V',1)+' · '+num(sm.values.current_a,'A',2):'No fresh reading');
-  // The garden panel has no meter of its own: its reading is the Garage inverter plug, as on the System tab.
+  // The garden panel has no meter of its own: its reading is the Garden inverter plug, as on the System tab.
   setLbl('garden',ig?num(ig.power_w,'W'):'—',ig?'pw':'stale',ig?'100 W panel · via garage plug':'No fresh reading');
   const sh=temp('section:summer-house');
   setLbl('summer',sh?num(sh.temperature_c,'°C',1):'—',sh?'':'stale',sh?(Number.isFinite(sh.humidity_pct)?Math.round(sh.humidity_pct)+'% humidity':''):'No fresh reading');
