@@ -43,12 +43,15 @@ BURST_GAP = 2.0           # seconds of silence that end a burst of replies
 STALE_SECONDS = 900       # PV power normally arrives every few minutes
 CHARGE_STATES = ("Not charging", "Float", "Boost", "Equalising")
 FIELDS = ("pv_v", "pv_a", "pv_w", "batt_v", "batt_a", "soc", "charge_state", "load_on", "load_w",
-          "batt_temp_c", "device_temp_c", "gen_today_kwh", "gen_total_kwh")
+          "batt_temp_c", "device_temp_c", "gen_today_kwh", "gen_total_kwh", "batt_v_max_today",
+          "batt_v_min_today")
+DAILY = ("gen_today_kwh", "batt_v_max_today", "batt_v_min_today")  # the charger restarts these each day
+ADDED = ("batt_v_max_today", "batt_v_min_today")  # columns added after 14 Nov 2026; older tables lack them
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS samples (
     ts INTEGER PRIMARY KEY, pv_v REAL, pv_a REAL, pv_w REAL, batt_v REAL, batt_a REAL, soc INTEGER,
     charge_state INTEGER, load_on INTEGER, load_w REAL, batt_temp_c REAL, device_temp_c REAL,
-    gen_today_kwh REAL, gen_total_kwh REAL, status TEXT
+    gen_today_kwh REAL, gen_total_kwh REAL, status TEXT, batt_v_max_today REAL, batt_v_min_today REAL
 );
 CREATE TABLE IF NOT EXISTS metadata (name TEXT PRIMARY KEY, value TEXT NOT NULL);
 """
@@ -113,7 +116,8 @@ class Burst:
                      device_temp_c=_signed(words[5]) / 100.0)
             v.setdefault("load_on", int(words[0] > 100))
         elif n == 18:
-            v.update(gen_today_kwh=_long(words[10], words[11]), gen_total_kwh=_long(words[16], words[17]))
+            v.update(batt_v_max_today=words[0] / 100.0, batt_v_min_today=words[1] / 100.0,
+                     gen_today_kwh=_long(words[10], words[11]), gen_total_kwh=_long(words[16], words[17]))
         elif n == 3:
             self._status(words[0], words[1])
             self.status["discharging"] = words[2]
@@ -144,6 +148,11 @@ class Store:
         self.db.execute("PRAGMA synchronous=FULL")
         self.db.execute("PRAGMA cache_size=-256")
         self.db.executescript(SCHEMA)
+        have = {row[1] for row in self.db.execute("PRAGMA table_info(samples)")}
+        with self.db:
+            for name in ADDED:
+                if name not in have:
+                    self.db.execute("ALTER TABLE samples ADD COLUMN %s REAL" % name)
 
     def add(self, ts, burst):
         if not burst.values:
@@ -152,8 +161,8 @@ class Store:
         row = [burst.values.get(name) for name in FIELDS]
         status = json.dumps(burst.status, separators=(",", ":"), sort_keys=True) if burst.status else None
         with self.db:
-            self.db.execute("INSERT OR REPLACE INTO samples VALUES (?%s,?)" % (",?" * len(FIELDS)),
-                            (ts, *row, status))
+            self.db.execute("INSERT OR REPLACE INTO samples (ts,%s,status) VALUES (?%s,?)"
+                            % (",".join(FIELDS), ",?" * len(FIELDS)), (ts, *row, status))
 
     def metadata(self, name, value):
         with self.db:
@@ -263,7 +272,11 @@ class CachedEpever:
     def latest(self):
         def query(db):
             values, times = {}, {}
+            have = {row[1] for row in db.execute("PRAGMA table_info(samples)")}
             for name in FIELDS:
+                if name not in have:  # the collector has not added this column yet
+                    values[name] = times[name] = None
+                    continue
                 row = db.execute("SELECT ts,%s FROM samples WHERE %s IS NOT NULL ORDER BY ts DESC LIMIT 1"
                                  % (name, name)).fetchone()
                 values[name], times[name] = (row[1], row[0]) if row else (None, None)
@@ -273,6 +286,10 @@ class CachedEpever:
         if result is None:
             return None
         now = int(self.clock() * 1000)
+        midnight = period_bounds("today", now)[0]
+        for name in DAILY:  # yesterday's figure is not today's: show nothing until today's arrives
+            if result["times"][name] is not None and result["times"][name] < midnight:
+                result["values"][name] = None
         state = result["values"]["charge_state"]
         result["values"]["charge_state_name"] = CHARGE_STATES[state] if state in (0, 1, 2, 3) else None
         ts = result["times"]["pv_w"]

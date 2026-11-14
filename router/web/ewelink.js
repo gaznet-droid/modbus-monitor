@@ -27,8 +27,10 @@
       card.querySelector('[data-switch]').textContent=device.switch==='on'?'On':device.switch==='off'?'Off':'Not reported';
     }
   }
-  // Cumulative energy for the selected period, from the same cached history the graph uses.
+  // Energy for the selected period: the server's figure (the plug's own day counter where it sends one,
+  // otherwise an estimate from power readings); the older five-minute sum only if the server gives none.
   function energyWh(result){
+    if(result?.energy&&'wh' in result.energy)return Number.isFinite(result.energy.wh)?result.energy.wh:null;
     let sum=0,any=false;
     for(const b of (result.bins||[]))if(b.samples&&Number.isFinite(b.mean_w)){sum+=b.mean_w*b.samples;any=true;}
     return any?sum*INTERVAL_S/3600:null;
@@ -41,8 +43,11 @@
       try{
         const r=await get('/api/ewelink/history?device='+encodeURIComponent(id)+'&window='+period);
         if(v!==version||!available())return;
-        const cell=el('ew-'+id)?.querySelector('[data-energy]');
+        const card=el('ew-'+id),cell=card?.querySelector('[data-energy]'),label=card?.querySelector('.ewelink-cumulative-label');
         if(cell)cell.textContent=fmtEnergy(energyWh(r));
+        const method=r?.energy?.method;
+        if(label)label.textContent='Used '+word+(method==='estimate'?' (estimate)':method==='mixed'?' (part estimate)':'');
+        if(cell)cell.title=method==='counter'?'From the plug\'s own energy counter':method?'Estimated from power readings, which the cloud updates only now and then, so it can read low':'';
       }catch(error){/* keep the previous figure if a read fails */}
     }));
   }

@@ -107,6 +107,37 @@ class AdapterTests(unittest.TestCase):
     def test_powr3_uses_hundredths_and_powr2_uses_engineering_units(self):
         self.assertEqual(e.metrics({'power':4566,'voltage':23500,'current':27},190),{'power_w':45.66,'voltage_v':235.0,'current_a':0.27})
         self.assertEqual(e.metrics({'power':'80.05','voltage':'240.28','current':'0.54'},32),{'power_w':80.05,'voltage_v':240.28,'current_a':0.54})
+    def test_powr316_day_counter_is_kept_and_powr2_has_none(self):
+        self.assertEqual(e.metrics({'power':120,'dayKwh':25,'monthKwh':1282},190),{'power_w':1.2,'day_kwh':0.25})
+        self.assertEqual(e.metrics({'power':'5','dayKwh':25,'hundredDaysKwh':'get'},32),{'power_w':5.0})
+    def test_energy_from_counter_counts_rises_and_midnight_restart(self):
+        m=60000
+        # 0.10 kWh before the period, rising to 0.30, the plug's midnight restart to 0.02, then 0.05.
+        rows=[(0,50,0.12),(10*m,50,0.30),(20*m,0,0.02),(30*m,0,0.05)]
+        self.assertEqual(e.period_energy(rows,0,40*m,True,baseline=0.10),{'wh':250.0,'method':'counter'})
+        # Without a reading just before, counting starts at the first reading in the period.
+        self.assertEqual(e.period_energy(rows,0,40*m,True),{'wh':230.0,'method':'counter'})
+        # A restart between the reading before the period and the first one in it counts all of the first.
+        self.assertEqual(e.period_energy([(0,1,0.04),(m,1,0.06)],0,2*m,True,baseline=0.9),{'wh':60.0,'method':'counter'})
+    def test_estimate_holds_readings_with_a_gap_cap(self):
+        m=60000
+        rows=[(0,60,None),(5*m,30,None),(60*m,None,None),(65*m,12,None)]
+        # 60 W for 5 min, 30 W for the 10-minute cap only, offline counts nothing, 12 W to the end (5 min).
+        self.assertEqual(e.period_energy(rows,0,70*m,True),{'wh':11.0,'method':'estimate'})
+        self.assertEqual(e.period_energy([],0,70*m,True),{'wh':None,'method':None})
+        # Counter readings only from part way: estimate before, counter after.
+        mixed=[(0,120,None),(10*m,120,0.50),(20*m,120,0.52)]
+        self.assertEqual(e.period_energy(mixed,0,30*m,True),{'wh':40.0,'method':'mixed'})
+        # Short periods integrate the readings even when a counter exists (it moves in 10 Wh steps).
+        self.assertEqual(e.period_energy(mixed,0,30*m,False)['method'],'estimate')
+    def test_history_reports_counter_energy(self):
+        now=int(time.time()*1000);start=now-86400000
+        with self.a.database() as db,db:
+            for ts,day in [(start-600000,0.10),(start+600000,0.20),(now-600000,0.45)]:
+                db.execute('INSERT INTO samples VALUES(?,?,?)',('fridge',ts,json.dumps({'online':True,'power_w':40,'day_kwh':day})))
+        self.assertEqual(self.a.history('fridge','24h')['energy'],{'wh':350.0,'method':'counter'})
+        self.assertEqual(self.a.history('fridge','live')['energy']['method'],'estimate')
+        self.assertFalse(self.calls)
     def test_home_metrics_scale_hundredths_and_door_lock(self):
         self.assertEqual(e.home_metrics({'temperature':'1712','humidity':'9377','battery':50},1770,'temp'),
                          {'temperature_c':17.12,'humidity_pct':93.77,'battery_pct':50.0})

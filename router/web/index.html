@@ -615,7 +615,7 @@
 <div id="outputDetail" hidden><div class="juwai-chart"><canvas id="outputChart" role="img" aria-label="Total solar power to house for the selected period, with the inverters and the Epever"></canvas></div><p id="outputNote" class="period-note" aria-live="polite"></p></div></article><article class="card juwai-card" id="epeverCard" data-stale="true" hidden>
 <h2 class="device-title"><button type="button" id="epeverToggle" aria-expanded="false" aria-controls="epeverDetail"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="7" width="16" height="11" rx="2"/><path d="M19 11h2v3h-2M11 9l-3 4h4l-3 4"/></svg><span id="epeverName">Epever</span><span class="epever-hint" id="epeverHint">Show details</span></button></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="epeverPower">— W</div></div><div class="juwai-energy"><div class="label">Generation</div><div id="epeverEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
 <div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="epeverState">Loading…</span></span><time id="epeverAge">Waiting for readings</time><span>Not counted in the total above</span></div>
-<div id="epeverDetail" hidden><dl class="juwai-metrics epever-metrics"><div><dt>Battery voltage</dt><dd id="epeverBattV">— V</dd></div><div><dt>Battery current</dt><dd id="epeverBattA">— A</dd></div><div><dt>Charging</dt><dd id="epeverCharge">—</dd></div><div><dt>Load</dt><dd id="epeverLoad">—</dd></div><div><dt>Battery level</dt><dd id="epeverSoc">— %</dd></div><div><dt>Panel voltage</dt><dd id="epeverPvV">— V</dd></div></dl>
+<div id="epeverDetail" hidden><dl class="juwai-metrics epever-metrics"><div><dt>Battery voltage</dt><dd id="epeverBattV">— V</dd></div><div><dt>Battery current</dt><dd id="epeverBattA">— A</dd></div><div><dt>Charging</dt><dd id="epeverCharge">—</dd></div><div><dt>Generated today</dt><dd id="epeverGenToday">— kWh</dd></div><div><dt>Battery level</dt><dd id="epeverSoc">— %</dd></div><div><dt>Panel voltage</dt><dd id="epeverPvV">— V</dd></div><div><dt>Battery min today</dt><dd id="epeverBattMin">—</dd></div></dl>
 <div class="juwai-chart"><canvas id="epeverChart" role="img" aria-label="Solar charger panel power and battery voltage for the selected period"></canvas></div>
 <p id="epeverNote" class="period-note" aria-live="polite"></p></div></article></div>
 <div class="juwai-chart-section"><div class="juwai-controls"><label for="juwaiMetric">Chart <select id="juwaiMetric"><option value="power_w">Power (W)</option><option value="voltage_v">Voltage (V)</option><option value="current_a">Current (A)</option></select></label></div>
@@ -986,10 +986,11 @@ function drawJuwai(){
     (['today','yesterday'].includes($('juwaiWindow').value)?'Calendar days use UK time.':'')):'Loading generation…';
   drawMobileJuwai();
 }
-// Total solar power to house = 1000 watt inverter + Garden inverter + 600 watt inverter plugs (eWeLink). The Epever charger's input is shown separately as battery charging, not subtracted (decided 14 Nov). Any part missing, stale or offline shows "—", never a partial figure. Energy uses the Inverters tab's method: sum(mean_w*samples)*interval/3600 over the history bins.
+// Total solar power to house = 1000 watt inverter + Garden inverter + 600 watt inverter plugs (eWeLink). The Epever charger's input is shown separately as battery charging, not subtracted (decided 14 Nov). Any part missing, stale or offline shows "—", never a partial figure. Energy uses the Inverters tab's figure: the plug's own day counter where it sends one, otherwise the server's estimate from power readings.
 let outputLatest=null, outputHistory={}, outputHistoryKey='', outputTime=0, outputChart=null, epeverLatest=null;
 const OUTPUT_IDS=['inverter-1000','garage-inverter','inverter-600'],OUTPUT_NAMES=['1000 watt inverter','Garden inverter','600 watt inverter'];
-function outputWh(r,interval){let sum=0,any=false;for(const b of (r?.bins||[]))if(b.samples&&Number.isFinite(b.mean_w)){sum+=b.mean_w*b.samples;any=true;}return any?sum*interval/3600:null;}
+const outputMethod=r=>r?.energy?.method==='counter'?'own counter':r?.energy?.method==='mixed'?'part estimate':'estimate';
+function outputWh(r,interval){if(r?.energy&&'wh' in r.energy)return Number.isFinite(r.energy.wh)?r.energy.wh:null;let sum=0,any=false;for(const b of (r?.bins||[]))if(b.samples&&Number.isFinite(b.mean_w)){sum+=b.mean_w*b.samples;any=true;}return any?sum*interval/3600:null;}
 function renderOutput(){
   const num=(v,unit,digits)=>Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:digits})+' '+unit:'—',kwh=wh=>Number.isFinite(wh)?(wh/1000).toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})+' kWh':'—';
   const devs=OUTPUT_IDS.map(id=>outputLatest?.devices?.find(d=>d.id===id)),usable=d=>!!d&&!!d.ts&&!d.stale&&!!d.online&&Number.isFinite(d.power_w);
@@ -1007,7 +1008,7 @@ function renderOutput(){
   const period=$('juwaiWindow').value,have=outputHistoryKey===period&&epeverKey===period,energy=epeverHistory?.energy,eWh=Number.isFinite(energy?.generated_kwh)?energy.generated_kwh*1000:null;
   const ok=wh.every(Number.isFinite)&&eWh!=null;
   $('outputEnergy').textContent=have&&wh.every(Number.isFinite)?kwh(wh[0]+wh[1]+wh[2]):'— kWh';
-  $('outputEnergyParts').textContent=!have?'':wh.every(Number.isFinite)?'Energy: '+OUTPUT_NAMES.map((n,i)=>n+' '+kwh(wh[i])).join(' + ')+'.'+(eWh==null?'':' Battery charging energy from the Epever: '+kwh(eWh)+', not counted in the total.')+(energy?.partial?' The Epever part is counted only from its first stored reading in this period.':''):'Energy to house unavailable: no readings from the '+OUTPUT_NAMES.filter((n,i)=>wh[i]==null).join(' or the ')+' for this period.';
+  $('outputEnergyParts').textContent=!have?'':wh.every(Number.isFinite)?'Energy: '+OUTPUT_NAMES.map((n,i)=>n+' '+kwh(wh[i])+' ('+outputMethod(outputHistory[OUTPUT_IDS[i]])+')').join(' + ')+'.'+(OUTPUT_IDS.some(id=>outputMethod(outputHistory[id])!=='own counter')?' Estimates come from power readings that the cloud updates only now and then, so they can read low.':'')+(eWh==null?'':' Battery charging energy from the Epever: '+kwh(eWh)+', not counted in the total.')+(energy?.partial?' The Epever part is counted only from its first stored reading in this period.':''):'Energy to house unavailable: no readings from the '+OUTPUT_NAMES.filter((n,i)=>wh[i]==null).join(' or the ')+' for this period.';
   drawOutput();
 }
 // Graph of the total on the plugs' time buckets: a bucket counts only when all three plugs and the Epever have a reading in it; anything else is left as a gap.
@@ -1097,7 +1098,9 @@ function renderEpever(data){
   if(data.observed_at)$('epeverAge').dateTime=new Date(data.observed_at).toISOString();
   $('epeverBattV').textContent=epeverText(v.batt_v,'V',2);$('epeverBattA').textContent=epeverText(v.batt_a,'A',2);
   $('epeverCharge').textContent=v.charge_state_name||'—';
-  $('epeverLoad').textContent=v.load_on==null?'—':v.load_on?'On'+(Number.isFinite(v.load_w)?' · '+epeverText(v.load_w,'W',1):''):'Off';
+  $('epeverGenToday').textContent=Number.isFinite(v.gen_today_kwh)?v.gen_today_kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' kWh':'— kWh';
+  const minAt=data.times?.batt_v_min_today;
+  $('epeverBattMin').textContent=Number.isFinite(v.batt_v_min_today)&&minAt?epeverText(v.batt_v_min_today,'V',2)+' · as of '+new Date(minAt).toLocaleTimeString('en-GB',{timeZone:'Europe/London',hour:'2-digit',minute:'2-digit'}):'—';
   $('epeverSoc').textContent=epeverText(v.soc,'%',0);$('epeverPvV').textContent=epeverText(v.pv_v,'V',2);
 }
 function drawEpever(){
@@ -1343,11 +1346,20 @@ function flowCompute(d,p){
   if(!(end>start))return null;
   const read={o1:flowSteps(d.o1.points,1,bucket),oG:flowSteps(d.oG.points,1,bucket),o6:flowSteps(d.o6.points,1,bucket),c:flowSteps(d.ch?.points,1,bucket),f:flowSteps(d.fr?.points,1,bucket),
     sh:flowSteps(d.shed.points,d.shed.columns?.indexOf('power_w')??4,bucket,d.shed.step_ms),ga:flowSteps(d.garage.points,d.garage.columns?.indexOf('power_w')??4,bucket,d.garage.step_ms),E:flowSteps(d.ep.points,1,bucket,d.ep.step_ms)};
+  // Plugs that send their own energy counter: scale their power so the period's total matches the counter.
+  const scale={},counted=[];
+  for(const [key,h] of [['o1',d.o1],['oG',d.oG],['o6',d.o6],['c',d.ch],['f',d.fr]]){
+    const m=h?.energy?.method,wh=h?.energy?.wh;if(!(m==='counter'||m==='mixed')||!Number.isFinite(wh))continue;
+    const own=flowSteps(h.points,1,bucket);let raw=0;
+    for(let k=Math.floor(h.start/bucket)*bucket;k<h.end;k+=bucket){const x=own(k);if(x!=null)raw+=x*(Math.min(k+bucket,h.end)-Math.max(k,h.start))/3600000;}
+    if(raw>=20){scale[key]=Math.min(2,Math.max(0.5,wh/raw));counted.push(key);}
+  }
   const flows={},add=(a,b,wh)=>{if(wh>0)flows[a+'>'+b]=(flows[a+'>'+b]||0)+wh;},parts={o1:0,oG:0,o6:0,f:0};
   let covered=0;
   for(let k=Math.floor(start/bucket)*bucket;k<end;k+=bucket){
     const h=(Math.min(k+bucket,end)-Math.max(k,start))/3600000;if(h<=0)continue;
     const v={};for(const key in read)v[key]=read[key](k);
+    for(const key in scale)if(v[key]!=null)v[key]*=scale[key];
     if([v.o1,v.oG,v.o6,v.sh,v.ga,v.E].some(x=>x==null))continue;
     covered+=h;
     const C=v.c||0,i1=v.o1/FLOW_EFF,iG=v.oG/FLOW_EFF,i6=v.o6/FLOW_EFF;
@@ -1364,7 +1376,7 @@ function flowCompute(d,p){
     add('garden','house',v.oG*h);add('garden','loss',(iG-v.oG)*h);
     parts.o1+=v.o1*h;parts.oG+=v.oG*h;parts.o6+=v.o6*h;if(v.f!=null)parts.f+=v.f*h;
   }
-  return {flows,parts,covered,hours:(end-start)/3600000,start,end};
+  return {flows,parts,covered,hours:(end-start)/3600000,start,end,counted};
 }
 function flowKwh(wh){return (wh/1000).toLocaleString(undefined,{minimumFractionDigits:wh<10000?2:1,maximumFractionDigits:wh<10000?2:1})+' kWh';}
 function renderFlow(p){
@@ -1384,9 +1396,16 @@ function renderFlow(p){
   $('flowIn').textContent=flowKwh(total);$('flowHouse').textContent=flowKwh(node.house||0);
   $('flowSolar').textContent=Math.round(solar/total*100)+'%';
   const pct=Math.round(r.covered/r.hours*100);
-  $('flowNote').textContent=[p.note,pct<95?'Readings cover '+pct+' percent of this period; the rest is left out.':'', 'The 275 watt panels and the battery discharge are estimates.'].filter(Boolean).join(' ');
+  $('flowNote').textContent=[p.note,pct<95?'Readings cover '+pct+' percent of this period; the rest is left out.':'', 'The 275 watt panels and the battery discharge are estimates.',
+    flowCountedText(r.counted)].filter(Boolean).join(' ');
   $('flowDetail').textContent='Tap a band or a bar for its figures.';
   drawFlow(r,node,total);
+}
+function flowCountedText(keys){
+  const names={o1:'1000 watt inverter',oG:'Garden inverter',o6:'600 watt inverter',c:'charger',f:'fridge'},own=keys.map(k=>names[k]);
+  const est=Object.keys(names).filter(k=>!keys.includes(k)).map(k=>names[k]);
+  const list=a=>a.length>1?a.slice(0,-1).join(', ')+' and '+a.at(-1):a[0];
+  return (own.length?'The '+list(own)+' '+(own.length>1?'use their plugs\' own energy counters':'uses its plug\'s own energy counter')+'. ':'')+'The '+list(est)+' '+(est.length>1?'are':'is')+' estimated from power readings, which can read low.';
 }
 function flowNodeText(id,node,r){
   const name=[...FLOW_LEFT,...FLOW_RIGHT].find(n=>n[0]===id)[1],v=node[id]||0;

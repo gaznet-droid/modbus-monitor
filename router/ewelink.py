@@ -33,6 +33,12 @@ HOSTS = {'eu':'https://eu-apia.coolkit.cc', 'us':'https://us-apia.coolkit.cc',
          'as':'https://as-apia.coolkit.cc', 'cn':'https://cn-apia.coolkit.cn'}
 INTERVAL = 300
 HUNDREDTHS = {190, 277, 7032}  # POWR3, MINI-DIM and the Roborock plug report power/voltage/current x100
+# POWR316 (UIID 190) plugs also send their own energy counter for the day, dayKwh, in hundredths of a
+# kWh (checked 14 Nov 2026 against integrated power). The POWR2 plugs (UIID 32) send none: their
+# history only comes back after a command, which this adapter never sends.
+DAY_COUNTER = {190}
+COUNTER_WINDOWS = {'today', 'yesterday', '24h', 'previous24h', '7d', '30d'}
+HOLD_CAP = 600  # an estimate holds each reading until the next one, for at most ten minutes
 HOME_KINDS = {'temp', 'door', 'switch'}
 HOME_SLUG = re.compile(r'[a-z0-9-]{1,32}')
 HOME_PLACE = re.compile(r'(room|door|section):[a-z0-9-]{1,32}')
@@ -88,6 +94,8 @@ def metrics(params, uiid=None):
         if value is not None and uiid in HUNDREDTHS:value/=100
         value = number(value,low,high)
         if value is not None: out[target] = value
+    day = number(params.get('dayKwh'), 0, 100000) if uiid in DAY_COUNTER else None
+    if day is not None: out['day_kwh'] = day/100
     switch = params.get('switch')
     if switch in ('on', 'off'): out['switch'] = switch
     elif isinstance(params.get('switches'), list):
@@ -112,6 +120,34 @@ def home_metrics(params, uiid, kind):
     elif kind == 'switch':
         out.update(metrics(params,uiid))
     return out
+
+def period_energy(readings, start, end, use_counter, baseline=None):
+    """Energy for a period from [(ts, power_w or None, day_kwh or None)] in time order.
+
+    Where the plug sends its own day counter, the energy is the sum of its rises, a fall being the
+    plug's midnight restart. Before the first counter reading, or for plugs without one, power is
+    held from each reading to the next for at most HOLD_CAP seconds: an estimate."""
+    first = next((i for i, r in enumerate(readings) if r[2] is not None), None) if use_counter else None
+    if first is None: cut, last = end, None
+    elif baseline is not None: cut, last = start, baseline  # a counter reading just before: no estimate
+    else: cut, last = readings[first][0], readings[first][2]  # count from the first counter reading
+    held, wh = 0, 0.0
+    for i, (ts, power, _) in enumerate(readings):
+        if ts >= cut: break
+        if power is None: continue
+        upto = min(readings[i+1][0] if i+1 < len(readings) else end, ts+HOLD_CAP*1000, cut)
+        wh += max(0.0, power)*(upto-ts)/3600000
+        held += 1
+    counted = 0
+    if first is not None:
+        for _, _, day in readings[first:]:
+            if day is None: continue
+            wh += (day-last if day >= last else day)*1000
+            last, counted = day, counted+1
+    if not held and not counted:
+        return {'wh': None, 'method': None}
+    method = 'counter' if not held else 'mixed' if counted else 'estimate'
+    return {'wh': round(wh, 1), 'method': method}
 
 class Ewelink:
     def __init__(self, storage_directory, guard, config='/etc/modbus-ewelink.json', transport=None):
@@ -404,11 +440,15 @@ class Ewelink:
             # Local readings arrive every 30 seconds, cloud ones every five minutes. Each five-minute slot
             # is averaged into one reading first, so pages still count readings as five minutes of energy.
             slots={}
+            readings=[]
             with self.database(readonly=True) as db:
+                before=db.execute('SELECT ts,payload FROM samples WHERE device=? AND ts<? AND ts>=? ORDER BY ts DESC LIMIT 1',
+                                  (slug,start,start-3600000)).fetchone()
                 rows=db.execute('SELECT ts,payload FROM samples WHERE device=? AND ts>=? AND ts<? ORDER BY ts',(slug,start,end))
                 for ts,payload in rows:
                     value=json.loads(payload)
                     power=number(value.get('power_w')) if value.get('online') else None
+                    readings.append((ts,power,number(value.get('day_kwh'))))
                     if power is None:continue
                     slot=slots.setdefault(ts//(INTERVAL*1000),[ts,0.0,0])
                     slot[1]+=power;slot[2]+=1
@@ -424,9 +464,11 @@ class Ewelink:
                 for i,b in enumerate(bins):
                     if b['samples']:b['mean_w']=totals[key][i]/b['samples']
                     b['partial']=b['samples']<max(1,int((b['end']-b['start'])/(INTERVAL*1000))-1)
+            baseline=number(json.loads(before[1]).get('day_kwh')) if before else None
             result=dict(device=slug,window=window,start=start,end=end,
                 points=[[ts,total/count] for ts,(total,count) in sorted(points.items())],
-                bucket_ms=bucket,bucket_unit=unit,**plans)
+                bucket_ms=bucket,bucket_unit=unit,energy=period_energy(readings,start,end,
+                    window in COUNTER_WINDOWS,baseline),**plans)
             # One cached period per device; browser reads never call the vendor.
             self.history_cache[slug]=(window,time.monotonic()+60,result)
             return result

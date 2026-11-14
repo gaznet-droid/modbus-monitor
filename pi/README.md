@@ -244,6 +244,15 @@ setting is ever sent to a plug, and nothing in the eWeLink account changes.
   plugs heard locally in the last minute. Changes are logged as `ewelink-local: <slug>
   local_lost|local_back` in the modpi journal and in the `local_events` table (kept 90 days).
 - Switch off: set `"ewelink_local_enabled": false` and restart modpi. The cloud poll carries on.
+- Energy ("Used <period>", the Generation total and the Energy flow), from 14 Nov 2026: the POWR316
+  plugs (1000 watt inverter, Fridge) send their own day counter, dayKwh, in hundredths of a kWh, both
+  in the cloud state and in their LAN announcements. It is stored as day_kwh, and for periods of a day
+  or more the energy is the sum of its rises (a fall is the plug's midnight restart). The POWR2 plugs
+  (Garden, 600 watt, Charger) send no counter; their daily history (hundredDaysKwhData) only comes back
+  after the app's `hundredDaysKwh: get` command, which this collector never sends. Their energy, and
+  every period shorter than a day, is an estimate: each reading held until the next, for at most ten
+  minutes, and labelled as an estimate on the page. The POWR2 cloud readings change only now and then,
+  so the estimate reads low (140 Wh against the app's 180 Wh for the 600 watt inverter on 13 Nov).
 
 ## Meter over the RS485 HAT (Job 3, live since 11 Nov 2026)
 router/modbus_rtu.py reads the meter over the Pi's serial port (Modbus RTU, 9600 8N1, unit 1,
@@ -284,6 +293,13 @@ is recognised by its length and place in the burst (see the top of router/epever
   someone has the app open.
 - Data: /var/lib/modpi/data/epever.sqlite3. Generation for a period is the difference in the charger's
   own lifetime counter, not an estimate from power.
+- From 14 Nov 2026 the 18-word reply's first two words, the day's highest and lowest battery voltage
+  (0x3302, 0x3303), are stored as batt_v_max_today and batt_v_min_today. The collector adds the two
+  columns to an older table by itself when it starts (ALTER TABLE ADD COLUMN), and the page copes with a
+  table that does not have them yet. The detail view shows "Generated today" (gen_today_kwh) in place of
+  Load, and "Battery min today" with the time of the reading; both show a dash until today's first
+  reading arrives. The charger restarts its day figures at its own midnight, so a reading just after UK
+  midnight can still carry yesterday's figure if its clock is behind.
 - Private settings: /var/lib/modpi/private/epever.json (modpi:modpi, 0600): `{"port": 15001, "name": "Epever"}`.
   The name is the card's title. The saved dongle settings pages, setup-command output and the first
   raw capture are in /var/lib/modpi/private/epever/. Never commit any of it.

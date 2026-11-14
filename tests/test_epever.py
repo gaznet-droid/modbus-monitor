@@ -41,13 +41,22 @@ class Decoding(unittest.TestCase):
         self.assertEqual(burst.values, {
             'pv_v': 35.73, 'pv_a': 1.75, 'pv_w': 62.68, 'load_w': 0.0, 'batt_temp_c': 9.73,
             'device_temp_c': 12.39, 'load_on': 0, 'soc': 100, 'charge_state': 2,
-            'gen_today_kwh': 0.34, 'gen_total_kwh': 1334.81, 'batt_a': 2.17, 'batt_v': 29.39})
+            'gen_today_kwh': 0.34, 'gen_total_kwh': 1334.81, 'batt_a': 2.17, 'batt_v': 29.39,
+            'batt_v_max_today': 29.96, 'batt_v_min_today': 23.43})
         self.assertEqual(burst.status, {'battery': 0, 'charging': 11, 'discharging': 0})
 
     def test_burst_while_the_app_is_open_has_a_different_order(self):
         values = decode(APP_OPEN).values
         self.assertEqual((values['batt_v'], values['batt_a'], values['soc']), (29.39, 2.19, 100))
         self.assertEqual((values['pv_v'], values['pv_w'], values['gen_total_kwh']), (36.32, 67.55, 1334.81))
+
+    def test_day_energy_reply_gives_battery_extremes(self):
+        # 3302-3313 as sent on 12 Nov 2026: 3302 max 29.96 V, 3303 min 23.43 V, 330C/D 0.34 kWh today
+        words = E.Frames().feed(bytes.fromhex(PERIODIC[5]))[0]
+        self.assertEqual(len(words), 18)
+        burst = E.Burst(); burst.add(words)
+        self.assertEqual(burst.values, {'batt_v_max_today': 29.96, 'batt_v_min_today': 23.43,
+                                        'gen_today_kwh': 0.34, 'gen_total_kwh': 1334.81})
 
     def test_minute_poll_and_rated_data(self):
         self.assertEqual(decode(MINUTE).values, {'batt_v': 29.47, 'charge_state': 2})
@@ -98,6 +107,45 @@ class StoreAndQueries(unittest.TestCase):
         self.now[0] += 3600
         self.reader.cache.clear()
         self.assertTrue(self.reader.latest()['stale'])
+
+    def test_daily_readings_show_only_once_today_has_one(self):
+        midnight = E.period_bounds('today', int(self.now[0] * 1000))[0]
+        store = E.Store(self.path, lambda: None)
+        yesterday = E.Burst(); yesterday.values.update(batt_v_min_today=24.1, gen_today_kwh=1.2, batt_v=26.0)
+        store.add(midnight - 3600000, yesterday)
+        store.close()
+        values = self.reader.latest()['values']
+        self.assertEqual((values['batt_v_min_today'], values['gen_today_kwh'], values['batt_v']), (None, None, 26.0))
+        store = E.Store(self.path, lambda: None)
+        store.add(midnight + 60000, decode(PERIODIC))
+        store.close()
+        self.reader.cache.clear()
+        latest = self.reader.latest()
+        self.assertEqual((latest['values']['batt_v_min_today'], latest['times']['batt_v_min_today']),
+                         (23.43, midnight + 60000))
+
+    def test_table_from_before_14_nov_is_migrated_and_still_readable(self):
+        old = sqlite3.connect(self.path)
+        old.executescript('''CREATE TABLE samples (
+            ts INTEGER PRIMARY KEY, pv_v REAL, pv_a REAL, pv_w REAL, batt_v REAL, batt_a REAL, soc INTEGER,
+            charge_state INTEGER, load_on INTEGER, load_w REAL, batt_temp_c REAL, device_temp_c REAL,
+            gen_today_kwh REAL, gen_total_kwh REAL, status TEXT);
+            CREATE TABLE metadata (name TEXT PRIMARY KEY, value TEXT NOT NULL);''')
+        now = int(self.now[0] * 1000)
+        old.execute('INSERT INTO samples (ts,pv_w,batt_v) VALUES (?,?,?)', (now - 120000, 5.0, 27.5))
+        old.commit(); old.close()
+        latest = self.reader.latest()  # the page reads before the collector has restarted
+        self.assertEqual((latest['values']['batt_v'], latest['values']['batt_v_min_today']), (27.5, None))
+        store = E.Store(self.path, lambda: None)
+        store.add(now - 60000, decode(PERIODIC))
+        store.close()
+        db = sqlite3.connect(self.path)
+        self.assertEqual(db.execute('SELECT ts,pv_w,batt_v,batt_v_min_today FROM samples ORDER BY ts').fetchall(),
+                         [(now - 120000, 5.0, 27.5, None), (now - 60000, 62.68, 29.39, 23.43)])
+        db.close()
+        E.Store(self.path, lambda: None).close()  # a second start finds the columns already there
+        self.reader.cache.clear()
+        self.assertEqual(self.reader.latest()['values']['batt_v_max_today'], 29.96)
 
     def test_generation_is_the_counter_difference(self):
         self.fill()

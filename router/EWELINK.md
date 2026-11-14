@@ -57,3 +57,11 @@ Published atomically as an HTML-only change with expected prior hash and local s
 ## Local LAN reads — 13 November 2026
 
 The 1000 watt inverter and Fridge plugs (UIID 190) are now read over Dad's LAN by mDNS every few seconds, with the cloud poll as the fallback per plug; see "Local eWeLink reads" in pi/README.md. The three UIID 32 plugs stay on the cloud. Found on the day: the cloud's power, voltage and current for most plugs no longer change between polls, and port 8081 refuses read-only state requests (error 400) on these plugs. Device keys are in the Pi's private folder only.
+
+## Plug energy counters — 14 November 2026
+
+Checked read-only which plugs expose their own energy counter (one device-list call, one status call, and 75 seconds of listening to the LAN announcements). POWR316 (UIID 190, 1000 watt inverter and Fridge): dayKwh and monthKwh in hundredths of a kWh, in both the cloud state and the LAN announcements; matched our integrated power within the counter's 10 Wh step. getHoursKwh is a request parameter the app sets; the hourly figures only come back after a command. POWR2 (UIID 32, Garden, 600 watt and Charger): no counter in the cloud state, the status endpoint or the LAN announcements; hundredDaysKwh is "get", the app's request, and the daily history only comes back after it is sent as a command. oneKwh is the app's manual metering session.
+
+The history endpoint now returns energy {wh, method}: "counter" (sum of dayKwh rises), "mixed" (estimate before the first stored counter reading) or "estimate" (each reading held to the next for at most ten minutes). Counter use is limited to periods of a day or more because it moves in 10 Wh steps. The page shows the server figure and labels estimates. The Energy flow scales a counter plug's power so its period total matches the counter.
+
+Finding: the 600 watt inverter's shortfall (site 138 Wh, app 180 Wh on 13 Nov) is not missing readings (283 of 288 were stored). The POWR2 cloud power stays unchanged for up to an hour between updates, so any sum of it reads low; the 13 Nov estimate with the new method is 140 Wh. Fixing it needs the plug's own history, which needs a command (hundredDaysKwh get, or uiActive for live power). Not sent; Gareth to decide.
