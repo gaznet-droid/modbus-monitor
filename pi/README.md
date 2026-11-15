@@ -254,6 +254,22 @@ setting is ever sent to a plug, and nothing in the eWeLink account changes.
   minutes, and labelled as an estimate on the page. The POWR2 cloud readings change only now and then,
   so the estimate reads low (140 Wh against the app's 180 Wh for the 600 watt inverter on 13 Nov).
 
+## Live POWR2 plugs over the eWeLink WebSocket (from 15 Nov 2026)
+router/ewelink_live.py keeps the Garden, 600 watt and Charger plugs (POWR2, UIID 32) streaming, with
+Gareth's go-ahead of 15 Nov. It opens one eWeLink WebSocket (dispatch, then userOnline, as the app
+does) and sends {"uiActive": 60} to each plug about once a minute, a second apart. That is the same
+message the eWeLink app sends when a plug's page is opened; it does not switch the plug or change a
+setting, and the module refuses to send anything else. The plugs then push power, voltage and
+current every few seconds; these go into the shared eWeLink history marked source=live, with a
+30 second time-weighted sample, like the LAN reader. The cloud poll takes a plug back after
+two minutes without a push.
+API use: one budgeted device call when modpi starts (at most once an hour if it fails), and one
+WebSocket address lookup per connection, capped at 48 a day. If none of the three plugs is a POWR2
+(for example after Dad's swap) the worker stops itself. Events (live_connected, live_on, live_lost,
+live_error) go to the local_events table.
+On by default when eWeLink is on. Off switch: "ewelink_live_enabled": false in
+/etc/modpi/monitor.json, then restart modpi; or revert the commit.
+
 ## Meter over the RS485 HAT (Job 3, live since 11 Nov 2026)
 router/modbus_rtu.py reads the meter over the Pi's serial port (Modbus RTU, 9600 8N1, unit 1,
 read functions 03 and 04 only), using the standard library. The same three reads as over the

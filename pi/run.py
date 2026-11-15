@@ -16,12 +16,13 @@ from epever import CachedEpever
 from modbus_rtu import BAUDS, SerialBus
 from ewelink import Ewelink
 from ewelink_local import EwelinkLocal
+from ewelink_live import EwelinkLive
 from auth import Auth
 from storage import Storage
 
 def load_config(path):
     config = json.loads(Path(path).read_text())
-    for key in ("meter_enabled", "ewelink_enabled", "ewelink_local_enabled"):
+    for key in ("meter_enabled", "ewelink_enabled", "ewelink_local_enabled", "ewelink_live_enabled"):
         if type(config.get(key, False)) is not bool:
             raise ValueError(key + " must be a boolean")
     serial = config.get("meter_serial")
@@ -78,11 +79,20 @@ def main():
                               config="/var/lib/modpi/private/ewelink.json")
             if config.get("ewelink_enabled", False):
                 workers.append(ewelink)
+            fresh = []
             if config.get("ewelink_local_enabled", False):
                 # The five power plugs over the LAN; the cloud poll above stays as the fallback.
                 local = EwelinkLocal(ewelink, "/var/lib/modpi/private/ewelink-local.json")
-                ewelink.local_fresh = local.fresh
+                fresh.append(local.fresh)
                 workers.append(local)
+            if config.get("ewelink_enabled", False) and config.get("ewelink_live_enabled", True):
+                # Garden, 600 watt and Charger (POWR2) kept streaming with uiActive over eWeLink's
+                # WebSocket (Gareth's go-ahead, 15 Nov 2026). On by default; "ewelink_live_enabled": false turns it off.
+                live = EwelinkLive(ewelink)
+                fresh.append(live.fresh)
+                workers.append(live)
+            if fresh:
+                ewelink.local_fresh = lambda slug: any(f(slug) for f in fresh)
             server = monitor.WebServer(("127.0.0.1", config.get("port", 8096)),
                 monitor.handler(store, Path(monitor.__file__).parent / "web", voltage, tuya, ewelink,
                     Auth("/var/lib/modpi/private/auth.json", "/var/lib/modpi/private/auth.sqlite3"),
