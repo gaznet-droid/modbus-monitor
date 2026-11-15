@@ -66,6 +66,11 @@ class ModbusRtuTests(unittest.TestCase):
         self.assertAlmostEqual(monitor.read_export_kwh(bus), 0.1, places=5)
         self.assertEqual(fake.requests, [frame(struct.pack('>BBHH', 1, 4, 2304, 2))])
 
+    def test_import_total_is_a_read_only_request_for_register_0x0800(self):
+        fake, bus = self.bus([frame(struct.pack('>BBBf', 1, 4, 4, 9836.7))])
+        self.assertAlmostEqual(monitor.read_import_kwh(bus), 9836.7, places=2)
+        self.assertEqual(fake.requests, [frame(struct.pack('>BBHH', 1, 4, 2048, 2))])
+
     def test_adapter_echo_of_our_own_request_is_skipped(self):
         request = frame(struct.pack('>BBHH', 1, 4, 146, 2))
         fake, bus = self.bus([request, frame(struct.pack('>BBBf', 1, 4, 4, 42.0))])

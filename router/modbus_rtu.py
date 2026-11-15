@@ -180,7 +180,7 @@ if __name__ == "__main__":
                     int(sys.argv[2]) if len(sys.argv) > 2 else 9600,
                     direction_gpio=int(sys.argv[3]) if len(sys.argv) > 3 else None)
     failed = 0
-    for label, register, function in (("power W", 146, 4), ("voltage V", 16, 3), ("meter kWh", 1792, 4), ("export kWh", 2304, 4)):
+    for label, register, function in (("power W", 146, 4), ("voltage V", 16, 3), ("meter kWh", 1792, 4), ("export kWh", 2304, 4), ("import kWh", 2048, 4)):
         try:
             print(label, round(bus.read_input_float(1, register, function), 3))
         except (OSError, ValueError) as error:

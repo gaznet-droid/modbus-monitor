@@ -91,7 +91,7 @@
 
         .reading-column { min-width: 0; }
         .meter-reading { text-align: right; }
-        .export-total { font-size:clamp(.85rem,3vw,1.1rem); color:var(--text-muted); margin-top:.2rem; font-variant-numeric:tabular-nums; white-space:nowrap; } .export-value { color:var(--export-color); font-weight:700; }
+        .export-total { font-size:clamp(.85rem,3vw,1.1rem); color:var(--text-muted); margin-top:.2rem; font-variant-numeric:tabular-nums; white-space:nowrap; } .export-value { color:var(--export-color); font-weight:700; } .import-value { color:var(--import-color); font-weight:700; }
         .meter-value { color: var(--text-main); font-size: clamp(1.05rem,4.4vw,2.2rem); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; white-space: nowrap; }
         .header-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-items: start; }
         .header-row .label { min-height: 1.7rem; }
@@ -721,9 +721,10 @@
               <div class="label">Live Net Power</div>
               <div class="stat" id="currentVal">-- W</div>
             </div>
-            <div class="reading-column meter-reading" aria-label="Meter readings: combined total and export, from the meter's own counters">
+            <div class="reading-column meter-reading" aria-label="Meter readings: combined total, import and export, from the meter's own counters">
               <div class="label">Meter readings</div>
               <div id="meterKwh" class="meter-value">— kWh</div>
+              <div class="export-total">Import <span id="importTotal" class="import-value">— kWh</span></div>
               <div class="export-total">Export <span id="exportTotal" class="export-value">— kWh</span></div>
             </div>
           </div>
@@ -1167,7 +1168,7 @@ let activeTab = 'power';
 const navViews = ['power','ewelink','home','system'];
 const views = ['power','juwai','ewelink','home','system'];
 const SITE_TITLES = {power:'ModPi',juwai:'Juwai',ewelink:'Inverters & fridge',home:'Home',system:'System'};
-function connectionLost(){$('currentVal').style.opacity='.55';$('meterKwh').style.opacity='.55';$('exportTotal').style.opacity='.55';}
+function connectionLost(){$('currentVal').style.opacity='.55';$('meterKwh').style.opacity='.55';$('exportTotal').style.opacity='.55';$('importTotal').style.opacity='.55';}
 function selectTab(name) {
   if(activeTab===name)return;
   activeTab=name;stopJuwai();stopHome();stopSystem();window.stopEwelink?.();
@@ -1606,6 +1607,9 @@ function updateLive(data) {
   const exported=data.export;
   $('exportTotal').innerText=exported&&Number.isFinite(exported.kwh)?exported.kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:false})+' kWh':'— kWh';
   $('exportTotal').style.opacity=exported?.stale?'.55':'1';
+  const imported=data.import;
+  $('importTotal').innerText=imported&&Number.isFinite(imported.kwh)?imported.kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:false})+' kWh':'— kWh';
+  $('importTotal').style.opacity=imported?.stale?'.55':'1';
   const latest=data.latest;
   if(!latest)return;
   const val=latest.value;

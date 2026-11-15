@@ -59,6 +59,8 @@ CREATE TABLE IF NOT EXISTS meter_state (
  id INTEGER PRIMARY KEY CHECK(id=1), ts INTEGER NOT NULL, kwh REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS export_state (
  id INTEGER PRIMARY KEY CHECK(id=1), ts INTEGER NOT NULL, kwh REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS import_state (
+ id INTEGER PRIMARY KEY CHECK(id=1), ts INTEGER NOT NULL, kwh REAL NOT NULL);
 PRAGMA user_version=2;
 """
 
@@ -110,6 +112,13 @@ def read_export_kwh(host, port=8838):
     value=read_input_float(host,port,unit=1,register=2304)
     if value<0:
         raise ValueError("Negative export reading")
+    return value
+
+def read_import_kwh(host, port=8838):
+    # OB115-Mod import active energy, 0x0800 (same register set as export 0x0900). Read only.
+    value=read_input_float(host,port,unit=1,register=2048)
+    if value<0:
+        raise ValueError("Negative import reading")
     return value
 
 class VoltageReader:
@@ -198,12 +207,17 @@ class Store:
         with self.lock,self.db:
             self.db.execute("INSERT OR REPLACE INTO meter_state VALUES (1,?,?)",(timestamp,kwh))
 
-    def save_export(self, timestamp, kwh):
+    def save_export(self, timestamp, kwh, table="export_state"):
         self.guard()
+        if table not in ("export_state","import_state"):
+            raise ValueError("Unknown counter")
         if not math.isfinite(kwh) or kwh<0:
-            raise ValueError("Invalid export reading")
+            raise ValueError("Invalid "+table.split("_")[0]+" reading")
         with self.lock,self.db:
-            self.db.execute("INSERT OR REPLACE INTO export_state VALUES (1,?,?)",(timestamp,kwh))
+            self.db.execute("INSERT OR REPLACE INTO "+table+" VALUES (1,?,?)",(timestamp,kwh))
+
+    def save_import(self, timestamp, kwh):
+        self.save_export(timestamp, kwh, "import_state")
 
     def live(self, since=0, now=None, window=None):
         self.guard()
@@ -213,12 +227,14 @@ class Store:
             recent = self.db.execute("SELECT ts,value FROM samples WHERE ts>? ORDER BY ts DESC LIMIT 1001", (since,)).fetchall() if since else []
             meter=self.db.execute("SELECT ts,kwh FROM meter_state WHERE id=1").fetchone()
             exported=self.db.execute("SELECT ts,kwh FROM export_state WHERE id=1").fetchone()
+            imported=self.db.execute("SELECT ts,kwh FROM import_state WHERE id=1").fetchone()
         latest = dict(zip(("ts","value","import_wh","export_wh","coverage_s"),row)) if row else None
         result = {"latest":latest,"stale":not row or now-row[0]>12000,
                 "server_time":now,"points":list(reversed(recent[:1000])),
                 "reload":len(recent)>1000}
         result["meter"]={"ts":meter[0],"kwh":meter[1],"stale":now-meter[0]>90000} if meter else None
         result["export"]={"ts":exported[0],"kwh":exported[1],"stale":now-exported[0]>90000} if exported else None
+        result["import"]={"ts":imported[0],"kwh":imported[1],"stale":now-imported[0]>90000} if imported else None
         if window:
             start,end=period_bounds(window,now)
             result["energy"] = self.energy(start,min(end,now))
@@ -321,6 +337,7 @@ class Monitor:
         self.failed = False
         self.meter_failed = False
         self.export_failed = False
+        self.import_failed = False
         self.next_meter = 0
 
     def poll(self):
@@ -360,6 +377,16 @@ class Monitor:
                     if not self.export_failed:
                         LOG.warning("Export energy reading unavailable; keeping last successful value")
                     self.export_failed=True
+                try:
+                    self.store.guard()
+                    self.store.save_import(int(time.time()*1000),read_import_kwh(self.host,self.port))
+                    if self.import_failed:
+                        LOG.info("Import energy reading recovered")
+                    self.import_failed=False
+                except (OSError,ValueError,RuntimeError,sqlite3.Error):
+                    if not self.import_failed:
+                        LOG.warning("Import energy reading unavailable; keeping last successful value")
+                    self.import_failed=True
             self.stop.wait(max(.2,3-(time.monotonic()-started)))
 
 ICON_FILES={

@@ -98,6 +98,9 @@ class ExportTotalTests(unittest.TestCase):
             self.assertEqual((live['export']['kwh'],live['export']['stale']),(0.1,False))
             self.assertTrue(s.live(now=1_100_000)['export']['stale'])
             with self.assertRaises(ValueError):s.save_export(1_000_000,-1)
+            s.save_import(1_000_000,9836.7)
+            self.assertEqual(s.live(now=1_060_000)['import']['kwh'],9836.7)
+            with self.assertRaises(ValueError):s.save_export(1_000_000,1,'samples')
 
 if __name__=='__main__':
     unittest.main()
