@@ -36,6 +36,7 @@
     return any?sum*INTERVAL_S/3600:null;
   }
   const fmtEnergy=wh=>wh==null?'No readings':wh<1000?Math.round(wh).toLocaleString()+' Wh':(wh/1000).toLocaleString(undefined,{maximumFractionDigits:2})+' kWh';
+  let cumulativeKey='',cumulativeAt=0;
   async function refreshCumulative(v){
     const period=el('ewelinkPeriod').value,word=PERIOD_WORD[period]||'this period';
     document.querySelectorAll('.ewelink-cumulative-label').forEach(x=>x.textContent='Used '+word);
@@ -119,7 +120,8 @@
     try{
       const data=await get('/api/ewelink/latest',aborter.signal);
       if(v!==version||!available())return;draw(data);
-      refreshCumulative(v); // cumulative shows on every card, graph open or not
+      // Cumulative shows on every card, graph open or not. Five history reads, so at most every 30 seconds (or when the period changes); the latest readings above refresh every 3 seconds.
+      const cumKey=el('ewelinkPeriod').value;if(cumKey!==cumulativeKey||Date.now()-cumulativeAt>=30000){cumulativeKey=cumKey;cumulativeAt=Date.now();refreshCumulative(v);}
       if(el('ewelinkChartSection').hidden)return; // History only while a device graph is shown.
       const device=el('ewelinkDevice').value,period=el('ewelinkPeriod').value,key=device+period;
       if(historyKey!==key||Date.now()-historyAt>300000){
@@ -131,7 +133,7 @@
         }catch(error){if(v!==version||!available())return;history=null;if(chart){chart.destroy();chart=null;}el('ewelinkBinControls').hidden=true;el('ewelinkBack').hidden=true;el('ewelinkHistoryNote').textContent='History is not available yet.';}
       }else drawHistory();
     }catch(error){if(v===version&&available())document.querySelectorAll('.ewelink-card').forEach(c=>c.dataset.stale='true');}
-    finally{clearTimeout(timeout);if(v===version&&available()){controller=null;timer=setTimeout(()=>read(v),10000);}}
+    finally{clearTimeout(timeout);if(v===version&&available()){controller=null;timer=setTimeout(()=>read(v),3000);}}
   }
   window.startEwelink=()=>{window.stopEwelink();read(version);};
   // Web: pick a device; its graph fills the right-hand pane. One device highlighted at a time.
