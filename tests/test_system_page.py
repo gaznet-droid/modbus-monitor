@@ -1,5 +1,6 @@
 """Page checks for the System diagram: Epever dark-box wording and the mains charger box."""
 import re
+import shutil
 import subprocess
 import unittest
 from pathlib import Path
@@ -51,6 +52,9 @@ class SystemDiagramPage(unittest.TestCase):
         for phrase in ("'Panel '+panel", "'not charging'", "'Float,'", "'battery full'", "'0 W in'"):
             self.assertIn(phrase, HTML)
         self.assertIn('Lit only while charging; a dark box says why', HTML)
+
+    @unittest.skipUnless(shutil.which('node'), 'Node is not installed (the Pi has none); the wording check runs on the Mac')
+    def test_wording_and_charger_states_in_the_page_script(self):
         check = subprocess.run(['node', str(ROOT / 'tests' / 'check_system_page.cjs')], cwd=ROOT, capture_output=True, text=True)
         self.assertEqual(check.returncode, 0, check.stdout + check.stderr)
 
