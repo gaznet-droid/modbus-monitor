@@ -1,0 +1,39 @@
+"""Page checks for the generation chart on the Power tab (step 1 of retiring the Generation tab). Python only."""
+import re
+import unittest
+from pathlib import Path
+
+HTML = (Path(__file__).parents[1] / 'router' / 'web' / 'index.html').read_text()
+
+
+class PowerGenerationCard(unittest.TestCase):
+    def test_card_sits_between_the_net_power_chart_and_the_energy_flow(self):
+        panel = HTML.split('id="powerPanel"', 1)[1].split('</section>', 1)[0]
+        self.assertLess(panel.index('id="lineChart"'), panel.index('id="genCard"'))
+        self.assertLess(panel.index('id="genCard"'), panel.index('id="flowCard"'))
+        for name in ('genChart', 'genMetric', 'genMobileChart', 'genMeterButtons', 'genBucketChoice', 'genLimit'):
+            self.assertEqual(HTML.count('id="%s"' % name), 1, name)
+
+    def test_every_element_the_power_chart_names_exists_once(self):
+        call = HTML.split('const genView=genChart(', 1)[1].split('}', 1)[0]
+        for name in re.findall(r":'(\w+)'", call):
+            self.assertEqual(HTML.count('id="%s"' % name), 1, name)
+
+    def test_periods_map_to_history_windows_and_cap_at_30_days(self):
+        windows = HTML.split('const GEN_WINDOWS=', 1)[1].split('};', 1)[0]
+        allowed = {'15m', 'live', '2h', '4h', '8h', 'today', '24h', '7d', '30d'}
+        mapped = dict(re.findall(r"'(\w+)':'(\w+)'", windows))
+        self.assertEqual(set(mapped.values()) - allowed, set())
+        for period in ('90d', '365d', 'custom'):
+            self.assertNotIn(period, mapped)
+        self.assertIn("goes back 30 days at most, so it shows the past 30 days.", HTML)
+
+    def test_reads_only_while_the_power_tab_is_showing(self):
+        body = HTML.split('async function readGen(){', 1)[1].split('\n}', 1)[0]
+        self.assertTrue(body.strip().startswith("if(activeTab!=='power'||document.hidden)return;"))
+        self.assertIn("activeTab!=='power'", body.split('catch', 1)[1])
+        self.assertIn('genController?.abort()', HTML.split('function selectTab', 1)[1].split('\n}', 1)[0])
+
+
+if __name__ == '__main__':
+    unittest.main()
