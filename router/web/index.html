@@ -1108,7 +1108,7 @@ function renderEpever(data){
   $('epeverCharge').textContent=v.charge_state_name||'—';
   $('epeverGenToday').textContent=Number.isFinite(v.gen_today_kwh)?v.gen_today_kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' kWh':'— kWh';
   const minAt=data.times?.batt_v_min_today;
-  $('epeverBattMin').textContent=Number.isFinite(v.batt_v_min_today)&&minAt?epeverText(v.batt_v_min_today,'V',2)+' · as of '+new Date(minAt).toLocaleTimeString('en-GB',{timeZone:'Europe/London',hour:'2-digit',minute:'2-digit'}):'—';
+  $('epeverBattMin').textContent=Number.isFinite(v.batt_v_min_today)&&minAt?epeverText(v.batt_v_min_today,'V',2):'—'; // voltage only: Dad asked for the time to go (15 Nov)
   $('epeverSoc').textContent=epeverText(v.soc,'%',0);$('epeverPvV').textContent=epeverText(v.pv_v,'V',2);
 }
 function drawEpever(){

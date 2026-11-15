@@ -53,6 +53,12 @@ class SystemDiagramPage(unittest.TestCase):
             self.assertIn(phrase, HTML)
         self.assertIn('Lit only while charging; a dark box says why', HTML)
 
+    def test_epever_battery_min_today_shows_the_voltage_only(self):
+        line = next(l for l in HTML.splitlines() if "$('epeverBattMin').textContent" in l)
+        self.assertNotIn('as of', line)
+        self.assertNotIn('toLocaleTimeString', line)
+        self.assertIn("epeverText(v.batt_v_min_today,'V',2)", line)
+
     @unittest.skipUnless(shutil.which('node'), 'Node is not installed (the Pi has none); the wording check runs on the Mac')
     def test_wording_and_charger_states_in_the_page_script(self):
         check = subprocess.run(['node', str(ROOT / 'tests' / 'check_system_page.cjs')], cwd=ROOT, capture_output=True, text=True)
