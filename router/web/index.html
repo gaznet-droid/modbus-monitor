@@ -44,7 +44,9 @@
           flex-direction: column;
           gap: 1.25rem;
         }
-        .tabs-row { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; border-bottom: 1px solid var(--border); padding-bottom: .5rem; }
+        .tabs-row { display: flex; align-items: center; flex-wrap: nowrap; gap: .75rem; border-bottom: 1px solid var(--border); padding-bottom: .5rem; }
+        .site-brand { display: inline-flex; align-items: center; gap: .55rem; flex-shrink: 0; color: var(--text-main); text-decoration: none; font-weight: 700; font-size: 1.05rem; letter-spacing: .01em; line-height: 1; white-space: nowrap; }
+        .site-brand img { width: 32px; height: 32px; display: block; border-radius: 7px; flex-shrink: 0; }
         .tabs { display: flex; gap: .5rem; }
         .tabs button { background: transparent; color: var(--text-muted); border: 1px solid transparent; border-radius: 8px; padding: .75rem 1.25rem; font: inherit; font-weight: 600; cursor: pointer; min-height: 44px; }
         .tabs button[aria-selected="true"] { color: var(--import-color); background: #141c2e; border-color: var(--border); }
@@ -530,11 +532,7 @@
         @media(max-width:600px) {
           :root { --tab-bar-height: 68px; }
           body { padding-bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom, 0px) + 1rem); }
-          .tabs-row {
-            border-bottom: 0;
-            padding-bottom: 0;
-            gap: 0;
-          }
+          .tabs-row { gap: .5rem; }
           .tabs {
             position: fixed;
             bottom: 0;
@@ -596,6 +594,7 @@
     <body>
       <div class="container">
         <div class="tabs-row">
+          <a class="site-brand" href="/"><img src="/favicon.svg" width="32" height="32" alt=""><span>Mod Pie</span></a>
         <nav class="tabs" role="tablist" aria-label="Meter view">
           <button id="powerTab" type="button" role="tab" aria-selected="true" aria-controls="powerPanel" aria-label="Power" title="Power"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2z"/></svg></button>
           <button id="juwaiTab" type="button" role="tab" aria-selected="false" aria-controls="juwaiPanel" aria-label="Juwai" title="Juwai" tabindex="-1"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3.5 14 6.5 4h14l-3 10h-14z"/><path d="M5 9h14M11 4l-3 10M15.5 4l-3 10M10.5 14v4M6.5 21h8M10.5 18v3"/></svg></button>
