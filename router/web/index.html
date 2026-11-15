@@ -1604,7 +1604,7 @@ function updateLive(data) {
   $('meterKwh').style.opacity=meter?.stale?'.55':'1';
   // Dad, 15 Nov: the OB115's own export counter (register 0x0900), not the site's estimate.
   const exported=data.export;
-  $('exportTotal').innerText=exported&&Number.isFinite(exported.kwh)?exported.kwh.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:1,useGrouping:false})+' kWh':'— kWh';
+  $('exportTotal').innerText=exported&&Number.isFinite(exported.kwh)?exported.kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:false})+' kWh':'— kWh';
   $('exportTotal').style.opacity=exported?.stale?'.55':'1';
   const latest=data.latest;
   if(!latest)return;
