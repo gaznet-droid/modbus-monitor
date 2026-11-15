@@ -188,6 +188,36 @@
         @media(max-width:600px) { .juwai-grid { grid-template-columns:1fr; } .tabs { gap:.2rem; } .tabs button { padding:.75rem 1rem; } }
 
         .juwai-group { padding:clamp(.8rem,3vw,1.5rem); }
+        /* Shared card/panel header: title (+ timestamp under it) on the left, actions on the right. */
+        .card-head { display:flex; align-items:center; justify-content:space-between; gap:.75rem 1rem; flex-wrap:wrap; }
+        .card-title-block { min-width:0; flex:1 1 10rem; display:flex; flex-direction:column; align-items:flex-start; gap:.2rem; }
+        .card-title-block h1, .card-title-block h2 { margin:0; min-width:0; overflow-wrap:anywhere; }
+        .card-head h1 { font-size:1.2rem; }
+        .card-title-block .period-note { width:auto; margin:0; }
+        .card-actions { display:flex; align-items:center; gap:.6rem; flex:0 1 auto; margin-left:auto; }
+        .card-actions label { display:flex; gap:.6rem; align-items:center; color:var(--text-muted); font-size:.85rem; white-space:nowrap; }
+        .card-actions select { min-height:44px; max-width:100%; background:#1e293b; color:var(--text-main); border:1px solid var(--border); border-radius:8px; padding:.5rem; font:inherit; color-scheme:dark; }
+        .card-actions select:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        .card-close { flex-shrink:0; min-width:44px; min-height:44px; border:1px solid var(--border); border-radius:8px; background:#1e293b; color:var(--text-main); font:inherit; font-size:1rem; cursor:pointer; }
+        .card-close:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        .gen-card .card-head, .flow-card .card-head { margin-bottom:.25rem; }
+        .juwai-group > .card-head, .sys-card > .card-head, .home-plan-card .card-head { width:100%; margin-bottom:1.2rem; }
+        .sys-detail > .card-head { margin-bottom:.8rem; }
+        .home-graph-main > .card-head { margin-bottom:.2rem; }
+        .card-actions .sd-meter-metric { display:none; }
+        .sys-detail:has(#sdMeterView:not([hidden])) .sd-meter-metric { display:flex; }
+        .info-tip-sd-out { display:none; }
+        .sys-detail:has(#sdOutView:not([hidden])) .info-tip-sd-out { display:inline-flex; }
+        .info-wrap { position:relative; display:inline-flex; align-items:center; gap:.4rem; max-width:100%; }
+        .info-tip { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; min-width:28px; min-height:28px; padding:0; border:1px solid var(--border); border-radius:50%; background:#1e293b; color:var(--text-muted); font:inherit; font-size:.8rem; font-weight:700; font-style:italic; font-family:Georgia,"Times New Roman",serif; line-height:1; cursor:pointer; flex-shrink:0; }
+        .info-tip:hover, .info-tip:focus-visible, .info-tip[aria-expanded="true"] { color:var(--text-main); border-color:var(--import-color); }
+        .info-tip:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        .info-popover { position:absolute; z-index:60; top:calc(100% + .4rem); left:0; max-width:min(22rem, calc(100vw - 2rem)); width:max-content; padding:.7rem .85rem; border:1px solid var(--border); border-radius:10px; background:#141c2e; color:var(--text-muted); font-size:.8rem; line-height:1.45; box-shadow:0 10px 25px -5px rgba(0,0,0,.5); text-align:left; font-weight:400; font-style:normal; }
+        .info-popover[hidden] { display:none !important; }
+        .info-popover .period-note, .info-popover .sys-key { margin:.4rem 0; width:auto; max-width:none; font-size:.8rem; line-height:1.45; color:var(--text-muted); }
+        .info-popover .period-note:first-child, .info-popover .sys-key:first-child { margin-top:0; }
+        .info-popover .period-note:last-child, .info-popover .sys-key:last-child { margin-bottom:0; }
+        .chart-info { display:flex; justify-content:flex-end; margin:.2rem 0 .15rem; position:relative; }
         .juwai-group-heading { display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1.2rem; flex-wrap:wrap; }
         .juwai-group-heading h1 { font-size:1.2rem; }
         .juwai-group-heading label { display:flex; gap:.6rem; align-items:center; color:var(--text-muted); font-size:.85rem; }
@@ -652,9 +682,14 @@
         </div>
 
         <article class="card gen-card" id="genCard" aria-labelledby="genTitle">
-          <div class="flow-head"><h2 id="genTitle">Generation</h2><span id="genPeriod" class="period-note">Loading…</span></div>
+          <div class="card-head">
+            <div class="card-title-block">
+              <h2 id="genTitle">Generation</h2>
+              <span id="genPeriod" class="period-note">Loading…</span>
+            </div>
+            <div class="card-actions"><label for="genMetric">Chart <select id="genMetric"><option value="power_w">Power (W)</option><option value="voltage_v">Voltage (V)</option><option value="current_a">Current (A)</option></select></label></div>
+          </div>
           <p id="genLimit" class="period-note" hidden></p>
-          <div class="juwai-controls"><label for="genMetric">Chart <select id="genMetric"><option value="power_w">Power (W)</option><option value="voltage_v">Voltage (V)</option><option value="current_a">Current (A)</option></select></label></div>
           <div class="juwai-mobile-only">
             <div class="mobile-generation-summary"><span id="genMobilePeriod">—</span><strong id="genMobileTotal">— kWh</strong><span>estimated generation</span><div id="genMobileSplit" class="mobile-generation-split"></div></div>
             <h3 id="genMobileHeading" class="mobile-chart-heading">Generation by hour</h3>
@@ -670,7 +705,12 @@
         </article>
 
         <article class="card flow-card" id="flowCard" aria-labelledby="flowTitle">
-          <div class="flow-head"><h2 id="flowTitle">Energy flow</h2><span id="flowPeriod" class="period-note">Loading…</span></div>
+          <div class="card-head">
+            <div class="card-title-block">
+              <h2 id="flowTitle">Energy flow</h2>
+              <span id="flowPeriod" class="period-note">Loading…</span>
+            </div>
+          </div>
           <div class="flow-summary" aria-label="Energy flow totals"><div>Energy in<strong id="flowIn">— kWh</strong></div><div>To house<strong id="flowHouse">— kWh</strong></div><div>Solar share<strong id="flowSolar">—</strong></div></div>
           <div id="flowChart" role="img" aria-label="Energy flow from the panels, battery and mains charger to the house, the battery and losses, for the period chosen above"></div>
           <p id="flowDetail" class="period-note" aria-live="polite">Tap a band or a bar for its figures.</p>
@@ -682,7 +722,10 @@
         </section>
 <section id="juwaiPanel" class="tab-panel" role="tabpanel" aria-labelledby="juwaiTab" hidden>
 <div class="card juwai-group">
-<div class="juwai-group-heading"><h1>Generation</h1><div id="juwaiSource" class="source-toggle" role="group" aria-label="Reading source" hidden><button type="button" data-source="cloud" aria-pressed="true">Cloud</button><button type="button" data-source="local" aria-pressed="false">Local</button></div><label for="juwaiWindow">Period <select id="juwaiWindow"><option value="15m" selected>Live</option><option value="live">Past hour</option><option value="today">Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
+<div class="card-head">
+<div class="card-title-block"><h1>Generation</h1></div>
+<div class="card-actions"><div id="juwaiSource" class="source-toggle" role="group" aria-label="Reading source" hidden><button type="button" data-source="cloud" aria-pressed="true">Cloud</button><button type="button" data-source="local" aria-pressed="false">Local</button></div>
+</div><label for="juwaiWindow">Period <select id="juwaiWindow"><option value="15m" selected>Live</option><option value="live">Past hour</option><option value="today">Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
 <p class="juwai-mobile-only mobile-generation-disclaimer">Generation totals are estimates.</p>
 <p id="juwaiStatus" class="period-note" role="status" hidden></p>
 <div class="juwai-grid"><article class="card juwai-card" id="shedCard" data-stale="true">
@@ -719,7 +762,10 @@
 <p class="period-note">Solar meter is not connected: Tuya permission is unresolved. Read-only monitoring.</p>
 </section>
 <section id="ewelinkPanel" class="tab-panel" role="tabpanel" aria-labelledby="ewelinkTab" hidden>
-<div class="card juwai-group ewelink-group"><div class="juwai-group-heading"><h1>Inverters &amp; fridge</h1><label for="ewelinkPeriod">Period <select id="ewelinkPeriod"><option value="15m">Live</option><option value="live">Past hour</option><option value="2h">Past 2 hours</option><option value="4h">Past 4 hours</option><option value="8h">Past 8 hours</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
+<div class="card juwai-group ewelink-group"><div class="card-head">
+<div class="card-title-block"><h1>Inverters &amp; fridge</h1></div>
+<div class="card-actions"><label for="ewelinkPeriod">Period <select id="ewelinkPeriod"><option value="15m">Live</option><option value="live">Past hour</option><option value="2h">Past 2 hours</option><option value="4h">Past 4 hours</option><option value="8h">Past 8 hours</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
+</div>
 <div class="ewelink-layout">
 <div class="ewelink-grid"><article id="ew-inverter-1000" class="card ewelink-card" data-stale="true" role="button" tabindex="0" aria-expanded="false" aria-controls="ewelinkChartSection">
 <div class="ewelink-heading"><h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m13 6-4 6h6l-4 6M1 8h3m-3 8h3m16-8h3m-3 8h3"/></svg><span>1000 watt inverter</span></h2></div>
@@ -746,7 +792,12 @@
 </div></div></div></section>
 <section id="homePanel" class="tab-panel" role="tabpanel" aria-labelledby="homeTab" hidden>
 <div class="card home-plan-card">
-<div class="juwai-group-heading"><h1>Home</h1><span id="homeStatus" class="period-note home-plan-note" role="status">Loading readings…</span></div>
+<div class="card-head">
+<div class="card-title-block">
+<h1>Home</h1>
+<span id="homeStatus" class="period-note home-plan-note" role="status">Loading readings…</span>
+</div>
+</div>
 <div id="homeBody" class="home-body"><div class="home-plan-view">
 <div id="homeOffPlan" class="home-offplan"></div>
 <svg class="home-plan" viewBox="80 125 830 1415" role="img" aria-labelledby="homePlanTitle">
@@ -870,14 +921,29 @@
 </svg>
 <div class="home-legend"><span>Tap a temperature to see its past 24 hours</span><span>Room colour shows temperature</span><span class="home-legend-scale" aria-hidden="true"><span>12°C</span><span class="home-legend-bar"></span><span>25°C+</span></span></div>
 </div>
-<div id="homeGraph" class="home-graph" hidden><div class="home-graph-main"><div class="home-graph-head"><h2 id="homeGraphTitle">Loading…</h2><button id="homeGraphClose" type="button" aria-label="Close the graph and show the floor plan">✕</button></div><p id="homeGraphNote" class="period-note" role="status">Loading readings…</p><div class="home-graph-chart"><canvas id="homeGraphChart" role="img" aria-label="Temperature over the past 24 hours"></canvas></div><div id="homeGraphTabs" class="home-graph-tabs" role="tablist" aria-label="Temperatures"></div></div></div>
+<div id="homeGraph" class="home-graph" hidden><div class="home-graph-main"><div class="card-head">
+<div class="card-title-block">
+<h2 id="homeGraphTitle">Loading…</h2>
+<p id="homeGraphNote" class="period-note" role="status">Loading readings…</p>
+</div>
+<div class="card-actions"><button id="homeGraphClose" class="card-close" type="button" aria-label="Close the graph and show the floor plan">✕</button></div>
+</div><div class="home-graph-chart"><canvas id="homeGraphChart" role="img" aria-label="Temperature over the past 24 hours"></canvas></div><div id="homeGraphTabs" class="home-graph-tabs" role="tablist" aria-label="Temperatures"></div></div></div>
 </div>
 </div>
-<div class="home-cards"><article class="card home-card" id="homeSection-garage"><h2>Garage</h2><div class="home-rows"><p class="period-note">Loading…</p></div></article></div>
+<div class="home-cards"><article class="card home-card" id="homeSection-garage"><div class="card-head"><div class="card-title-block"><h2>Garage</h2></div></div><div class="home-rows"><p class="period-note">Loading…</p></div></article></div>
 </section>
 <section id="systemPanel" class="tab-panel" role="tabpanel" aria-labelledby="systemTab" hidden>
 <div class="card sys-card">
-<div class="juwai-group-heading"><h1>System</h1><span id="systemStatus" class="period-note home-plan-note" role="status">Loading readings…</span></div>
+<div class="card-head">
+<div class="card-title-block">
+<div class="info-wrap">
+<h1>System</h1>
+<button type="button" class="info-tip" aria-label="About the System diagram" aria-expanded="false" aria-controls="sysKeyTip">i</button>
+<div id="sysKeyTip" class="info-popover" role="tooltip" hidden><p>Four sets of panels. The 100 watt Garden panel feeds the Garden inverter; its only reading is that inverter's eWeLink plug. The 400 watt Shed and Garage panels and the 275 watt set each pass through a meter into DC. DC feeds the 1000 watt inverter and the Epever, which charges the 24 volt battery that runs the 600 watt inverter. Total solar to house is the three inverters added together; what the Epever takes in is battery charging, shown separately and not taken off. A mains battery charger, switched by hand, feeds the 24 volt battery from the right. That plug is a separate mains input and is not part of the solar total. The Shed and garage total on Generation is those two meters only; the 275 watt meter has its own card.</p></div>
+</div>
+<span id="systemStatus" class="period-note home-plan-note" role="status">Loading readings…</span>
+</div>
+</div>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
 <symbol id="sysIcPanel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15 7 5h14l-3 10H4zM5.5 10h14M10.6 5l-3 10M15.3 5l-3 10M11 15v4M8 20h6"/></symbol>
 <symbol id="sysIcMeter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 18a8.5 8.5 0 1 1 17 0H3.5zM12 18l4-5M6.5 13.6l1.2.8M12 10.5V12M17.5 13.6l-1.2.8"/></symbol>
@@ -886,36 +952,53 @@
 <symbol id="sysIcCharger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v1.5M2 8h1.5M3.5 4.5l1 1M10.5 4.5l-1 1M10 8a3 3 0 0 0-6 0M15 7l-4 7h4l-2 7 7-9h-4l2-5z"/></symbol><symbol id="sysIcMains" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v4M16 3v4M5 8h14v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8zM12 11l-2 3h4l-2 3"/></symbol><symbol id="sysIcHouse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-7 9 7M5 9.5V20h14V9.5M9.5 20v-6h5v6"/></symbol></defs></svg>
 <div id="sysBody" class="sys-body">
 <div id="sysDetail" class="sys-detail" hidden>
-<div class="home-graph-head"><h2 id="sysDetailTitle">Loading…</h2><button id="sysDetailClose" type="button" aria-label="Close the details and show the diagram">✕</button></div>
-<div class="juwai-controls"><label for="sysDetailPeriod">Period <select id="sysDetailPeriod"><option value="15m">Live</option><option value="live">Past hour</option><option value="2h">Past 2 hours</option><option value="4h">Past 4 hours</option><option value="8h">Past 8 hours</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
+<div class="card-head">
+<div class="card-title-block">
+<div class="info-wrap">
+<h2 id="sysDetailTitle">Loading…</h2>
+<button type="button" class="info-tip info-tip-sd-out" aria-label="About total solar to house" aria-expanded="false" aria-controls="sdOutIntroTip">i</button>
+<div id="sdOutIntroTip" class="info-popover" role="tooltip" hidden>
+<p class="period-note">1000 watt inverter + Garden inverter + 600 watt inverter, added together. Battery charging (Epever) is shown separately and not taken off.</p>
+<p class="period-note" id="sdOutPowerParts">1000 watt inverter — + Garden inverter — + 600 watt inverter —</p>
+<p class="period-note" id="sdOutCharging">Battery charging (Epever): —</p>
+</div>
+</div>
+</div>
+<div class="card-actions">
+<label class="sd-meter-metric" for="sdMeterMetric">Chart <select id="sdMeterMetric"><option value="power_w">Power (W)</option><option value="voltage_v">Voltage (V)</option><option value="current_a">Current (A)</option></select></label>
+<label for="sysDetailPeriod">Period <select id="sysDetailPeriod"><option value="15m">Live</option><option value="live">Past hour</option><option value="2h">Past 2 hours</option><option value="4h">Past 4 hours</option><option value="8h">Past 8 hours</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label>
+<button id="sysDetailClose" class="card-close" type="button" aria-label="Close the details and show the diagram">✕</button>
+</div>
+</div>
 <div id="sdMeterView" class="sd-view" hidden><div id="sdMeterCard" class="sd-head" data-stale="true">
 <div class="sd-values"><div><div class="label">Latest power</div><div class="juwai-power" id="sdMeterPower">— W</div></div><div class="sd-energy"><div class="label">Estimated generation</div><div id="sdMeterEnergy" class="juwai-kwh">— kWh</div><div class="period-note sd-period">Today</div></div></div>
 <dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="sdMeterVoltage">— V</dd></div><div><dt>Current</dt><dd id="sdMeterCurrent">— A</dd></div></dl>
 <div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="sdMeterState">Loading…</span></span><time id="sdMeterAge">Waiting for readings</time></div></div>
-<div class="juwai-controls"><label for="sdMeterMetric">Chart <select id="sdMeterMetric"><option value="power_w">Power (W)</option><option value="voltage_v">Voltage (V)</option><option value="current_a">Current (A)</option></select></label></div>
+<div class="chart-info info-wrap"><button type="button" class="info-tip" aria-label="About this meter chart" aria-expanded="false" aria-controls="sdMeterNoteTip">i</button><div id="sdMeterNoteTip" class="info-popover" role="tooltip" hidden><p id="sdMeterNote" class="period-note" aria-live="polite">Loading generation…</p></div></div>
 <div class="juwai-chart"><canvas id="sdMeterChart" role="img" aria-label="This meter's power, voltage or current for the period chosen above"></canvas></div>
-<p id="sdMeterNote" class="period-note" aria-live="polite">Loading generation…</p></div>
+</div>
 <div id="sdOutView" class="sd-view" hidden><div id="sdOutCard" class="sd-head" data-stale="true">
-<p class="period-note">1000 watt inverter + Garden inverter + 600 watt inverter, added together. Battery charging (Epever) is shown separately and not taken off.</p>
-<div class="sd-values"><div><div class="label">Latest power</div><div class="juwai-power" id="sdOutPower">— W</div></div><div class="sd-energy"><div class="label">Energy to house</div><div id="sdOutEnergy" class="juwai-kwh">— kWh</div><div class="period-note sd-period">Today</div></div></div>
-<p class="period-note" id="sdOutPowerParts">1000 watt inverter — + Garden inverter — + 600 watt inverter —</p><p class="period-note" id="sdOutCharging">Battery charging (Epever): —</p><p class="period-note" id="sdOutEnergyParts"></p>
+<div class="sd-values"><div><div class="label">Latest power</div><div class="juwai-power" id="sdOutPower">— W</div></div><div class="sd-energy"><div class="label info-wrap">Energy to house<button type="button" class="info-tip" aria-label="About energy to house" aria-expanded="false" aria-controls="sdOutEnergyTip">i</button><div id="sdOutEnergyTip" class="info-popover" role="tooltip" hidden><p class="period-note" id="sdOutEnergyParts"></p></div></div><div id="sdOutEnergy" class="juwai-kwh">— kWh</div><div class="period-note sd-period">Today</div></div></div>
 <div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="sdOutState">Loading…</span></span><time id="sdOutAge">Waiting for readings</time></div></div>
+<div class="chart-info info-wrap"><button type="button" class="info-tip" aria-label="About the total to house chart" aria-expanded="false" aria-controls="sdOutNoteTip">i</button><div id="sdOutNoteTip" class="info-popover" role="tooltip" hidden><p id="sdOutNote" class="period-note" aria-live="polite">Loading…</p></div></div>
 <div class="juwai-chart"><canvas id="sdOutChart" role="img" aria-label="Total solar power to house for the period chosen above, with battery charging from the Epever"></canvas></div>
-<p id="sdOutNote" class="period-note" aria-live="polite">Loading…</p></div>
+</div>
 <div id="sdEpView" class="sd-view" hidden><div id="sdEpCard" class="sd-head" data-stale="true">
 <div class="sd-values"><div><div class="label">Latest power</div><div class="juwai-power" id="sdEpPower">— W</div></div><div class="sd-energy"><div class="label">Generation</div><div id="sdEpEnergy" class="juwai-kwh">— kWh</div><div class="period-note sd-period">Today</div></div></div>
 <dl class="juwai-metrics epever-metrics"><div><dt>Battery voltage</dt><dd id="sdEpBattV">— V</dd></div><div><dt>Battery current</dt><dd id="sdEpBattA">— A</dd></div><div><dt>Charging</dt><dd id="sdEpCharge">—</dd></div><div><dt>Generated today</dt><dd id="sdEpGenToday">— kWh</dd></div><div><dt>Battery level</dt><dd id="sdEpSoc">— %</dd></div><div><dt>Panel voltage</dt><dd id="sdEpPvV">— V</dd></div><div><dt>Battery min today</dt><dd id="sdEpBattMin">—</dd></div></dl>
 <div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="sdEpState">Loading…</span></span><time id="sdEpAge">Waiting for readings</time><span id="sdEpName">Epever</span></div></div>
+<div class="chart-info info-wrap"><button type="button" class="info-tip" aria-label="About the Epever chart" aria-expanded="false" aria-controls="sdEpNoteTip">i</button><div id="sdEpNoteTip" class="info-popover" role="tooltip" hidden><p id="sdEpNote" class="period-note" aria-live="polite">Loading…</p></div></div>
 <div class="juwai-chart"><canvas id="sdEpChart" role="img" aria-label="Solar charger panel power and battery voltage for the period chosen above"></canvas></div>
-<p id="sdEpNote" class="period-note" aria-live="polite">Loading…</p></div>
+</div>
 <div id="sdPlugView" class="sd-view" hidden><div id="sdPlugCard" class="sd-head" data-stale="true">
 <div class="sd-values"><div><div class="label ewelink-latest">Latest power<span class="visually-hidden" data-state>Loading…</span></div><div class="juwai-power" data-power>— W</div></div><div class="sd-energy"><div class="label ewelink-cumulative-label">Used today</div><div class="juwai-kwh" data-energy>— kWh</div></div></div>
 <dl class="juwai-metrics"><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl></div>
 <h3 id="sdPlugHeading" class="sd-heading">Power over time</h3>
 <button id="sdPlugBack" type="button" class="sd-week" hidden>← All weeks</button>
+<div class="chart-info info-wrap"><button type="button" class="info-tip" aria-label="About this plug chart" aria-expanded="false" aria-controls="sdPlugNoteTip">i</button><div id="sdPlugNoteTip" class="info-popover" role="tooltip" hidden><p id="sdPlugNote" class="period-note">Loading recorded readings…</p></div></div>
 <div class="ewelink-chart"><canvas id="sdPlugChart" role="img" aria-label="This plug's power for the period chosen above; on phones, use the details below for bar values"></canvas></div>
 <div id="sdPlugBins" hidden><div id="sdPlugDetails" class="mobile-bucket-details" role="status" aria-live="polite"></div><button id="sdPlugDrill" type="button" class="sd-week" hidden>View daily detail</button></div>
-<p id="sdPlugNote" class="period-note">Loading recorded readings…</p></div>
+</div>
 <div id="sysDetailTabs" class="home-graph-tabs sys-detail-tabs" role="tablist" aria-label="Devices"><button type="button" role="tab" data-dev="output" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sysIcHouse"/></svg><span>Total to house</span><span class="tab-temp" data-watts>—</span></button><button type="button" role="tab" data-dev="inv1000" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sysIcInverter"/></svg><span>1000 W inverter</span><span class="tab-temp" data-watts>—</span></button><button type="button" role="tab" data-dev="inv600" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sysIcInverter"/></svg><span>600 W inverter</span><span class="tab-temp" data-watts>—</span></button><button type="button" role="tab" data-dev="garden" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sysIcPanel"/></svg><span>Garden</span><span class="tab-temp" data-watts>—</span></button><button type="button" role="tab" data-dev="shed" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sysIcMeter"/></svg><span>Shed</span><span class="tab-temp" data-watts>—</span></button><button type="button" role="tab" data-dev="garage" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sysIcMeter"/></svg><span>Garage</span><span class="tab-temp" data-watts>—</span></button><button type="button" role="tab" data-dev="p275" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sysIcMeter"/></svg><span>275</span><span class="tab-temp" data-watts>—</span></button><button type="button" role="tab" data-dev="epever" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sysIcBattery"/></svg><span>Epever and battery</span><span class="tab-temp" data-watts>—</span></button><button type="button" role="tab" data-dev="charger" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sysIcCharger"/></svg><span>Charger</span><span class="tab-temp" data-watts>—</span></button></div>
 </div>
 <div class="sys-plan-view">
@@ -1018,7 +1101,8 @@
 <g id="sysFWBatt" class="sys-flow"><path class="sys-chev" d="M-2.6 -3L1.6 0L-2.6 3"><animateMotion dur="1.17s" begin="-0.00s" repeatCount="indefinite" rotate="auto"><mpath href="#sysLWBatt"/></animateMotion></path></g>
 <g id="sysFWCharger" class="sys-flow"><path class="sys-chev" d="M-2.6 -3L1.6 0L-2.6 3"><animateMotion dur="0.72s" begin="-0.00s" repeatCount="indefinite" rotate="auto"><mpath href="#sysLWCharger"/></animateMotion></path></g>
 </svg>
-<p class="sys-key">Four sets of panels. The 100 watt Garden panel feeds the Garden inverter; its only reading is that inverter's eWeLink plug. The 400 watt Shed and Garage panels and the 275 watt set each pass through a meter into DC. DC feeds the 1000 watt inverter and the Epever, which charges the 24 volt battery that runs the 600 watt inverter. Total solar to house is the three inverters added together; what the Epever takes in is battery charging, shown separately and not taken off. A mains battery charger, switched by hand, feeds the 24 volt battery from the right. That plug is a separate mains input and is not part of the solar total. The Shed and garage total on Generation is those two meters only; the 275 watt meter has its own card.</p>
+<p class="sys-key" hidden></p>
+
 </div></div>
 </div>
 </section>
@@ -2076,7 +2160,7 @@ function markSysDetail(){
 }
 // Show one device: its own period, its view, figures cleared until its readings arrive.
 function selectSysDetail(dev){
-  sysDetailController?.abort();sysDetailController=null;sysDetailKey='';
+  closeInfoTips();sysDetailController?.abort();sysDetailController=null;sysDetailKey='';
   sysDev=dev;const d=SYS_DEVICES[dev],period=sysPeriod();
   $('sysDetailTitle').textContent=d.name;$('sysDetailPeriod').value=period;
   const label=$('sysDetailPeriod').selectedOptions[0]?.textContent||'';
@@ -2123,6 +2207,55 @@ mobileMedia.addEventListener('change',()=>{if(sysShowing()&&SYS_DEVICES[sysDev].
 // Open the tab named in the URL (e.g. #home); default stays Power.
 function openHashTab(){const name=location.hash.slice(1);if(views.includes(name))selectTab(name);}
 window.addEventListener('hashchange',openHashTab);
+
+function closeInfoTips(except){
+  document.querySelectorAll('.info-tip[aria-expanded="true"]').forEach(btn=>{
+    if(btn===except)return;
+    btn.setAttribute('aria-expanded','false');
+    const pop=document.getElementById(btn.getAttribute('aria-controls'));
+    if(pop)pop.hidden=true;
+  });
+}
+function placeInfoPopover(btn){
+  const pop=document.getElementById(btn.getAttribute('aria-controls'));
+  if(!pop)return;
+  pop.style.left='0px';pop.style.right='auto';pop.style.top='calc(100% + .4rem)';pop.style.bottom='auto';
+  const pad=8, wrap=pop.offsetParent||btn.parentElement, wr=wrap.getBoundingClientRect();
+  let r=pop.getBoundingClientRect();
+  if(r.right>innerWidth-pad){pop.style.left='auto';pop.style.right='0px';r=pop.getBoundingClientRect();}
+  if(r.left<pad){pop.style.left=(pad-wr.left)+'px';pop.style.right='auto';r=pop.getBoundingClientRect();}
+  if(r.right>innerWidth-pad){pop.style.maxWidth=Math.max(160,innerWidth-pad-Math.max(pad,r.left))+'px';r=pop.getBoundingClientRect();}
+  if(r.bottom>innerHeight-pad && r.height<btn.getBoundingClientRect().top-pad){pop.style.top='auto';pop.style.bottom='calc(100% + .4rem)';}
+}
+function openInfoTip(btn){
+  if(!btn||btn.hidden||getComputedStyle(btn).display==='none')return;
+  closeInfoTips(btn);
+  const pop=document.getElementById(btn.getAttribute('aria-controls'));
+  if(!pop)return;
+  btn.setAttribute('aria-expanded','true');
+  pop.hidden=false;
+  placeInfoPopover(btn);
+}
+function setupInfoTips(){
+  const fine=()=>matchMedia('(hover: hover) and (pointer: fine)').matches;
+  document.addEventListener('click',e=>{
+    const btn=e.target.closest('.info-tip');
+    if(btn){e.preventDefault();e.stopPropagation();const open=btn.getAttribute('aria-expanded')==='true';if(open)closeInfoTips();else openInfoTip(btn);return;}
+    if(!e.target.closest('.info-popover'))closeInfoTips();
+  });
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeInfoTips();});
+  document.querySelectorAll('.info-wrap').forEach(wrap=>{
+    const btn=wrap.querySelector('.info-tip');if(!btn)return;
+    let timer;
+    wrap.addEventListener('pointerenter',()=>{if(!fine())return;clearTimeout(timer);openInfoTip(btn);});
+    wrap.addEventListener('pointerleave',()=>{if(!fine())return;timer=setTimeout(()=>closeInfoTips(),120);});
+    btn.addEventListener('focus',()=>openInfoTip(btn));
+    btn.addEventListener('blur',()=>{if(!wrap.contains(document.activeElement)&&!fine())return; if(fine()&&!wrap.contains(document.activeElement))closeInfoTips();});
+  });
+  addEventListener('resize',()=>document.querySelectorAll('.info-tip[aria-expanded="true"]').forEach(placeInfoPopover));
+}
+setupInfoTips();
+
 openHashTab();
 tick();
 
