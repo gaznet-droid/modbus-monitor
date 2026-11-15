@@ -89,18 +89,21 @@ class SystemDiagramPage(unittest.TestCase):
             for gid, rect in found.items():
                 if gid != 'sysCharger':
                     self.assertFalse(overlaps(found['sysCharger'], rect), '%s overlaps %s' % (kind, gid))
-            # Charger line goes around the right of the Epever and into the bottom of the battery.
+            # Charger line leaves the right side of the charger (mid-height),
+            # runs up the right of the Epever, and enters the right side of the battery.
             path = re.search(r'id="sysL(?:W)?Charger"[^>]*d="M([\d.]+) ([\d.]+)H([\d.]+)V([\d.]+)H([\d.]+)"', svg)
             self.assertIsNotNone(path, kind)
-            x0, y0, x_right, y_batt, x1 = (float(n) for n in path.groups())
-            self.assertGreater(y0, ey + eh, kind)  # starts at the charger, below the Epever
-            self.assertLess(y0, cy + 1, kind)
-            self.assertGreaterEqual(y0, cy, kind)
-            self.assertGreater(x_right, ex + ew, kind)  # runs to the right of the Epever
-            self.assertLess(x_right, view_w, kind)
-            self.assertAlmostEqual(y_batt, by + bh, delta=4, msg=kind)  # arrives at the battery bottom
-            self.assertLess(x1, ex + ew, kind)
-            self.assertGreater(x1, bx, kind)
+            x0, y0, x_right, y_in, x1 = (float(n) for n in path.groups())
+            self.assertAlmostEqual(x0, cx + cw, delta=2, msg=kind)
+            self.assertGreater(y0, cy + ch * 0.25, kind)
+            self.assertLess(y0, cy + ch * 0.75, kind)
+            self.assertGreaterEqual(x_right, ex + ew + 12, kind)  # clear gap to the right of the Epever
+            self.assertLess(x_right, view_w, kind)  # stays inside the viewBox
+            self.assertAlmostEqual(x1, bx + bw, delta=2, msg=kind)  # enters the battery's right side
+            self.assertGreater(y_in, by + bh * 0.25, kind)
+            self.assertLess(y_in, by + bh * 0.75, kind)
+            self.assertLess(y_in, by + bh - 8, kind)  # not the old bottom-right entry
+            self.assertLess(x1, x_right, kind)  # last run is right-to-left, arrow points into the battery
             # Epever's own feed into the battery runs up the left-hand side.
             batt = re.search(r'id="sysL(?:W)?Batt"[^>]*d="M([\d.]+) ([\d.]+)V([\d.]+)"', svg)
             self.assertIsNotNone(batt, kind)
