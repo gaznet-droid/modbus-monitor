@@ -28,6 +28,23 @@ class PowerGenerationCard(unittest.TestCase):
             self.assertNotIn(period, mapped)
         self.assertIn("goes back 30 days at most, so it shows the past 30 days.", HTML)
 
+    def test_mobile_summary_keeps_period_only_under_the_title(self):
+        self.assertNotIn('id="genMobilePeriod"', HTML)
+        card = HTML.split('id="genCard"', 1)[1].split('id="flowCard"', 1)[0]
+        self.assertLess(card.index('id="genPeriod"'), card.index('id="genMobileTotal"'))
+        self.assertLess(card.index('id="genMobileSplit"'), card.index('mobile-generation-label'))
+        self.assertIn('>Estimated</span>', card)
+        self.assertNotIn('estimated generation', card)
+
+    def test_mobile_compare_includes_the_total_series(self):
+        # Compare used to copy only Shed and Garage (indexes 0 and 1). Total is the
+        # dataset appended after the meter series; it must be on the Compare chart too.
+        self.assertIn("v.meter==='compare'?[0,1,totalI]", HTML)
+        self.assertIn('Shed, Garage and Total', HTML)
+        # Total is shed+garage from the already-drawn series, aligned by sample step,
+        # not a raw timestamp lookup that missed near-matches on mobile.
+        self.assertIn('const bucket=x=>Math.round(x/step)', HTML)
+
     def test_reads_only_while_the_power_tab_is_showing(self):
         body = HTML.split('async function readGen(){', 1)[1].split('\n}', 1)[0]
         self.assertTrue(body.strip().startswith("if(activeTab!=='power'||document.hidden)return;"))

@@ -133,16 +133,27 @@ assert.ok(pair('sysFWCharger')[0].classList.contains('on'));
 assert.equal(text('sysOutputBig'), '13 W');
 both('sysChargerBig');
 both('sysOutputBig');
+// Inverter plug graphics share the feed's .on class (Inv1000=10, GarInv=0, Inv600=3).
+assert.ok(pair('sysPlug1000')[0].classList.contains('on'));
+assert.ok(pair('sysPlugW1000')[0].classList.contains('on'));
+assert.ok(pair('sysPlug600')[0].classList.contains('on'));
+assert.ok(pair('sysPlugW600')[0].classList.contains('on'));
+assert.ok(!pair('sysPlugGardenUp')[0].classList.contains('on'));
+assert.ok(!pair('sysPlugWGardenUp')[0].classList.contains('on'));
 
 draw(null, inverters([10, 0, 3]).concat([plug({ power_w: 0 })]));
 assert.equal(state('sysCharger'), 'idle');
 assert.equal(text('sysChargerBig'), '0 W');
 assert.equal(text('sysOutputBig'), '13 W');
 assert.ok(!pair('sysLCharger')[0].classList.contains('on'));
+assert.ok(!pair('sysPlugGardenUp')[0].classList.contains('on'));
 
 draw(null, inverters([1, 2, 3]).concat([plug({ power_w: 0.1 })]));
 assert.equal(state('sysCharger'), 'lit');
 assert.equal(text('sysOutputBig'), '6 W');
+assert.ok(pair('sysPlug1000')[0].classList.contains('on'));
+assert.ok(pair('sysPlugGardenUp')[0].classList.contains('on'));
+assert.ok(pair('sysPlug600')[0].classList.contains('on'));
 
 draw(null, [plug({ stale: true, power_w: 80 })]);
 assert.equal(state('sysCharger'), 'stale');
