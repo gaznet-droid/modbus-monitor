@@ -57,6 +57,8 @@ CREATE TABLE IF NOT EXISTS state (
  import_wh REAL NOT NULL, export_wh REAL NOT NULL, coverage_s REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS meter_state (
  id INTEGER PRIMARY KEY CHECK(id=1), ts INTEGER NOT NULL, kwh REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS export_state (
+ id INTEGER PRIMARY KEY CHECK(id=1), ts INTEGER NOT NULL, kwh REAL NOT NULL);
 PRAGMA user_version=2;
 """
 
@@ -100,6 +102,14 @@ def read_combined_kwh(host, port=8838):
     value=read_input_float(host,port,unit=1,register=1792)
     if value<0:
         raise ValueError("Negative combined meter reading")
+    return value
+
+def read_export_kwh(host, port=8838):
+    # OB115-Mod export active energy, 0x0900 (Owen Brothers datasheet, second register set, the same
+    # set as 0x0092 power, 0x0010 voltage and 0x0700 total). Read only (function 04), never written.
+    value=read_input_float(host,port,unit=1,register=2304)
+    if value<0:
+        raise ValueError("Negative export reading")
     return value
 
 class VoltageReader:
@@ -188,6 +198,13 @@ class Store:
         with self.lock,self.db:
             self.db.execute("INSERT OR REPLACE INTO meter_state VALUES (1,?,?)",(timestamp,kwh))
 
+    def save_export(self, timestamp, kwh):
+        self.guard()
+        if not math.isfinite(kwh) or kwh<0:
+            raise ValueError("Invalid export reading")
+        with self.lock,self.db:
+            self.db.execute("INSERT OR REPLACE INTO export_state VALUES (1,?,?)",(timestamp,kwh))
+
     def live(self, since=0, now=None, window=None):
         self.guard()
         now = int(time.time()*1000) if now is None else now
@@ -195,11 +212,13 @@ class Store:
             row = self.db.execute("SELECT ts,value,import_wh,export_wh,coverage_s FROM state WHERE id=1").fetchone()
             recent = self.db.execute("SELECT ts,value FROM samples WHERE ts>? ORDER BY ts DESC LIMIT 1001", (since,)).fetchall() if since else []
             meter=self.db.execute("SELECT ts,kwh FROM meter_state WHERE id=1").fetchone()
+            exported=self.db.execute("SELECT ts,kwh FROM export_state WHERE id=1").fetchone()
         latest = dict(zip(("ts","value","import_wh","export_wh","coverage_s"),row)) if row else None
         result = {"latest":latest,"stale":not row or now-row[0]>12000,
                 "server_time":now,"points":list(reversed(recent[:1000])),
                 "reload":len(recent)>1000}
         result["meter"]={"ts":meter[0],"kwh":meter[1],"stale":now-meter[0]>90000} if meter else None
+        result["export"]={"ts":exported[0],"kwh":exported[1],"stale":now-exported[0]>90000} if exported else None
         if window:
             start,end=period_bounds(window,now)
             result["energy"] = self.energy(start,min(end,now))
@@ -301,6 +320,7 @@ class Monitor:
         self.stop = threading.Event()
         self.failed = False
         self.meter_failed = False
+        self.export_failed = False
         self.next_meter = 0
 
     def poll(self):
@@ -330,6 +350,16 @@ class Monitor:
                     if not self.meter_failed:
                         LOG.warning("Combined energy reading unavailable; keeping last successful value")
                     self.meter_failed=True
+                try:
+                    self.store.guard()
+                    self.store.save_export(int(time.time()*1000),read_export_kwh(self.host,self.port))
+                    if self.export_failed:
+                        LOG.info("Export energy reading recovered")
+                    self.export_failed=False
+                except (OSError,ValueError,RuntimeError,sqlite3.Error):
+                    if not self.export_failed:
+                        LOG.warning("Export energy reading unavailable; keeping last successful value")
+                    self.export_failed=True
             self.stop.wait(max(.2,3-(time.monotonic()-started)))
 
 ICON_FILES={

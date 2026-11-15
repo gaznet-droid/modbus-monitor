@@ -86,4 +86,18 @@ class MonitorTests(unittest.TestCase):
         self.assertEqual(value,-123.5)
         self.assertEqual(observed[0][7:],struct.pack('>BHH',4,146,2))
 
-if __name__=='__main__':unittest.main()
+
+
+class ExportTotalTests(unittest.TestCase):
+    def test_export_total_is_stored_and_served(self):
+        with tempfile.TemporaryDirectory() as folder:
+            s=m.Store(str(Path(folder)/'test.db'))
+            self.assertIsNone(s.live(now=1_000_000)['export'])
+            s.save_export(1_000_000,0.1)
+            live=s.live(now=1_060_000)
+            self.assertEqual((live['export']['kwh'],live['export']['stale']),(0.1,False))
+            self.assertTrue(s.live(now=1_100_000)['export']['stale'])
+            with self.assertRaises(ValueError):s.save_export(1_000_000,-1)
+
+if __name__=='__main__':
+    unittest.main()
