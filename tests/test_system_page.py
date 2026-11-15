@@ -78,8 +78,11 @@ class SystemDiagramPage(unittest.TestCase):
             cx, cy, cw, ch = found['sysCharger']
             bx, by, bw, bh = found['sysBatt']
             ex, ey, ew, eh = found['sysEpever']
-            # Below the Epever, in the same column, so the diagram no longer needs a right-hand column.
+            # Below the Epever, in the same column, with the same gap as the other rows.
             self.assertGreaterEqual(cy, ey + eh, kind)
+            shed, garage = found['sysShed'], found['sysGarage']
+            row_gap = garage[1] - (shed[1] + shed[3])
+            self.assertGreaterEqual(cy - (ey + eh), row_gap - 1, kind)
             self.assertLess(abs(cx - ex), 1, kind)
             self.assertLessEqual(cx + cw, view_w)
             self.assertLessEqual(cy + ch, float(re.search(r'viewBox="0 0 %d ([\d.]+)"' % view_w, svg).group(1)))
@@ -152,12 +155,21 @@ class SystemDetailPage(unittest.TestCase):
         script = HTML.split('const SYS_DEVICES=', 1)[1].split('};', 1)[0]
         self.assertEqual(re.findall(r'^\s*(\w+):\{name:', script, re.M), DEVICES)
 
-    def test_detail_header_stacks_title_above_matching_controls(self):
-        self.assertIn('.sys-detail > .card-head { margin-bottom:.8rem; flex-direction:column; align-items:stretch;', HTML)
+    def test_detail_header_title_and_close_sit_above_a_full_width_period(self):
+        self.assertIn('.sys-detail > .card-head { display:grid; grid-template-columns:minmax(0,1fr) auto;', HTML)
         self.assertIn('.sys-detail #sysDetailTitle { font-size:.9rem;', HTML)
-        # Chart metric sits with the meter chart, not beside Period in the header.
+        self.assertIn('border-top:1px solid var(--border)', HTML)
         header = HTML.split('id="sysDetail"', 1)[1].split('id="sdMeterView"', 1)[0]
         meter = HTML.split('id="sdMeterView"', 1)[1].split('id="sdOutView"', 1)[0]
+        # Title and close share the first header row; Period is a full-width labelled select below the rule.
+        self.assertIn('id="sysDetailTitle"', header)
+        self.assertIn('id="sysDetailClose"', header)
+        self.assertLess(header.find('id="sysDetailTitle"'), header.find('id="sysDetailClose"'))
+        self.assertLess(header.find('id="sysDetailClose"'), header.find('id="sysDetailPeriod"'))
+        self.assertIn('id="sysDetailPeriod" aria-label="Period"', header)
+        self.assertNotIn('>Period <select', header)
+        self.assertNotIn('<label for="sysDetailPeriod">', header)
+        # Chart metric sits with the meter chart, not beside Period in the header.
         self.assertNotIn('id="sdMeterMetric"', header)
         self.assertIn('id="sdMeterMetric"', meter)
         self.assertIn('class="chart-metric"', meter)
@@ -169,7 +181,7 @@ class SystemDetailPage(unittest.TestCase):
         self.assertIn('id="sysDetailClose"', HTML)
         self.assertIn("getBoundingClientRect().top<0)$('sysDetail').scrollIntoView", HTML)
         # One period picker that opens on Today; each device remembers its own choice.
-        picker = HTML.split('id="sysDetailPeriod">', 1)[1].split('</select>', 1)[0]
+        picker = HTML.split('id="sysDetailPeriod"', 1)[1].split('>', 1)[1].split('</select>', 1)[0]
         self.assertIn('<option value="today" selected>Today</option>', picker)
         self.assertIn("const sysPeriod=()=>sysPeriods[sysDev]||'today';", HTML)
 
