@@ -163,3 +163,22 @@ assert.equal(text('sysChargerS1'), 'No reading');
 assert.equal(text('sysChargerS2'), '');
 
 console.log('PASS: Epever dark-box wording and charger plug states, with the charger left out of the solar total.');
+
+// System detail: the nine devices in button order, and every diagram box names one of them.
+const devStart = html.indexOf('const SYS_DEVICES=');
+const devEnd = html.indexOf('};', devStart) + 2;
+const devices = vm.runInNewContext('(' + html.slice(devStart + 'const SYS_DEVICES='.length, devEnd - 1) + ')');
+const order = ['output', 'inv1000', 'inv600', 'garden', 'shed', 'garage', 'p275', 'epever', 'charger'];
+assert.deepEqual(Object.keys(devices), order);
+const buttons = [...html.split('id="sysDetailTabs"')[1].split('</div>')[0].matchAll(/data-dev="(\w+)"/g)].map(m => m[1]);
+assert.deepEqual(buttons, order);
+const boxes = [...html.matchAll(/<g id="(sys\w+)" data-dev="(\w+)"/g)];
+assert.equal(boxes.length, 30, 'fifteen boxes in each of the two layouts');
+for (const [, id, dev] of boxes) {
+  assert.ok(devices[dev], id + ' names an unknown device ' + dev);
+  assert.ok(html.includes('id="sys' + devices[dev].box + 'Big"'), dev + ' button has no headline box');
+}
+for (const d of Object.values(devices)) assert.ok(['Out', 'Plug', 'Meter', 'Ep'].includes(d.view));
+for (const view of ['Out', 'Plug', 'Meter', 'Ep']) assert.ok(html.includes('id="sd' + view + 'View"'), view);
+assert.ok(!html.includes('data-goto'), 'no box jumps to another tab');
+console.log('PASS: nine System detail devices in order, every diagram box mapped to one.');

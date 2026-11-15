@@ -12,7 +12,7 @@
       <meta name="theme-color" content="#090d16">
       <meta name="apple-mobile-web-app-title" content="Power">
       <script src="/chart.umd.min.js"></script>
-      <script src="/ewelink.js?v=card-graphs-7" defer></script>
+      <script src="/ewelink.js?v=card-graphs-8" defer></script>
       <style>
         :root {
           --bg-base: #090d16;
@@ -367,10 +367,12 @@
         .sys-plan [data-state="nm"] rect { fill:none; }
         .sys-plan .sys-sock { fill:var(--bg-base); }
         .sys-plan .sys-nometer { font-size:11px; fill:var(--amber-zero); font-style:italic; }
-        .sys-plan [data-goto] { cursor:pointer; }
-        .sys-plan [data-goto]:hover rect { stroke:var(--import-color); }
-        .sys-plan [data-goto]:focus { outline:none; }
-        .sys-plan [data-goto]:focus-visible rect { stroke:var(--import-color); stroke-width:2.5; }
+        .sys-plan [data-dev] { cursor:pointer; }
+        .sys-plan [data-dev]:hover rect { stroke:var(--import-color); }
+        .sys-plan [data-dev]:focus { outline:none; }
+        .sys-plan [data-dev]:focus-visible rect { stroke:var(--import-color); stroke-width:2.5; }
+        /* Every box of the open device shows as selected. */
+        .sys-plan [data-dev][aria-expanded="true"] > rect:first-child { stroke:var(--text-main); stroke-width:2.5; }
         .sys-line { stroke:#334155; stroke-width:1.5; fill:none; transition:stroke .4s; }
         .sys-line.sys-unmetered { stroke-dasharray:4 4; }
         .sys-line.on { stroke:#1e5f86; }
@@ -379,11 +381,36 @@
         .sys-plan .sys-flow { display:none; }
         .sys-plan .sys-flow.on { display:inline; }
         @media(prefers-reduced-motion:reduce) { .sys-plan .sys-flow { display:none !important; } .sys-line.on { stroke:var(--import-color); } }
-        .link-flash { animation:linkFlash 2.4s ease-out; }
-        @keyframes linkFlash { 0%,45% { box-shadow:0 0 0 2px var(--import-color), 0 0 18px rgba(56,189,248,.45); } 100% { box-shadow:0 0 0 2px transparent, 0 0 0 transparent; } }
         @media(max-width:480px) { .sys-plan { width:calc(100% + 1.5rem); margin:0 -.75rem; } }
         .sys-key { max-width:400px; margin:1rem auto 0; color:var(--text-muted); font-size:.9rem; line-height:1.5; }
         @media(min-width:601px) { .sys-key { max-width:640px; } }
+        /* System detail: the Home graph pattern. 900 px and wider: detail on the left, the narrow diagram on the right; narrower: the detail replaces the diagram. */
+        .sys-body, .sys-plan-view { width:100%; display:flex; flex-direction:column; align-items:center; }
+        .sys-detail { width:100%; min-width:0; }
+        .sys-detail .juwai-controls { margin:.5rem 0 .8rem; }
+        .sd-view { min-width:0; }
+        .sd-head { padding:.85rem 1rem; border:1px solid var(--border); border-radius:12px; background:#101828; margin-bottom:1rem; min-width:0; }
+        .sd-head[data-stale="true"] .juwai-power { color:var(--text-muted); }
+        .sd-values { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:.7rem; }
+        .sd-values .label { font-size:.65rem; }
+        .sd-energy { text-align:right; }
+        .sd-head .juwai-metrics { flex-wrap:wrap; gap:.6rem 2rem; margin:.5rem 0 0; }
+        .sd-head .epever-metrics { display:grid; }
+        .sd-head > .period-note { margin:.35rem 0; }
+        .sd-head .device-update { margin-top:.7rem; }
+        .sd-heading { font-size:.95rem; margin:.2rem 0 .6rem; }
+        .sys-detail .juwai-chart, .sys-detail .ewelink-chart { height:320px; }
+        .sys-detail button.sd-week { min-height:44px; border:1px solid var(--border); border-radius:8px; background:#1e293b; color:var(--text-main); font:inherit; font-size:.8rem; padding:.5rem; margin:.5rem 0; cursor:pointer; }
+        #sysDetailClose { flex-shrink:0; min-width:44px; min-height:44px; border:1px solid var(--border); border-radius:8px; background:#1e293b; color:var(--text-main); font:inherit; font-size:1rem; cursor:pointer; }
+        #sysDetailClose:focus-visible, .sys-detail button.sd-week:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        .home-graph-tabs.sys-detail-tabs { grid-template-columns:repeat(3,minmax(0,1fr)); }
+        @media(min-width:900px) {
+          .sys-body.detail-open { display:grid; grid-template-columns:minmax(0,7fr) minmax(0,5fr); gap:1.5rem; align-items:start; }
+          .sys-body.detail-open .sys-wide { display:none; }
+          .sys-body.detail-open .sys-narrow { display:block; }
+        }
+        @media(max-width:899px) { .sys-body.detail-open .sys-plan-view { display:none; } }
+        @media(max-width:600px) { .sd-head { padding:.75rem; } .sys-detail .juwai-chart, .sys-detail .ewelink-chart { height:280px; } }
         .home-plan-card { display:flex; flex-direction:column; align-items:center; }
         .home-plan-card .juwai-group-heading { width:100%; }
         .home-plan-note { width:auto; margin:0; }
@@ -629,7 +656,7 @@
 <dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="p275Voltage">— V</dd></div><div><dt>Current</dt><dd id="p275Current">— A</dd></div></dl><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="p275State">Loading…</span></span><time id="p275Age">Waiting for readings</time><span>Not counted in the Shed and garage total</span></div></article><article class="card juwai-card" id="totalCard" data-stale="true">
 <h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2" y="4" width="8" height="8" rx="1"/><rect x="14" y="4" width="8" height="8" rx="1"/><path d="M6 15v4h12v-4m-6 1v6"/></svg><span>Shed and garage total</span></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="totalPower">— W</div></div><div class="juwai-energy"><div class="label">Estimated generation</div><div id="totalEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
 <div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="totalState">Loading…</span></span><time id="totalAge">Waiting for readings</time></div></article><article class="card juwai-card" id="outputCard" data-stale="true">
-<h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m13 6-4 6h6l-4 6M1 8h3m-3 8h3m16-8h3m-3 8h3"/></svg><button type="button" id="outputToggle" aria-expanded="false" aria-controls="outputDetail"><span>Total solar power to house</span><span class="epever-hint" id="outputHint">Show graph</span></button></h2><p class="period-note">1000 watt inverter + Garden inverter + 600 watt inverter − Epever</p><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="outputPower">— W</div></div><div class="juwai-energy"><div class="label">Energy to house</div><div id="outputEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
+<h2 class="device-title"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m13 6-4 6h6l-4 6M1 8h3m-3 8h3m16-8h3m-3 8h3"/></svg><button type="button" id="outputToggle" aria-expanded="false" aria-controls="outputDetail"><span>Total solar power to house</span><span class="epever-hint" id="outputHint">Show graph</span></button></h2><p class="period-note">1000 watt inverter + Garden inverter + 600 watt inverter, added together; battery charging (Epever) is shown separately and not taken off</p><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="outputPower">— W</div></div><div class="juwai-energy"><div class="label">Energy to house</div><div id="outputEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
 <p class="period-note" id="outputPowerParts">1000 watt inverter — + Garden inverter — + 600 watt inverter —</p><p class="period-note" id="outputCharging">Battery charging (Epever): —</p><p class="period-note" id="outputEnergyParts"></p><div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="outputState">Loading…</span></span><time id="outputAge">Waiting for readings</time></div>
 <div id="outputDetail" hidden><div class="juwai-chart"><canvas id="outputChart" role="img" aria-label="Total solar power to house for the selected period, with the inverters and the Epever"></canvas></div><p id="outputNote" class="period-note" aria-live="polite"></p></div></article><article class="card juwai-card" id="epeverCard" data-stale="true" hidden>
 <h2 class="device-title"><button type="button" id="epeverToggle" aria-expanded="false" aria-controls="epeverDetail"><svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="7" width="16" height="11" rx="2"/><path d="M19 11h2v3h-2M11 9l-3 4h4l-3 4"/></svg><span id="epeverName">Epever</span><span class="epever-hint" id="epeverHint">Show details</span></button></h2><div class="juwai-card-values"><div><div class="label">Latest power</div><div class="juwai-power" id="epeverPower">— W</div></div><div class="juwai-energy"><div class="label">Generation</div><div id="epeverEnergy" class="juwai-kwh">— kWh</div><div class="period-note juwai-period">Today</div></div></div>
@@ -819,25 +846,60 @@
 <symbol id="sysIcInverter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM3.5 20.5l17-17M6 7h5M6 9.5h5M13 16.5c1-1.5 2-1.5 3 0s2 1.5 3 0"/></symbol>
 <symbol id="sysIcBattery" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h15v11H3zM18 10.5h2.5v4H18M6 12.5h4M8 10.5v4M12.5 12.5h3"/></symbol>
 <symbol id="sysIcCharger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v1.5M2 8h1.5M3.5 4.5l1 1M10.5 4.5l-1 1M10 8a3 3 0 0 0-6 0M15 7l-4 7h4l-2 7 7-9h-4l2-5z"/></symbol><symbol id="sysIcMains" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v4M16 3v4M5 8h14v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8zM12 11l-2 3h4l-2 3"/></symbol><symbol id="sysIcHouse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-7 9 7M5 9.5V20h14V9.5M9.5 20v-6h5v6"/></symbol></defs></svg>
+<div id="sysBody" class="sys-body">
+<div id="sysDetail" class="sys-detail" hidden>
+<div class="home-graph-head"><h2 id="sysDetailTitle">Loading…</h2><button id="sysDetailClose" type="button" aria-label="Close the details and show the diagram">✕</button></div>
+<div class="juwai-controls"><label for="sysDetailPeriod">Period <select id="sysDetailPeriod"><option value="15m">Live</option><option value="live">Past hour</option><option value="2h">Past 2 hours</option><option value="4h">Past 4 hours</option><option value="8h">Past 8 hours</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select></label></div>
+<div id="sdMeterView" class="sd-view" hidden><div id="sdMeterCard" class="sd-head" data-stale="true">
+<div class="sd-values"><div><div class="label">Latest power</div><div class="juwai-power" id="sdMeterPower">— W</div></div><div class="sd-energy"><div class="label">Estimated generation</div><div id="sdMeterEnergy" class="juwai-kwh">— kWh</div><div class="period-note sd-period">Today</div></div></div>
+<dl class="juwai-metrics"><div><dt>Voltage</dt><dd id="sdMeterVoltage">— V</dd></div><div><dt>Current</dt><dd id="sdMeterCurrent">— A</dd></div></dl>
+<div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="sdMeterState">Loading…</span></span><time id="sdMeterAge">Waiting for readings</time></div></div>
+<div class="juwai-controls"><label for="sdMeterMetric">Chart <select id="sdMeterMetric"><option value="power_w">Power (W)</option><option value="voltage_v">Voltage (V)</option><option value="current_a">Current (A)</option></select></label></div>
+<div class="juwai-chart"><canvas id="sdMeterChart" role="img" aria-label="This meter's power, voltage or current for the period chosen above"></canvas></div>
+<p id="sdMeterNote" class="period-note" aria-live="polite">Loading generation…</p></div>
+<div id="sdOutView" class="sd-view" hidden><div id="sdOutCard" class="sd-head" data-stale="true">
+<p class="period-note">1000 watt inverter + Garden inverter + 600 watt inverter, added together. Battery charging (Epever) is shown separately and not taken off.</p>
+<div class="sd-values"><div><div class="label">Latest power</div><div class="juwai-power" id="sdOutPower">— W</div></div><div class="sd-energy"><div class="label">Energy to house</div><div id="sdOutEnergy" class="juwai-kwh">— kWh</div><div class="period-note sd-period">Today</div></div></div>
+<p class="period-note" id="sdOutPowerParts">1000 watt inverter — + Garden inverter — + 600 watt inverter —</p><p class="period-note" id="sdOutCharging">Battery charging (Epever): —</p><p class="period-note" id="sdOutEnergyParts"></p>
+<div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="sdOutState">Loading…</span></span><time id="sdOutAge">Waiting for readings</time></div></div>
+<div class="juwai-chart"><canvas id="sdOutChart" role="img" aria-label="Total solar power to house for the period chosen above, with battery charging from the Epever"></canvas></div>
+<p id="sdOutNote" class="period-note" aria-live="polite">Loading…</p></div>
+<div id="sdEpView" class="sd-view" hidden><div id="sdEpCard" class="sd-head" data-stale="true">
+<div class="sd-values"><div><div class="label">Latest power</div><div class="juwai-power" id="sdEpPower">— W</div></div><div class="sd-energy"><div class="label">Generation</div><div id="sdEpEnergy" class="juwai-kwh">— kWh</div><div class="period-note sd-period">Today</div></div></div>
+<dl class="juwai-metrics epever-metrics"><div><dt>Battery voltage</dt><dd id="sdEpBattV">— V</dd></div><div><dt>Battery current</dt><dd id="sdEpBattA">— A</dd></div><div><dt>Charging</dt><dd id="sdEpCharge">—</dd></div><div><dt>Generated today</dt><dd id="sdEpGenToday">— kWh</dd></div><div><dt>Battery level</dt><dd id="sdEpSoc">— %</dd></div><div><dt>Panel voltage</dt><dd id="sdEpPvV">— V</dd></div><div><dt>Battery min today</dt><dd id="sdEpBattMin">—</dd></div></dl>
+<div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="sdEpState">Loading…</span></span><time id="sdEpAge">Waiting for readings</time><span id="sdEpName">Epever</span></div></div>
+<div class="juwai-chart"><canvas id="sdEpChart" role="img" aria-label="Solar charger panel power and battery voltage for the period chosen above"></canvas></div>
+<p id="sdEpNote" class="period-note" aria-live="polite">Loading…</p></div>
+<div id="sdPlugView" class="sd-view" hidden><div id="sdPlugCard" class="sd-head" data-stale="true">
+<div class="sd-values"><div><div class="label ewelink-latest">Latest power<span class="visually-hidden" data-state>Loading…</span></div><div class="juwai-power" data-power>— W</div></div><div class="sd-energy"><div class="label ewelink-cumulative-label">Used today</div><div class="juwai-kwh" data-energy>— kWh</div></div></div>
+<dl class="juwai-metrics"><div><dt>Voltage</dt><dd data-voltage>— V</dd></div><div><dt>Current</dt><dd data-current>— A</dd></div><div><dt>Switch</dt><dd data-switch>—</dd></div></dl></div>
+<h3 id="sdPlugHeading" class="sd-heading">Power over time</h3>
+<button id="sdPlugBack" type="button" class="sd-week" hidden>← All weeks</button>
+<div class="ewelink-chart"><canvas id="sdPlugChart" role="img" aria-label="This plug's power for the period chosen above; on phones, use the details below for bar values"></canvas></div>
+<div id="sdPlugBins" hidden><div id="sdPlugDetails" class="mobile-bucket-details" role="status" aria-live="polite"></div><button id="sdPlugDrill" type="button" class="sd-week" hidden>View daily detail</button></div>
+<p id="sdPlugNote" class="period-note">Loading recorded readings…</p></div>
+<div id="sysDetailTabs" class="home-graph-tabs sys-detail-tabs" role="tablist" aria-label="Devices"><button type="button" role="tab" data-dev="output" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sysIcHouse"/></svg><span>Total to house</span><span class="tab-temp" data-watts>—</span></button><button type="button" role="tab" data-dev="inv1000" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sysIcInverter"/></svg><span>1000 W inverter</span><span class="tab-temp" data-watts>—</span></button><button type="button" role="tab" data-dev="inv600" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sysIcInverter"/></svg><span>600 W inverter</span><span class="tab-temp" data-watts>—</span></button><button type="button" role="tab" data-dev="garden" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sysIcPanel"/></svg><span>Garden</span><span class="tab-temp" data-watts>—</span></button><button type="button" role="tab" data-dev="shed" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sysIcMeter"/></svg><span>Shed</span><span class="tab-temp" data-watts>—</span></button><button type="button" role="tab" data-dev="garage" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sysIcMeter"/></svg><span>Garage</span><span class="tab-temp" data-watts>—</span></button><button type="button" role="tab" data-dev="p275" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sysIcMeter"/></svg><span>275</span><span class="tab-temp" data-watts>—</span></button><button type="button" role="tab" data-dev="epever" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sysIcBattery"/></svg><span>Epever and battery</span><span class="tab-temp" data-watts>—</span></button><button type="button" role="tab" data-dev="charger" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#sysIcCharger"/></svg><span>Charger</span><span class="tab-temp" data-watts>—</span></button></div>
+</div>
+<div class="sys-plan-view">
 <svg class="sys-plan sys-narrow" viewBox="0 0 464 692" role="group" aria-labelledby="sysTitle" aria-describedby="sysDesc">
 <title id="sysTitle">Solar wiring: the 100 watt Garden panel feeds the Garden inverter through its eWeLink plug; the 400 watt Shed and Garage panels and the 275 watt set, each through a meter, join on DC, which feeds the 1000 watt inverter and the Epever; the Epever charges the 24 volt battery that runs the 600 watt inverter; a mains charger, switched by hand, also feeds that battery from the right and is not part of the solar total; total solar to house is the three inverters added together; the Epever charging is shown separately</title>
 <desc id="sysDesc">When the Epever reading is fresh but the box is dark, the text says why: panel voltage and not charging, float with the battery full, or the charge state with no power coming in. A stale or missing reading stays a dash. The Charger box is the mains plug to the right of the 24 volt battery. It lights only while that reading is fresh, online and drawing power, and its watts are not added to total solar to house.</desc>
 
-<g id="sysOutput" data-goto="juwai:output" tabindex="0" role="link" aria-label="Total solar to house, the three inverters added together: open Generation" data-state="stale"><rect x="6" y="8" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcHouse" x="37" y="15" width="16" height="16"/><text class="sys-name" x="45" y="42">Total solar</text><text class="sys-name" x="45" y="54">to house</text><text class="sys-big" x="45" y="76" id="sysOutputBig">—</text><text class="sys-small" x="45" y="92" id="sysOutputS1">3 inverters</text><text class="sys-small" x="45" y="105" id="sysOutputS2">added together</text></g>
-<g id="sysGarInv" data-goto="ewelink:garage-inverter" tabindex="0" role="link" aria-label="Garden inverter: open its graph on Inverters and fridge" data-state="stale"><rect x="98" y="8" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcInverter" x="129" y="15" width="16" height="16"/><text class="sys-name" x="137" y="42">Garden</text><text class="sys-name" x="137" y="54">inverter</text><text class="sys-big" x="137" y="76" id="sysGarInvBig">—</text><text class="sys-small" x="137" y="92" id="sysGarInvS1"></text><text class="sys-small" x="137" y="105" id="sysGarInvS2"></text></g><rect class="sys-sock" x="130" y="110" width="14" height="6" rx="1"/>
-<g id="sysInv1000" data-goto="ewelink:inverter-1000" tabindex="0" role="link" aria-label="1000 watt inverter: open its graph on Inverters and fridge" data-state="stale"><rect x="190" y="8" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcInverter" x="221" y="15" width="16" height="16"/><text class="sys-name" x="229" y="42">1000 W</text><text class="sys-name" x="229" y="54">inverter</text><text class="sys-big" x="229" y="76" id="sysInv1000Big">—</text><text class="sys-small" x="229" y="92" id="sysInv1000S1"></text><text class="sys-small" x="229" y="105" id="sysInv1000S2"></text></g><rect class="sys-sock" x="222" y="110" width="14" height="6" rx="1"/>
-<g id="sysInv600" data-goto="ewelink:inverter-600" tabindex="0" role="link" aria-label="600 watt inverter: open its graph on Inverters and fridge" data-state="stale"><rect x="282" y="8" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcInverter" x="313" y="15" width="16" height="16"/><text class="sys-name" x="321" y="42">600 W</text><text class="sys-name" x="321" y="54">inverter</text><text class="sys-big" x="321" y="76" id="sysInv600Big">—</text><text class="sys-small" x="321" y="92" id="sysInv600S1"></text><text class="sys-small" x="321" y="105" id="sysInv600S2"></text></g><rect class="sys-sock" x="314" y="110" width="14" height="6" rx="1"/>
-<g id="sysPGarden" data-goto="ewelink:garage-inverter" tabindex="0" role="link" aria-label="100 watt Garden panel: open the Garden inverter graph" data-state="idle"><rect x="6" y="164" width="74" height="108" rx="8"/><use class="sys-ic" href="#sysIcPanel" x="35" y="171" width="16" height="16"/><text class="sys-name" x="43" y="208">Garden panel</text><text class="sys-rate" x="43" y="232">100 W</text><text class="sys-small" x="43" y="248" id="sysPGardenS1"></text><text class="sys-small" x="43" y="261" id="sysPGardenS2"></text></g>
-<g id="sysGarden" data-goto="ewelink:garage-inverter" tabindex="0" role="link" aria-label="eWeLink Garden meter, the Garden inverter plug reading: open its graph" data-state="stale"><rect x="98" y="164" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcMeter" x="129" y="171" width="16" height="16"/><text class="sys-name" x="137" y="198">eWeLink</text><text class="sys-name" x="137" y="210">Garden meter</text><text class="sys-big" x="137" y="232" id="sysGardenBig">—</text><text class="sys-small" x="137" y="248" id="sysGardenS1"></text><text class="sys-small" x="137" y="261" id="sysGardenS2"></text></g>
-<g id="sysPShed" data-goto="juwai:shed" tabindex="0" role="link" aria-label="400 watt Shed panel: open the Shed card on Generation" data-state="idle"><rect x="6" y="300" width="74" height="108" rx="8"/><use class="sys-ic" href="#sysIcPanel" x="35" y="307" width="16" height="16"/><text class="sys-name" x="43" y="344">Shed panel</text><text class="sys-rate" x="43" y="368">400 W</text><text class="sys-small" x="43" y="384" id="sysPShedS1"></text><text class="sys-small" x="43" y="397" id="sysPShedS2"></text></g>
-<g id="sysShed" data-goto="juwai:shed" tabindex="0" role="link" aria-label="Shed meter: open the Shed card on Generation" data-state="stale"><rect x="98" y="300" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcMeter" x="129" y="307" width="16" height="16"/><text class="sys-name" x="137" y="344">Shed meter</text><text class="sys-big" x="137" y="368" id="sysShedBig">—</text><text class="sys-small" x="137" y="384" id="sysShedS1"></text><text class="sys-small" x="137" y="397" id="sysShedS2"></text></g>
-<g id="sysPGarage" data-goto="juwai:garage" tabindex="0" role="link" aria-label="400 watt Garage panel: open the Garage card on Generation" data-state="idle"><rect x="6" y="436" width="74" height="108" rx="8"/><use class="sys-ic" href="#sysIcPanel" x="35" y="443" width="16" height="16"/><text class="sys-name" x="43" y="480">Garage panel</text><text class="sys-rate" x="43" y="504">400 W</text><text class="sys-small" x="43" y="520" id="sysPGarageS1"></text><text class="sys-small" x="43" y="533" id="sysPGarageS2"></text></g>
-<g id="sysGarage" data-goto="juwai:garage" tabindex="0" role="link" aria-label="Garage meter: open the Garage card on Generation" data-state="stale"><rect x="98" y="436" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcMeter" x="129" y="443" width="16" height="16"/><text class="sys-name" x="137" y="480">Garage meter</text><text class="sys-big" x="137" y="504" id="sysGarageBig">—</text><text class="sys-small" x="137" y="520" id="sysGarageS1"></text><text class="sys-small" x="137" y="533" id="sysGarageS2"></text></g>
-<g id="sysP275" data-goto="juwai:p275" tabindex="0" role="link" aria-label="275 watt panels: open the 275 watt card on Generation" data-state="idle"><rect x="6" y="572" width="74" height="108" rx="8"/><use class="sys-ic" href="#sysIcPanel" x="35" y="579" width="16" height="16"/><text class="sys-name" x="43" y="616">275 W panels</text><text class="sys-rate" x="43" y="640">275 W</text><text class="sys-small" x="43" y="656" id="sysP275S1"></text><text class="sys-small" x="43" y="669" id="sysP275S2"></text></g>
-<g id="sys275" data-goto="juwai:p275" tabindex="0" role="link" aria-label="275 watt meter: open the 275 watt card on Generation" data-state="stale"><rect x="98" y="572" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcMeter" x="129" y="579" width="16" height="16"/><text class="sys-name" x="137" y="616">275 meter</text><text class="sys-big" x="137" y="640" id="sys275Big">—</text><text class="sys-small" x="137" y="656" id="sys275S1"></text><text class="sys-small" x="137" y="669" id="sys275S2"></text></g>
-<g id="sysBatt" data-goto="juwai:epever" tabindex="0" role="link" aria-label="24 volt battery: open its details on the Epever card" data-state="stale"><rect x="282" y="164" width="78" height="122" rx="8"/><rect class="sys-bat-body" x="297" y="172" width="44" height="24" rx="4"/><rect class="sys-bat-nub" x="341" y="180" width="4" height="8" rx="1"/><rect id="sysBattFill" class="sys-bat-fill" x="299" y="174" width="0" height="20" rx="2" data-level="na"/><text id="sysBattPct" class="sys-bat-pct" x="319" y="188">—</text><text class="sys-name" x="321" y="208">24 V battery</text><text class="sys-big" x="321" y="232" id="sysBattBig">—</text><text class="sys-small" x="321" y="248" id="sysBattS1"></text><text class="sys-small" x="321" y="261" id="sysBattS2"></text><text class="sys-small" x="321" y="274" id="sysBattS3"></text></g>
-<g id="sysCharger" data-goto="ewelink:charger-inverter" tabindex="0" role="link" aria-label="Mains battery charger, switched by hand: open its graph on Inverters and fridge" data-state="stale"><rect x="378" y="171" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcMains" x="409" y="178" width="16" height="16"/><text class="sys-name" x="417" y="205">Charger</text><text class="sys-small" x="417" y="217">mains, manual</text><text class="sys-big" x="417" y="239" id="sysChargerBig">—</text><text class="sys-small" x="417" y="255" id="sysChargerS1"></text><text class="sys-small" x="417" y="268" id="sysChargerS2"></text></g>
-<g id="sysEpever" data-goto="juwai:epever" tabindex="0" role="link" aria-label="Epever charge controller. Lit only while charging; a dark box says why: open its details on Generation" data-state="stale"><rect x="282" y="324" width="78" height="122" rx="8"/><use class="sys-ic" href="#sysIcCharger" x="313" y="331" width="16" height="16"/><text class="sys-name" x="321" y="368">Epever</text><text class="sys-big" x="321" y="392" id="sysEpeverBig">—</text><text class="sys-small" x="321" y="408" id="sysEpeverS1"></text><text class="sys-small" x="321" y="421" id="sysEpeverS2"></text><text class="sys-small" x="321" y="434" id="sysEpeverS3"></text></g>
+<g id="sysOutput" data-dev="output" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="Total solar to house, the three inverters added together: show its details" data-state="stale"><rect x="6" y="8" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcHouse" x="37" y="15" width="16" height="16"/><text class="sys-name" x="45" y="42">Total solar</text><text class="sys-name" x="45" y="54">to house</text><text class="sys-big" x="45" y="76" id="sysOutputBig">—</text><text class="sys-small" x="45" y="92" id="sysOutputS1">3 inverters</text><text class="sys-small" x="45" y="105" id="sysOutputS2">added together</text></g>
+<g id="sysGarInv" data-dev="garden" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="Garden inverter: show the Garden details" data-state="stale"><rect x="98" y="8" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcInverter" x="129" y="15" width="16" height="16"/><text class="sys-name" x="137" y="42">Garden</text><text class="sys-name" x="137" y="54">inverter</text><text class="sys-big" x="137" y="76" id="sysGarInvBig">—</text><text class="sys-small" x="137" y="92" id="sysGarInvS1"></text><text class="sys-small" x="137" y="105" id="sysGarInvS2"></text></g><rect class="sys-sock" x="130" y="110" width="14" height="6" rx="1"/>
+<g id="sysInv1000" data-dev="inv1000" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="1000 watt inverter: show its details" data-state="stale"><rect x="190" y="8" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcInverter" x="221" y="15" width="16" height="16"/><text class="sys-name" x="229" y="42">1000 W</text><text class="sys-name" x="229" y="54">inverter</text><text class="sys-big" x="229" y="76" id="sysInv1000Big">—</text><text class="sys-small" x="229" y="92" id="sysInv1000S1"></text><text class="sys-small" x="229" y="105" id="sysInv1000S2"></text></g><rect class="sys-sock" x="222" y="110" width="14" height="6" rx="1"/>
+<g id="sysInv600" data-dev="inv600" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="600 watt inverter: show its details" data-state="stale"><rect x="282" y="8" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcInverter" x="313" y="15" width="16" height="16"/><text class="sys-name" x="321" y="42">600 W</text><text class="sys-name" x="321" y="54">inverter</text><text class="sys-big" x="321" y="76" id="sysInv600Big">—</text><text class="sys-small" x="321" y="92" id="sysInv600S1"></text><text class="sys-small" x="321" y="105" id="sysInv600S2"></text></g><rect class="sys-sock" x="314" y="110" width="14" height="6" rx="1"/>
+<g id="sysPGarden" data-dev="garden" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="100 watt Garden panel: show the Garden details" data-state="idle"><rect x="6" y="164" width="74" height="108" rx="8"/><use class="sys-ic" href="#sysIcPanel" x="35" y="171" width="16" height="16"/><text class="sys-name" x="43" y="208">Garden panel</text><text class="sys-rate" x="43" y="232">100 W</text><text class="sys-small" x="43" y="248" id="sysPGardenS1"></text><text class="sys-small" x="43" y="261" id="sysPGardenS2"></text></g>
+<g id="sysGarden" data-dev="garden" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="eWeLink Garden meter, the Garden inverter plug reading: show the Garden details" data-state="stale"><rect x="98" y="164" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcMeter" x="129" y="171" width="16" height="16"/><text class="sys-name" x="137" y="198">eWeLink</text><text class="sys-name" x="137" y="210">Garden meter</text><text class="sys-big" x="137" y="232" id="sysGardenBig">—</text><text class="sys-small" x="137" y="248" id="sysGardenS1"></text><text class="sys-small" x="137" y="261" id="sysGardenS2"></text></g>
+<g id="sysPShed" data-dev="shed" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="400 watt Shed panel: show the Shed details" data-state="idle"><rect x="6" y="300" width="74" height="108" rx="8"/><use class="sys-ic" href="#sysIcPanel" x="35" y="307" width="16" height="16"/><text class="sys-name" x="43" y="344">Shed panel</text><text class="sys-rate" x="43" y="368">400 W</text><text class="sys-small" x="43" y="384" id="sysPShedS1"></text><text class="sys-small" x="43" y="397" id="sysPShedS2"></text></g>
+<g id="sysShed" data-dev="shed" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="Shed meter: show the Shed details" data-state="stale"><rect x="98" y="300" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcMeter" x="129" y="307" width="16" height="16"/><text class="sys-name" x="137" y="344">Shed meter</text><text class="sys-big" x="137" y="368" id="sysShedBig">—</text><text class="sys-small" x="137" y="384" id="sysShedS1"></text><text class="sys-small" x="137" y="397" id="sysShedS2"></text></g>
+<g id="sysPGarage" data-dev="garage" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="400 watt Garage panel: show the Garage details" data-state="idle"><rect x="6" y="436" width="74" height="108" rx="8"/><use class="sys-ic" href="#sysIcPanel" x="35" y="443" width="16" height="16"/><text class="sys-name" x="43" y="480">Garage panel</text><text class="sys-rate" x="43" y="504">400 W</text><text class="sys-small" x="43" y="520" id="sysPGarageS1"></text><text class="sys-small" x="43" y="533" id="sysPGarageS2"></text></g>
+<g id="sysGarage" data-dev="garage" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="Garage meter: show the Garage details" data-state="stale"><rect x="98" y="436" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcMeter" x="129" y="443" width="16" height="16"/><text class="sys-name" x="137" y="480">Garage meter</text><text class="sys-big" x="137" y="504" id="sysGarageBig">—</text><text class="sys-small" x="137" y="520" id="sysGarageS1"></text><text class="sys-small" x="137" y="533" id="sysGarageS2"></text></g>
+<g id="sysP275" data-dev="p275" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="275 watt panels: show the 275 watt details" data-state="idle"><rect x="6" y="572" width="74" height="108" rx="8"/><use class="sys-ic" href="#sysIcPanel" x="35" y="579" width="16" height="16"/><text class="sys-name" x="43" y="616">275 W panels</text><text class="sys-rate" x="43" y="640">275 W</text><text class="sys-small" x="43" y="656" id="sysP275S1"></text><text class="sys-small" x="43" y="669" id="sysP275S2"></text></g>
+<g id="sys275" data-dev="p275" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="275 watt meter: show the 275 watt details" data-state="stale"><rect x="98" y="572" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcMeter" x="129" y="579" width="16" height="16"/><text class="sys-name" x="137" y="616">275 meter</text><text class="sys-big" x="137" y="640" id="sys275Big">—</text><text class="sys-small" x="137" y="656" id="sys275S1"></text><text class="sys-small" x="137" y="669" id="sys275S2"></text></g>
+<g id="sysBatt" data-dev="epever" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="24 volt battery: show the Epever and battery details" data-state="stale"><rect x="282" y="164" width="78" height="122" rx="8"/><rect class="sys-bat-body" x="297" y="172" width="44" height="24" rx="4"/><rect class="sys-bat-nub" x="341" y="180" width="4" height="8" rx="1"/><rect id="sysBattFill" class="sys-bat-fill" x="299" y="174" width="0" height="20" rx="2" data-level="na"/><text id="sysBattPct" class="sys-bat-pct" x="319" y="188">—</text><text class="sys-name" x="321" y="208">24 V battery</text><text class="sys-big" x="321" y="232" id="sysBattBig">—</text><text class="sys-small" x="321" y="248" id="sysBattS1"></text><text class="sys-small" x="321" y="261" id="sysBattS2"></text><text class="sys-small" x="321" y="274" id="sysBattS3"></text></g>
+<g id="sysCharger" data-dev="charger" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="Mains battery charger, switched by hand: show its details" data-state="stale"><rect x="378" y="171" width="78" height="108" rx="8"/><use class="sys-ic" href="#sysIcMains" x="409" y="178" width="16" height="16"/><text class="sys-name" x="417" y="205">Charger</text><text class="sys-small" x="417" y="217">mains, manual</text><text class="sys-big" x="417" y="239" id="sysChargerBig">—</text><text class="sys-small" x="417" y="255" id="sysChargerS1"></text><text class="sys-small" x="417" y="268" id="sysChargerS2"></text></g>
+<g id="sysEpever" data-dev="epever" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="Epever charge controller. Lit only while charging; a dark box says why: show the Epever and battery details" data-state="stale"><rect x="282" y="324" width="78" height="122" rx="8"/><use class="sys-ic" href="#sysIcCharger" x="313" y="331" width="16" height="16"/><text class="sys-name" x="321" y="368">Epever</text><text class="sys-big" x="321" y="392" id="sysEpeverBig">—</text><text class="sys-small" x="321" y="408" id="sysEpeverS1"></text><text class="sys-small" x="321" y="421" id="sysEpeverS2"></text><text class="sys-small" x="321" y="434" id="sysEpeverS3"></text></g>
 <g id="sysDC" data-state="idle"><rect x="217" y="300" width="24" height="380" rx="6"/><text class="sys-name" x="229" y="478" style="font-weight:700">DC</text></g>
 <path class="sys-plug" transform="translate(0,16)" d="M134 102v-6M140 102v-6M131 102h12v6a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2z"/>
 <path class="sys-plug" transform="translate(92,16)" d="M134 102v-6M140 102v-6M131 102h12v6a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2z"/>
@@ -872,21 +934,21 @@
 <svg class="sys-plan sys-wide" viewBox="0 0 744 736" role="group" aria-labelledby="sysTitleW" aria-describedby="sysDescW">
 <title id="sysTitleW">Solar wiring: the 100 watt Garden panel feeds the Garden inverter through its eWeLink plug; the 400 watt Shed and Garage panels and the 275 watt set, each through a meter, join on DC, which feeds the 1000 watt inverter and the Epever; the Epever charges the 24 volt battery that runs the 600 watt inverter; a mains charger, switched by hand, also feeds that battery from the right and is not part of the solar total; total solar to house is the three inverters added together; the Epever charging is shown separately</title>
 <desc id="sysDescW">When the Epever reading is fresh but the box is dark, the text says why: panel voltage and not charging, float with the battery full, or the charge state with no power coming in. A stale or missing reading stays a dash. The Charger box is the mains plug to the right of the 24 volt battery. It lights only while that reading is fresh, online and drawing power, and its watts are not added to total solar to house.</desc>
-<g id="sysOutput" data-goto="juwai:output" tabindex="0" role="link" aria-label="Total solar to house, the three inverters added together: open Generation" data-state="stale"><rect x="10" y="8" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcHouse" x="50" y="15" width="16" height="16"/><text class="sys-name" x="58" y="42">Total solar</text><text class="sys-name" x="58" y="54">to house</text><text class="sys-big" x="58" y="76" id="sysOutputBig">—</text><text class="sys-small" x="58" y="92" id="sysOutputS1">3 inverters</text><text class="sys-small" x="58" y="105" id="sysOutputS2">added together</text></g>
-<g id="sysGarInv" data-goto="ewelink:garage-inverter" tabindex="0" role="link" aria-label="Garden inverter: open its graph on Inverters and fridge" data-state="stale"><rect x="166" y="8" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcInverter" x="206" y="15" width="16" height="16"/><text class="sys-name" x="214" y="42">Garden</text><text class="sys-name" x="214" y="54">inverter</text><text class="sys-big" x="214" y="76" id="sysGarInvBig">—</text><text class="sys-small" x="214" y="92" id="sysGarInvS1"></text><text class="sys-small" x="214" y="105" id="sysGarInvS2"></text></g><rect class="sys-sock" x="207" y="110" width="14" height="6" rx="1"/>
-<g id="sysInv1000" data-goto="ewelink:inverter-1000" tabindex="0" role="link" aria-label="1000 watt inverter: open its graph on Inverters and fridge" data-state="stale"><rect x="340" y="8" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcInverter" x="380" y="15" width="16" height="16"/><text class="sys-name" x="388" y="42">1000 W</text><text class="sys-name" x="388" y="54">inverter</text><text class="sys-big" x="388" y="76" id="sysInv1000Big">—</text><text class="sys-small" x="388" y="92" id="sysInv1000S1"></text><text class="sys-small" x="388" y="105" id="sysInv1000S2"></text></g><rect class="sys-sock" x="381" y="110" width="14" height="6" rx="1"/>
-<g id="sysInv600" data-goto="ewelink:inverter-600" tabindex="0" role="link" aria-label="600 watt inverter: open its graph on Inverters and fridge" data-state="stale"><rect x="514" y="8" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcInverter" x="554" y="15" width="16" height="16"/><text class="sys-name" x="562" y="42">600 W</text><text class="sys-name" x="562" y="54">inverter</text><text class="sys-big" x="562" y="76" id="sysInv600Big">—</text><text class="sys-small" x="562" y="92" id="sysInv600S1"></text><text class="sys-small" x="562" y="105" id="sysInv600S2"></text></g><rect class="sys-sock" x="555" y="110" width="14" height="6" rx="1"/>
-<g id="sysPGarden" data-goto="ewelink:garage-inverter" tabindex="0" role="link" aria-label="100 watt Garden panel: open the Garden inverter graph" data-state="idle"><rect x="10" y="176" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcPanel" x="50" y="183" width="16" height="16"/><text class="sys-name" x="58" y="220">Garden panel</text><text class="sys-rate" x="58" y="244">100 W</text><text class="sys-small" x="58" y="260" id="sysPGardenS1"></text><text class="sys-small" x="58" y="273" id="sysPGardenS2"></text></g>
-<g id="sysGarden" data-goto="ewelink:garage-inverter" tabindex="0" role="link" aria-label="eWeLink Garden meter, the Garden inverter plug reading: open its graph" data-state="stale"><rect x="166" y="176" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcMeter" x="206" y="183" width="16" height="16"/><text class="sys-name" x="214" y="210">eWeLink</text><text class="sys-name" x="214" y="222">Garden meter</text><text class="sys-big" x="214" y="244" id="sysGardenBig">—</text><text class="sys-small" x="214" y="260" id="sysGardenS1"></text><text class="sys-small" x="214" y="273" id="sysGardenS2"></text></g>
-<g id="sysPShed" data-goto="juwai:shed" tabindex="0" role="link" aria-label="400 watt Shed panel: open the Shed card on Generation" data-state="idle"><rect x="10" y="324" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcPanel" x="50" y="331" width="16" height="16"/><text class="sys-name" x="58" y="368">Shed panel</text><text class="sys-rate" x="58" y="392">400 W</text><text class="sys-small" x="58" y="408" id="sysPShedS1"></text><text class="sys-small" x="58" y="421" id="sysPShedS2"></text></g>
-<g id="sysShed" data-goto="juwai:shed" tabindex="0" role="link" aria-label="Shed meter: open the Shed card on Generation" data-state="stale"><rect x="166" y="324" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcMeter" x="206" y="331" width="16" height="16"/><text class="sys-name" x="214" y="368">Shed meter</text><text class="sys-big" x="214" y="392" id="sysShedBig">—</text><text class="sys-small" x="214" y="408" id="sysShedS1"></text><text class="sys-small" x="214" y="421" id="sysShedS2"></text></g>
-<g id="sysPGarage" data-goto="juwai:garage" tabindex="0" role="link" aria-label="400 watt Garage panel: open the Garage card on Generation" data-state="idle"><rect x="10" y="472" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcPanel" x="50" y="479" width="16" height="16"/><text class="sys-name" x="58" y="516">Garage panel</text><text class="sys-rate" x="58" y="540">400 W</text><text class="sys-small" x="58" y="556" id="sysPGarageS1"></text><text class="sys-small" x="58" y="569" id="sysPGarageS2"></text></g>
-<g id="sysGarage" data-goto="juwai:garage" tabindex="0" role="link" aria-label="Garage meter: open the Garage card on Generation" data-state="stale"><rect x="166" y="472" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcMeter" x="206" y="479" width="16" height="16"/><text class="sys-name" x="214" y="516">Garage meter</text><text class="sys-big" x="214" y="540" id="sysGarageBig">—</text><text class="sys-small" x="214" y="556" id="sysGarageS1"></text><text class="sys-small" x="214" y="569" id="sysGarageS2"></text></g>
-<g id="sysP275" data-goto="juwai:p275" tabindex="0" role="link" aria-label="275 watt panels: open the 275 watt card on Generation" data-state="idle"><rect x="10" y="620" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcPanel" x="50" y="627" width="16" height="16"/><text class="sys-name" x="58" y="664">275 W panels</text><text class="sys-rate" x="58" y="688">275 W</text><text class="sys-small" x="58" y="704" id="sysP275S1"></text><text class="sys-small" x="58" y="717" id="sysP275S2"></text></g>
-<g id="sys275" data-goto="juwai:p275" tabindex="0" role="link" aria-label="275 watt meter: open the 275 watt card on Generation" data-state="stale"><rect x="166" y="620" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcMeter" x="206" y="627" width="16" height="16"/><text class="sys-name" x="214" y="664">275 meter</text><text class="sys-big" x="214" y="688" id="sys275Big">—</text><text class="sys-small" x="214" y="704" id="sys275S1"></text><text class="sys-small" x="214" y="717" id="sys275S2"></text></g>
-<g id="sysBatt" data-goto="juwai:epever" tabindex="0" role="link" aria-label="24 volt battery: open its details on the Epever card" data-state="stale"><rect x="514" y="176" width="96" height="122" rx="8"/><rect class="sys-bat-body" x="538" y="184" width="44" height="24" rx="4"/><rect class="sys-bat-nub" x="582" y="192" width="4" height="8" rx="1"/><rect id="sysBattFill" class="sys-bat-fill" x="540" y="186" width="0" height="20" rx="2" data-level="na"/><text id="sysBattPct" class="sys-bat-pct" x="560" y="200">—</text><text class="sys-name" x="562" y="220">24 V battery</text><text class="sys-big" x="562" y="244" id="sysBattBig">—</text><text class="sys-small" x="562" y="260" id="sysBattS1"></text><text class="sys-small" x="562" y="273" id="sysBattS2"></text><text class="sys-small" x="562" y="286" id="sysBattS3"></text></g>
-<g id="sysCharger" data-goto="ewelink:charger-inverter" tabindex="0" role="link" aria-label="Mains battery charger, switched by hand: open its graph on Inverters and fridge" data-state="stale"><rect x="638" y="183" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcMains" x="678" y="190" width="16" height="16"/><text class="sys-name" x="686" y="217">Charger</text><text class="sys-small" x="686" y="229">mains, manual</text><text class="sys-big" x="686" y="251" id="sysChargerBig">—</text><text class="sys-small" x="686" y="267" id="sysChargerS1"></text><text class="sys-small" x="686" y="280" id="sysChargerS2"></text></g>
-<g id="sysEpever" data-goto="juwai:epever" tabindex="0" role="link" aria-label="Epever charge controller. Lit only while charging; a dark box says why: open its details on Generation" data-state="stale"><rect x="514" y="342" width="96" height="122" rx="8"/><use class="sys-ic" href="#sysIcCharger" x="554" y="349" width="16" height="16"/><text class="sys-name" x="562" y="386">Epever</text><text class="sys-big" x="562" y="410" id="sysEpeverBig">—</text><text class="sys-small" x="562" y="426" id="sysEpeverS1"></text><text class="sys-small" x="562" y="439" id="sysEpeverS2"></text><text class="sys-small" x="562" y="452" id="sysEpeverS3"></text></g>
+<g id="sysOutput" data-dev="output" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="Total solar to house, the three inverters added together: show its details" data-state="stale"><rect x="10" y="8" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcHouse" x="50" y="15" width="16" height="16"/><text class="sys-name" x="58" y="42">Total solar</text><text class="sys-name" x="58" y="54">to house</text><text class="sys-big" x="58" y="76" id="sysOutputBig">—</text><text class="sys-small" x="58" y="92" id="sysOutputS1">3 inverters</text><text class="sys-small" x="58" y="105" id="sysOutputS2">added together</text></g>
+<g id="sysGarInv" data-dev="garden" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="Garden inverter: show the Garden details" data-state="stale"><rect x="166" y="8" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcInverter" x="206" y="15" width="16" height="16"/><text class="sys-name" x="214" y="42">Garden</text><text class="sys-name" x="214" y="54">inverter</text><text class="sys-big" x="214" y="76" id="sysGarInvBig">—</text><text class="sys-small" x="214" y="92" id="sysGarInvS1"></text><text class="sys-small" x="214" y="105" id="sysGarInvS2"></text></g><rect class="sys-sock" x="207" y="110" width="14" height="6" rx="1"/>
+<g id="sysInv1000" data-dev="inv1000" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="1000 watt inverter: show its details" data-state="stale"><rect x="340" y="8" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcInverter" x="380" y="15" width="16" height="16"/><text class="sys-name" x="388" y="42">1000 W</text><text class="sys-name" x="388" y="54">inverter</text><text class="sys-big" x="388" y="76" id="sysInv1000Big">—</text><text class="sys-small" x="388" y="92" id="sysInv1000S1"></text><text class="sys-small" x="388" y="105" id="sysInv1000S2"></text></g><rect class="sys-sock" x="381" y="110" width="14" height="6" rx="1"/>
+<g id="sysInv600" data-dev="inv600" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="600 watt inverter: show its details" data-state="stale"><rect x="514" y="8" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcInverter" x="554" y="15" width="16" height="16"/><text class="sys-name" x="562" y="42">600 W</text><text class="sys-name" x="562" y="54">inverter</text><text class="sys-big" x="562" y="76" id="sysInv600Big">—</text><text class="sys-small" x="562" y="92" id="sysInv600S1"></text><text class="sys-small" x="562" y="105" id="sysInv600S2"></text></g><rect class="sys-sock" x="555" y="110" width="14" height="6" rx="1"/>
+<g id="sysPGarden" data-dev="garden" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="100 watt Garden panel: show the Garden details" data-state="idle"><rect x="10" y="176" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcPanel" x="50" y="183" width="16" height="16"/><text class="sys-name" x="58" y="220">Garden panel</text><text class="sys-rate" x="58" y="244">100 W</text><text class="sys-small" x="58" y="260" id="sysPGardenS1"></text><text class="sys-small" x="58" y="273" id="sysPGardenS2"></text></g>
+<g id="sysGarden" data-dev="garden" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="eWeLink Garden meter, the Garden inverter plug reading: show the Garden details" data-state="stale"><rect x="166" y="176" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcMeter" x="206" y="183" width="16" height="16"/><text class="sys-name" x="214" y="210">eWeLink</text><text class="sys-name" x="214" y="222">Garden meter</text><text class="sys-big" x="214" y="244" id="sysGardenBig">—</text><text class="sys-small" x="214" y="260" id="sysGardenS1"></text><text class="sys-small" x="214" y="273" id="sysGardenS2"></text></g>
+<g id="sysPShed" data-dev="shed" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="400 watt Shed panel: show the Shed details" data-state="idle"><rect x="10" y="324" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcPanel" x="50" y="331" width="16" height="16"/><text class="sys-name" x="58" y="368">Shed panel</text><text class="sys-rate" x="58" y="392">400 W</text><text class="sys-small" x="58" y="408" id="sysPShedS1"></text><text class="sys-small" x="58" y="421" id="sysPShedS2"></text></g>
+<g id="sysShed" data-dev="shed" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="Shed meter: show the Shed details" data-state="stale"><rect x="166" y="324" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcMeter" x="206" y="331" width="16" height="16"/><text class="sys-name" x="214" y="368">Shed meter</text><text class="sys-big" x="214" y="392" id="sysShedBig">—</text><text class="sys-small" x="214" y="408" id="sysShedS1"></text><text class="sys-small" x="214" y="421" id="sysShedS2"></text></g>
+<g id="sysPGarage" data-dev="garage" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="400 watt Garage panel: show the Garage details" data-state="idle"><rect x="10" y="472" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcPanel" x="50" y="479" width="16" height="16"/><text class="sys-name" x="58" y="516">Garage panel</text><text class="sys-rate" x="58" y="540">400 W</text><text class="sys-small" x="58" y="556" id="sysPGarageS1"></text><text class="sys-small" x="58" y="569" id="sysPGarageS2"></text></g>
+<g id="sysGarage" data-dev="garage" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="Garage meter: show the Garage details" data-state="stale"><rect x="166" y="472" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcMeter" x="206" y="479" width="16" height="16"/><text class="sys-name" x="214" y="516">Garage meter</text><text class="sys-big" x="214" y="540" id="sysGarageBig">—</text><text class="sys-small" x="214" y="556" id="sysGarageS1"></text><text class="sys-small" x="214" y="569" id="sysGarageS2"></text></g>
+<g id="sysP275" data-dev="p275" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="275 watt panels: show the 275 watt details" data-state="idle"><rect x="10" y="620" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcPanel" x="50" y="627" width="16" height="16"/><text class="sys-name" x="58" y="664">275 W panels</text><text class="sys-rate" x="58" y="688">275 W</text><text class="sys-small" x="58" y="704" id="sysP275S1"></text><text class="sys-small" x="58" y="717" id="sysP275S2"></text></g>
+<g id="sys275" data-dev="p275" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="275 watt meter: show the 275 watt details" data-state="stale"><rect x="166" y="620" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcMeter" x="206" y="627" width="16" height="16"/><text class="sys-name" x="214" y="664">275 meter</text><text class="sys-big" x="214" y="688" id="sys275Big">—</text><text class="sys-small" x="214" y="704" id="sys275S1"></text><text class="sys-small" x="214" y="717" id="sys275S2"></text></g>
+<g id="sysBatt" data-dev="epever" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="24 volt battery: show the Epever and battery details" data-state="stale"><rect x="514" y="176" width="96" height="122" rx="8"/><rect class="sys-bat-body" x="538" y="184" width="44" height="24" rx="4"/><rect class="sys-bat-nub" x="582" y="192" width="4" height="8" rx="1"/><rect id="sysBattFill" class="sys-bat-fill" x="540" y="186" width="0" height="20" rx="2" data-level="na"/><text id="sysBattPct" class="sys-bat-pct" x="560" y="200">—</text><text class="sys-name" x="562" y="220">24 V battery</text><text class="sys-big" x="562" y="244" id="sysBattBig">—</text><text class="sys-small" x="562" y="260" id="sysBattS1"></text><text class="sys-small" x="562" y="273" id="sysBattS2"></text><text class="sys-small" x="562" y="286" id="sysBattS3"></text></g>
+<g id="sysCharger" data-dev="charger" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="Mains battery charger, switched by hand: show its details" data-state="stale"><rect x="638" y="183" width="96" height="108" rx="8"/><use class="sys-ic" href="#sysIcMains" x="678" y="190" width="16" height="16"/><text class="sys-name" x="686" y="217">Charger</text><text class="sys-small" x="686" y="229">mains, manual</text><text class="sys-big" x="686" y="251" id="sysChargerBig">—</text><text class="sys-small" x="686" y="267" id="sysChargerS1"></text><text class="sys-small" x="686" y="280" id="sysChargerS2"></text></g>
+<g id="sysEpever" data-dev="epever" tabindex="0" role="button" aria-expanded="false" aria-controls="sysDetail" aria-label="Epever charge controller. Lit only while charging; a dark box says why: show the Epever and battery details" data-state="stale"><rect x="514" y="342" width="96" height="122" rx="8"/><use class="sys-ic" href="#sysIcCharger" x="554" y="349" width="16" height="16"/><text class="sys-name" x="562" y="386">Epever</text><text class="sys-big" x="562" y="410" id="sysEpeverBig">—</text><text class="sys-small" x="562" y="426" id="sysEpeverS1"></text><text class="sys-small" x="562" y="439" id="sysEpeverS2"></text><text class="sys-small" x="562" y="452" id="sysEpeverS3"></text></g>
 <g id="sysDC" data-state="idle"><rect x="372" y="324" width="32" height="404" rx="6"/><text class="sys-name" x="388" y="514" style="font-weight:700">DC</text></g>
 <path class="sys-plug" transform="translate(77,16)" d="M134 102v-6M140 102v-6M131 102h12v6a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2z"/>
 <path class="sys-plug" transform="translate(251,16)" d="M134 102v-6M140 102v-6M131 102h12v6a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2z"/>
@@ -919,6 +981,7 @@
 <g id="sysFWCharger" class="sys-flow"><path class="sys-chev" d="M-2.6 -3L1.6 0L-2.6 3"><animateMotion dur="0.72s" begin="-0.00s" repeatCount="indefinite" rotate="auto"><mpath href="#sysLWCharger"/></animateMotion></path></g>
 </svg>
 <p class="sys-key">Four sets of panels. The 100 watt Garden panel feeds the Garden inverter; its only reading is that inverter's eWeLink plug. The 400 watt Shed and Garage panels and the 275 watt set each pass through a meter into DC. DC feeds the 1000 watt inverter and the Epever, which charges the 24 volt battery that runs the 600 watt inverter. Total solar to house is the three inverters added together; what the Epever takes in is battery charging, shown separately and not taken off. A mains battery charger, switched by hand, feeds the 24 volt battery from the right. That plug is a separate mains input and is not part of the solar total. The Shed and garage total on Generation is those two meters only; the 275 watt meter has its own card.</p>
+</div></div>
 </div>
 </section>
       </div>
@@ -981,78 +1044,94 @@ function drawJuwai(){
   const period=$('juwaiWindow').selectedOptions[0].textContent;
   document.querySelectorAll('.juwai-period').forEach(el=>el.textContent=period);
   const energies=['shed','garage'].map(id=>juwaiHistory[id]?.energy),e275=juwaiHistory.p275?.energy;
-  $('p275Energy').textContent=e275?.coverage_s>0&&Number.isFinite(e275.estimated_kwh)?e275.estimated_kwh.toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})+' kWh':'— kWh';
-  for(const [i,id] of ['shed','garage'].entries())$(id+'Energy').textContent=Number.isFinite(energies[i]?.estimated_kwh)?energies[i].estimated_kwh.toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})+' kWh':'— kWh';
+  $('p275Energy').textContent=meterKwh(e275,true);
+  for(const [i,id] of ['shed','garage'].entries())$(id+'Energy').textContent=meterKwh(energies[i]);
   const complete=energies.every(e=>Number.isFinite(e?.estimated_kwh));
   $('totalEnergy').textContent=complete?energies.reduce((sum,e)=>sum+e.estimated_kwh,0).toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})+' kWh':'— kWh';
   Object.assign(juwaiGen,{history:juwaiHistory,window:$('juwaiWindow').value,ready:!!juwaiHistoryKey,label:period});
   juwaiGen.draw();
 }
 // Total solar power to house = 1000 watt inverter + Garden inverter + 600 watt inverter plugs (eWeLink). The Epever charger's input is shown separately as battery charging, not subtracted (decided 14 Nov). Any part missing, stale or offline shows "—", never a partial figure. Energy uses the Inverters tab's figure: the plug's own day counter where it sends one, otherwise the server's estimate from power readings.
-let outputLatest=null, outputHistory={}, outputHistoryKey='', outputTime=0, outputChart=null, epeverLatest=null;
+// The Total and Epever code below serves two views, each with its own readings, history and period: the Generation tab's cards (ids output… and epever…; step 3 deletes that view, juwaiSolar)
+// and the System tab's detail (ids sdOut… and sdEp…, sysSolar). out and ep are the id prefixes, period() the history window, live() whether the view is showing, epTail extra wording for the Epever note.
+function solarView(out,ep,period,live,epTail=''){return {out,ep,period,live,epTail,latest:null,history:{},key:'',time:0,chart:null,epLatest:null,epHistory:null,epKey:'',epTime:0,epChart:null};}
+const juwaiSolar=solarView('output','epever',()=>$('juwaiWindow').value,()=>activeTab==='juwai'&&!document.hidden,' This charger is not added to the Shed and garage total.');
 const OUTPUT_IDS=['inverter-1000','garage-inverter','inverter-600'],OUTPUT_NAMES=['1000 watt inverter','Garden inverter','600 watt inverter'];
 const outputMethod=r=>r?.energy?.method==='counter'?'own counter':r?.energy?.method==='mixed'?'part estimate':'estimate';
 function outputWh(r,interval){if(r?.energy&&'wh' in r.energy)return Number.isFinite(r.energy.wh)?r.energy.wh:null;let sum=0,any=false;for(const b of (r?.bins||[]))if(b.samples&&Number.isFinite(b.mean_w)){sum+=b.mean_w*b.samples;any=true;}return any?sum*interval/3600:null;}
-function renderOutput(){
-  const num=(v,unit,digits)=>Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:digits})+' '+unit:'—',kwh=wh=>Number.isFinite(wh)?(wh/1000).toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})+' kWh':'—';
-  const devs=OUTPUT_IDS.map(id=>outputLatest?.devices?.find(d=>d.id===id)),usable=d=>!!d&&!!d.ts&&!d.stale&&!!d.online&&Number.isFinite(d.power_w);
-  const ev=epeverLatest?.values,eOk=!!epeverLatest&&!epeverLatest.stale&&Number.isFinite(ev?.pv_w);
-  const all=devs.every(usable),interval=outputLatest?.interval_seconds||300,wh=OUTPUT_IDS.map(id=>outputWh(outputHistory[id],interval));
-  $('outputPower').textContent=all?num(devs.reduce((t,d)=>t+d.power_w,0),'W',2):'— W';
-  $('outputPowerParts').textContent=OUTPUT_NAMES.map((n,i)=>n+' '+(usable(devs[i])?num(devs[i].power_w,'W',2):'—')).join(' + ');
+function renderOutput(o){
+  const $o=k=>$(o.out+k),num=(v,unit,digits)=>Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:digits})+' '+unit:'—',kwh=wh=>Number.isFinite(wh)?(wh/1000).toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})+' kWh':'—';
+  const devs=OUTPUT_IDS.map(id=>o.latest?.devices?.find(d=>d.id===id)),usable=d=>!!d&&!!d.ts&&!d.stale&&!!d.online&&Number.isFinite(d.power_w);
+  const ev=o.epLatest?.values,eOk=!!o.epLatest&&!o.epLatest.stale&&Number.isFinite(ev?.pv_w);
+  const all=devs.every(usable),interval=o.latest?.interval_seconds||300,wh=OUTPUT_IDS.map(id=>outputWh(o.history[id],interval));
+  $o('Power').textContent=all?num(devs.reduce((t,d)=>t+d.power_w,0),'W',2):'— W';
+  $o('PowerParts').textContent=OUTPUT_NAMES.map((n,i)=>n+' '+(usable(devs[i])?num(devs[i].power_w,'W',2):'—')).join(' + ');
   // The Epever's input is the power going into the battery, so it is shown separately and not taken off the total.
-  $('outputCharging').textContent='Battery charging (Epever): '+(eOk?num(ev.pv_w,'W',2):'—')+'. Taken from the panels into the battery; not counted in the total.';
-  $('outputCard').dataset.stale=String(!all);
-  $('outputState').textContent=!outputLatest?'Unavailable':all?'Current':'Delayed';
-  const stamps=[...devs.map(d=>d?.ts),epeverLatest?.observed_at].filter(Number.isFinite),stamp=stamps.length===OUTPUT_IDS.length+1?Math.min(...stamps):null;
-  $('outputAge').textContent=stamp?new Date(stamp).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'Waiting for readings';
-  if(stamp)$('outputAge').dateTime=new Date(stamp).toISOString();
-  const period=$('juwaiWindow').value,have=outputHistoryKey===period&&epeverKey===period,energy=epeverHistory?.energy,eWh=Number.isFinite(energy?.generated_kwh)?energy.generated_kwh*1000:null;
-  const ok=wh.every(Number.isFinite)&&eWh!=null;
-  $('outputEnergy').textContent=have&&wh.every(Number.isFinite)?kwh(wh[0]+wh[1]+wh[2]):'— kWh';
-  $('outputEnergyParts').textContent=!have?'':wh.every(Number.isFinite)?'Energy: '+OUTPUT_NAMES.map((n,i)=>n+' '+kwh(wh[i])+' ('+outputMethod(outputHistory[OUTPUT_IDS[i]])+')').join(' + ')+'.'+(OUTPUT_IDS.some(id=>outputMethod(outputHistory[id])!=='own counter')?' Estimates come from power readings that the cloud updates only now and then, so they can read low.':'')+(eWh==null?'':' Battery charging energy from the Epever: '+kwh(eWh)+', not counted in the total.')+(energy?.partial?' The Epever part is counted only from its first stored reading in this period.':''):'Energy to house unavailable: no readings from the '+OUTPUT_NAMES.filter((n,i)=>wh[i]==null).join(' or the ')+' for this period.';
-  drawOutput();
+  $o('Charging').textContent='Battery charging (Epever): '+(eOk?num(ev.pv_w,'W',2):'—')+'. Taken from the panels into the battery; not counted in the total.';
+  $o('Card').dataset.stale=String(!all);
+  $o('State').textContent=!o.latest?'Unavailable':all?'Current':'Delayed';
+  const stamps=[...devs.map(d=>d?.ts),o.epLatest?.observed_at].filter(Number.isFinite),stamp=stamps.length===OUTPUT_IDS.length+1?Math.min(...stamps):null;
+  $o('Age').textContent=stamp?new Date(stamp).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'Waiting for readings';
+  if(stamp)$o('Age').dateTime=new Date(stamp).toISOString();
+  const period=o.period(),have=o.key===period&&o.epKey===period,energy=o.epHistory?.energy,eWh=Number.isFinite(energy?.generated_kwh)?energy.generated_kwh*1000:null;
+  $o('Energy').textContent=have&&wh.every(Number.isFinite)?kwh(wh[0]+wh[1]+wh[2]):'— kWh';
+  $o('EnergyParts').textContent=!have?'':wh.every(Number.isFinite)?'Energy: '+OUTPUT_NAMES.map((n,i)=>n+' '+kwh(wh[i])+' ('+outputMethod(o.history[OUTPUT_IDS[i]])+')').join(' + ')+'.'+(OUTPUT_IDS.some(id=>outputMethod(o.history[id])!=='own counter')?' Estimates come from power readings that the cloud updates only now and then, so they can read low.':'')+(eWh==null?'':' Battery charging energy from the Epever: '+kwh(eWh)+', not counted in the total.')+(energy?.partial?' The Epever part is counted only from its first stored reading in this period.':''):'Energy to house unavailable: no readings from the '+OUTPUT_NAMES.filter((n,i)=>wh[i]==null).join(' or the ')+' for this period.';
+  drawOutput(o);
 }
 // Graph of the total on the plugs' time buckets: a bucket counts only when all three plugs and the Epever have a reading in it; anything else is left as a gap.
-function drawOutput(){
-  if($('outputDetail').hidden)return;
-  if(!outputChart)outputChart=new Chart($('outputChart'),{type:'line',data:{datasets:[['Total to house','#fbbf24',3],['Battery charging (Epever)','#38bdf8',1.5]].map(([label,colour,width])=>({label,data:[],parsing:false,borderColor:colour,backgroundColor:colour,pointRadius:width>2?2:0,pointHitRadius:10,borderWidth:width,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:v=>new Date(v).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})},grid:{color:'#1e293b'}},y:{title:{display:true,text:'Power (W)',color:'#94a3b8'},ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString(undefined,{maximumFractionDigits:1})+' W'}}}}});
-  const period=$('juwaiWindow').value,ready=outputHistoryKey===period&&epeverKey===period&&!!epeverHistory,first=outputHistory[OUTPUT_IDS[0]],bucket=first?.bucket_ms||300000,lines=[[],[]];
+function drawOutput(o){
+  if($(o.out+'Detail')?.hidden)return;
+  if(!o.chart)o.chart=new Chart($(o.out+'Chart'),{type:'line',data:{datasets:[['Total to house','#fbbf24',3],['Battery charging (Epever)','#38bdf8',1.5]].map(([label,colour,width])=>({label,data:[],parsing:false,borderColor:colour,backgroundColor:colour,pointRadius:width>2?2:0,pointHitRadius:10,borderWidth:width,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:v=>new Date(v).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})},grid:{color:'#1e293b'}},y:{title:{display:true,text:'Power (W)',color:'#94a3b8'},ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString(undefined,{maximumFractionDigits:1})+' W'}}}}});
+  const chart=o.chart,period=o.period(),ready=o.key===period&&o.epKey===period&&!!o.epHistory,first=o.history[OUTPUT_IDS[0]],bucket=first?.bucket_ms||300000,lines=[[],[]];
   if(ready&&first){
-    const plugs=OUTPUT_IDS.map(id=>new Map((outputHistory[id]?.points||[]).filter(r=>Number.isFinite(r[1])).map(r=>[r[0],r[1]]))),sums=new Map();
-    for(const row of epeverHistory.points||[])if(Number.isFinite(row[1])){const key=Math.floor(row[0]/bucket)*bucket,sum=sums.get(key)||[0,0];sum[0]+=row[1];sum[1]++;sums.set(key,sum);}
+    const plugs=OUTPUT_IDS.map(id=>new Map((o.history[id]?.points||[]).filter(r=>Number.isFinite(r[1])).map(r=>[r[0],r[1]]))),sums=new Map();
+    for(const row of o.epHistory.points||[])if(Number.isFinite(row[1])){const key=Math.floor(row[0]/bucket)*bucket,sum=sums.get(key)||[0,0];sum[0]+=row[1];sum[1]++;sums.set(key,sum);}
     for(const ts of [...plugs[0].keys()].sort((a,b)=>a-b)){
       const e=sums.get(ts);if(!e||!plugs.every(m=>m.has(ts)))continue;
       const inverters=plugs.reduce((t,m)=>t+m.get(ts),0),epever=e[0]/e[1],values=[inverters,epever];
       for(const [i,line] of lines.entries()){const prev=line[line.length-1];if(prev&&ts-prev.x>bucket*2.1)line.push({x:prev.x+bucket,y:null});line.push({x:ts,y:values[i]});}
     }
-    outputChart.options.scales.x.min=first.start;outputChart.options.scales.x.max=first.end;
+    chart.options.scales.x.min=first.start;chart.options.scales.x.max=first.end;
   }
-  lines.forEach((line,i)=>{outputChart.data.datasets[i].data=line;});
-  outputChart.update('none');
-  $('outputNote').textContent=!ready?'Loading…':lines[0].length?'Total to house is the three inverter readings added together. Battery charging is the Epever’s input, the power going from the panels into the battery; it is shown separately and not taken off the total. The inverters report every five minutes and the Epever every few minutes; times with a reading missing are left as gaps.':'No times in this period have readings from all three inverters and the Epever.';
+  lines.forEach((line,i)=>{chart.data.datasets[i].data=line;});
+  chart.update('none');
+  $(o.out+'Note').textContent=!ready?'Loading…':lines[0].length?'Total to house is the three inverter readings added together. Battery charging is the Epever’s input, the power going from the panels into the battery; it is shown separately and not taken off the total. The inverters report every five minutes and the Epever every few minutes; times with a reading missing are left as gaps.':'No times in this period have readings from all three inverters and the Epever.';
 }
+// The three inverter plugs' history for a view, kept for five minutes per period.
+async function readOutputHistory(o,signal,window){
+  if(o.key===window&&Date.now()-o.time<300000)return;
+  try{const rows=await Promise.all(OUTPUT_IDS.map(id=>getJSON('/api/ewelink/history?device='+id+'&window='+window,signal)));o.history=Object.fromEntries(OUTPUT_IDS.map((id,i)=>[id,rows[i]]));}
+  catch(e){if(signal.aborted)throw e;o.history={};}
+  o.key=window;o.time=Date.now();
+}
+// Generation tab only (step 3 deletes it): the System tab takes the latest plug readings from its own 3 second poll.
 async function readOutput(signal,window){
-  const tasks=[getJSON('/api/ewelink/latest',signal).then(d=>{outputLatest=d;}).catch(e=>{if(signal.aborted)throw e;outputLatest=null;})];
-  if(outputHistoryKey!==window||Date.now()-outputTime>=300000)tasks.push(Promise.all(OUTPUT_IDS.map(id=>getJSON('/api/ewelink/history?device='+id+'&window='+window,signal))).then(rows=>{outputHistory=Object.fromEntries(OUTPUT_IDS.map((id,i)=>[id,rows[i]]));outputHistoryKey=window;outputTime=Date.now();}).catch(e=>{if(signal.aborted)throw e;outputHistory={};outputHistoryKey=window;outputTime=Date.now();}));
+  const o=juwaiSolar,tasks=[getJSON('/api/ewelink/latest',signal).then(d=>{o.latest=d;}).catch(e=>{if(signal.aborted)throw e;o.latest=null;}),readOutputHistory(o,signal,window)];
   try{await Promise.all(tasks);}catch(e){return;}
-  if(!signal.aborted&&activeTab==='juwai'&&!document.hidden)renderOutput();
+  if(!signal.aborted&&o.live())renderOutput(o);
+}
+// The Shed, Garage and 275 meters' history for a period, by device; a missing 275 meter gives null rather than failing the rest.
+function tuyaHistory(ids,window,signal,source){
+  return Promise.all(ids.map(id=>getJSON('/api/tuya/history?device='+id+'&window='+window+(source?'&source='+source:''),signal).then(data=>[id,data],e=>{if(id==='p275'&&e.name!=='AbortError')return [id,null];throw e;}))).then(Object.fromEntries);
+}
+// Estimated generation for a period; the 275 meter also needs some recorded time, so a meter with no readings shows "—", not 0.
+function meterKwh(e,needCoverage){return (!needCoverage||e?.coverage_s>0)&&Number.isFinite(e?.estimated_kwh)?e.estimated_kwh.toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})+' kWh':'— kWh';}
+// One meter's latest figures into the elements p+'Power', p+'Voltage', p+'Current', p+'Card', p+'State' and p+'Age': p is shed, garage or p275 on Generation, sdMeter in the System detail.
+function renderMeter(device,p,sourceName){
+  const number=(v,unit,digits)=>Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:digits})+' '+unit:'— '+unit,v=device?.values||{};
+  $(p+'Power').textContent=number(v.power_w,'W',2);
+  $(p+'Voltage').textContent=number(v.voltage_v,'V',2);
+  $(p+'Current').textContent=number(v.current_a,'A',3);
+  $(p+'Card').dataset.stale=String(!device||device.stale);
+  $(p+'State').textContent=!device?'Unavailable':device.stale?'Delayed':'Current';
+  $(p+'Age').textContent=device?.observed_at?sourceName+' · '+new Date(device.observed_at).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'No recorded sample';
+  if(device?.observed_at)$(p+'Age').dateTime=new Date(device.observed_at).toISOString();
 }
 function renderJuwai(data){
   const sourceName=juwaiSourceNames[data.source]||'Cloud';
   $('juwaiSource').hidden=!data.switchable;
   for(const button of $('juwaiSource').children)button.setAttribute('aria-pressed',String(button.dataset.source===data.source));
-  for(const device of data.devices){
-    if(!['shed','garage','p275'].includes(device.id))continue;
-    const id=device.id,number=(v,unit,digits)=>Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:digits})+' '+unit:'— '+unit;
-    $(id+'Power').textContent=number(device.values.power_w,'W',2);
-    $(id+'Voltage').textContent=number(device.values.voltage_v,'V',2);
-    $(id+'Current').textContent=number(device.values.current_a,'A',3);
-    $(id+'Card').dataset.stale=String(device.stale);
-    $(id+'State').textContent=device.stale?'Delayed':'Current';
-    $(id+'Age').textContent=device.observed_at?sourceName+' · '+new Date(device.observed_at).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'No recorded sample';
-    if(device.observed_at)$(id+'Age').dateTime=new Date(device.observed_at).toISOString();
-  }
+  for(const device of data.devices)if(['shed','garage','p275'].includes(device.id))renderMeter(device,device.id,sourceName);
   const valid=data.devices.filter(d=>['shed','garage'].includes(d.id)&&!d.stale&&Number.isFinite(d.values.power_w));
   $('totalPower').textContent=valid.length===2?valid.reduce((sum,d)=>sum+d.values.power_w,0).toLocaleString(undefined,{maximumFractionDigits:2})+' W':'— W';
   $('totalCard').dataset.stale=String(valid.length!==2);
@@ -1071,9 +1150,9 @@ async function readJuwai(version){
   try{
     const tasks=[getJSON('/api/tuya/latest'+(juwaiSource?'?source='+juwaiSource:''),aborter.signal).then(data=>{if(version===juwaiVersion&&activeTab==='juwai'&&!document.hidden)renderJuwai(data);})];
     if(juwaiHistoryKey!==window||Date.now()-juwaiHistoryTime>=(LIVE_WINDOWS.includes(window)?3000:300000)){
-      tasks.push(Promise.all(['shed','garage','p275'].map(id=>getJSON('/api/tuya/history?device='+id+'&window='+window+(juwaiSource?'&source='+juwaiSource:''),aborter.signal).then(data=>[id,data],e=>{if(id==='p275'&&e.name!=='AbortError')return [id,null];throw e;}))).then(rows=>{
+      tasks.push(tuyaHistory(['shed','garage','p275'],window,aborter.signal,juwaiSource).then(history=>{
         if(version!==juwaiVersion||activeTab!=='juwai'||document.hidden)return;
-        juwaiHistory=Object.fromEntries(rows);juwaiHistoryKey=window;juwaiHistoryTime=Date.now();drawJuwai();
+        juwaiHistory=history;juwaiHistoryKey=window;juwaiHistoryTime=Date.now();drawJuwai();
       }));
     }
     readEpever(version,aborter.signal);readOutput(aborter.signal,window);
@@ -1088,57 +1167,61 @@ async function readJuwai(version){
     if(version===juwaiVersion&&activeTab==='juwai'&&!document.hidden){juwaiController=null;juwaiTimer=setTimeout(()=>readJuwai(version),LIVE_WINDOWS.includes(window)?3000:10000);}
   }
 }
-// Epever solar charger: a fourth card, shown only once the Pi has stored readings from it. Read-only.
-let epeverChart=null, epeverHistory=null, epeverKey='', epeverTime=0;
+// Epever solar charger: a card on Generation, shown only once the Pi has stored readings from it, and the System detail's Epever and battery view. Read-only. o is a view from solarView.
 const epeverText=(v,unit,digits)=>Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:digits})+' '+unit:'— '+unit;
-function renderEpever(data){
-  const v=data.values;
-  $('epeverCard').hidden=false;$('epeverName').textContent=data.name;
-  $('epeverPower').textContent=epeverText(v.pv_w,'W',2);
-  $('epeverCard').dataset.stale=String(data.stale);$('epeverState').textContent=data.stale?'Delayed':'Current';
-  $('epeverAge').textContent=data.observed_at?new Date(data.observed_at).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'No recorded sample';
-  if(data.observed_at)$('epeverAge').dateTime=new Date(data.observed_at).toISOString();
-  $('epeverBattV').textContent=epeverText(v.batt_v,'V',2);$('epeverBattA').textContent=epeverText(v.batt_a,'A',2);
-  $('epeverCharge').textContent=v.charge_state_name||'—';
-  $('epeverGenToday').textContent=Number.isFinite(v.gen_today_kwh)?v.gen_today_kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' kWh':'— kWh';
+function renderEpever(o,data){
+  const v=data.values,set=(k,t)=>{$(o.ep+k).textContent=t;};
+  $(o.ep+'Card').hidden=false;set('Name',data.name);
+  set('Power',epeverText(v.pv_w,'W',2));
+  $(o.ep+'Card').dataset.stale=String(data.stale);set('State',data.stale?'Delayed':'Current');
+  set('Age',data.observed_at?new Date(data.observed_at).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'No recorded sample');
+  if(data.observed_at)$(o.ep+'Age').dateTime=new Date(data.observed_at).toISOString();
+  set('BattV',epeverText(v.batt_v,'V',2));set('BattA',epeverText(v.batt_a,'A',2));
+  set('Charge',v.charge_state_name||'—');
+  set('GenToday',Number.isFinite(v.gen_today_kwh)?v.gen_today_kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' kWh':'— kWh');
   const minAt=data.times?.batt_v_min_today;
-  $('epeverBattMin').textContent=Number.isFinite(v.batt_v_min_today)&&minAt?epeverText(v.batt_v_min_today,'V',2):'—'; // voltage only: Dad asked for the time to go (15 Nov)
-  $('epeverSoc').textContent=epeverText(v.soc,'%',0);$('epeverPvV').textContent=epeverText(v.pv_v,'V',2);
+  set('BattMin',Number.isFinite(v.batt_v_min_today)&&minAt?epeverText(v.batt_v_min_today,'V',2):'—'); // voltage only: Dad asked for the time to go (15 Nov)
+  set('Soc',epeverText(v.soc,'%',0));set('PvV',epeverText(v.pv_v,'V',2));
 }
-function drawEpever(){
-  const energy=epeverHistory?.energy;
-  $('epeverEnergy').textContent=Number.isFinite(energy?.generated_kwh)?energy.generated_kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' kWh':'— kWh';
-  if($('epeverDetail').hidden)return;
-  if(!epeverChart)epeverChart=new Chart($('epeverChart'),{type:'line',data:{datasets:[['Panel power (W)','#fbbf24','y'],['Battery voltage (V)','#38bdf8','y1']].map(([label,colour,axis])=>({label,data:[],parsing:false,yAxisID:axis,borderColor:colour,backgroundColor:colour,pointRadius:2,pointHitRadius:10,borderWidth:2,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:v=>new Date(v).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})},grid:{color:'#1e293b'}},y:{min:0,title:{display:true,text:'Power (W)',color:'#94a3b8'},ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}},y1:{position:'right',title:{display:true,text:'Battery (V)',color:'#94a3b8'},ticks:{color:'#94a3b8'},grid:{drawOnChartArea:false}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()}}}}});
+function drawEpever(o){
+  const energy=o.epHistory?.energy,history=o.epHistory;
+  $(o.ep+'Energy').textContent=Number.isFinite(energy?.generated_kwh)?energy.generated_kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' kWh':'— kWh';
+  if($(o.ep+'Detail')?.hidden)return;
+  if(!o.epChart)o.epChart=new Chart($(o.ep+'Chart'),{type:'line',data:{datasets:[['Panel power (W)','#fbbf24','y'],['Battery voltage (V)','#38bdf8','y1']].map(([label,colour,axis])=>({label,data:[],parsing:false,yAxisID:axis,borderColor:colour,backgroundColor:colour,pointRadius:2,pointHitRadius:10,borderWidth:2,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:v=>new Date(v).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})},grid:{color:'#1e293b'}},y:{min:0,title:{display:true,text:'Power (W)',color:'#94a3b8'},ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}},y1:{position:'right',title:{display:true,text:'Battery (V)',color:'#94a3b8'},ticks:{color:'#94a3b8'},grid:{drawOnChartArea:false}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()}}}}});
   for(const [i,column] of [1,2].entries()){
     const points=[];
-    for(const row of epeverHistory?.points||[]){
+    for(const row of history?.points||[]){
       if(!Number.isFinite(row[column]))continue;
       const prev=points[points.length-1];
-      if(prev&&row[0]-prev.x>Math.max(1800000,epeverHistory.step_ms*2.1))points.push({x:prev.x+epeverHistory.step_ms,y:null});
+      if(prev&&row[0]-prev.x>Math.max(1800000,history.step_ms*2.1))points.push({x:prev.x+history.step_ms,y:null});
       points.push({x:row[0],y:row[column]});
     }
-    epeverChart.data.datasets[i].data=points;
+    o.epChart.data.datasets[i].data=points;
   }
-  if(epeverHistory){epeverChart.options.scales.x.min=epeverHistory.start;epeverChart.options.scales.x.max=epeverHistory.end;}
-  epeverChart.update('none');
-  $('epeverNote').textContent=epeverHistory?'Generation is the charger’s own meter reading'+(energy?.partial?', counted from the first reading stored in this period':'')+'. Readings arrive every few minutes. This charger is not added to the Shed and garage total.':'Loading…';
+  if(history){o.epChart.options.scales.x.min=history.start;o.epChart.options.scales.x.max=history.end;}
+  o.epChart.update('none');
+  $(o.ep+'Note').textContent=history?'Generation is the charger’s own meter reading'+(energy?.partial?', counted from the first reading stored in this period':'')+'. Readings arrive every few minutes.'+o.epTail:'Loading…';
 }
+// The Epever's history for a view, kept for two minutes per period; live() says whether the reply is still wanted.
+async function readEpeverHistory(o,signal,window,live){
+  if(o.epKey===window&&Date.now()-o.epTime<120000)return;
+  const history=await getJSON('/api/epever/history?window='+window,signal);
+  if(!live())return;
+  o.epHistory=history;o.epKey=window;o.epTime=Date.now();
+}
+// Generation tab only (step 3 deletes it): the System tab takes the latest Epever reading from its own poll.
 async function readEpever(version,signal){
-  const window=$('juwaiWindow').value,live=()=>version===juwaiVersion&&activeTab==='juwai'&&!document.hidden;
+  const o=juwaiSolar,window=o.period(),live=()=>version===juwaiVersion&&o.live();
   try{
     const data=await getJSON('/api/epever/latest',signal);
     if(!live())return;
-    epeverLatest=data;renderEpever(data);
-    if(epeverKey!==window||Date.now()-epeverTime>=120000){
-      const history=await getJSON('/api/epever/history?window='+window,signal);
-      if(!live())return;
-      epeverHistory=history;epeverKey=window;epeverTime=Date.now();
-    }
-    drawEpever();renderOutput();
+    o.epLatest=data;renderEpever(o,data);
+    await readEpeverHistory(o,signal,window,live);
+    if(!live())return;
+    drawEpever(o);renderOutput(o);
   }catch(error){
     if(!live())return;
-    epeverLatest=null;renderOutput();
+    o.epLatest=null;renderOutput(o);
     if(!$('epeverCard').hidden){$('epeverCard').dataset.stale='true';$('epeverState').textContent='Unavailable';}
   }
 }
@@ -1146,18 +1229,18 @@ $('outputCard').addEventListener('click',event=>{
   if(event.target.closest('#outputDetail'))return;
   const open=$('outputDetail').hidden;
   $('outputDetail').hidden=!open;$('outputToggle').setAttribute('aria-expanded',String(open));$('outputHint').textContent=open?'Hide graph':'Show graph';
-  if(open){drawOutput();outputChart?.resize();}
+  if(open){drawOutput(juwaiSolar);juwaiSolar.chart?.resize();}
 });
 $('epeverCard').addEventListener('click',event=>{
   if(event.target.closest('#epeverDetail'))return;
   const open=$('epeverDetail').hidden;
   $('epeverDetail').hidden=!open;$('epeverToggle').setAttribute('aria-expanded',String(open));$('epeverHint').textContent=open?'Hide details':'Show details';
-  if(open){drawEpever();epeverChart?.resize();}
+  if(open){drawEpever(juwaiSolar);juwaiSolar.epChart?.resize();}
 });
 $('juwaiSource').addEventListener('click',e=>{const button=e.target.closest('button[data-source]');if(!button||button.getAttribute('aria-pressed')==='true')return;
   juwaiSource=button.dataset.source;for(const b of $('juwaiSource').children)b.setAttribute('aria-pressed',String(b===button));
   juwaiGen.week=null;juwaiGen.bin=null;stopJuwai();juwaiHistoryKey='';juwaiHistory={};drawJuwai();readJuwai(juwaiVersion);});
-$('juwaiWindow').addEventListener('change',()=>{epeverKey='';epeverHistory=null;juwaiGen.week=null;juwaiGen.bin=null;juwaiGen.meter='total';stopJuwai();juwaiHistoryKey='';juwaiHistory={};drawJuwai();renderOutput();readJuwai(juwaiVersion);});
+$('juwaiWindow').addEventListener('change',()=>{juwaiSolar.epKey='';juwaiSolar.epHistory=null;juwaiGen.week=null;juwaiGen.bin=null;juwaiGen.meter='total';stopJuwai();juwaiHistoryKey='';juwaiHistory={};drawJuwai();renderOutput(juwaiSolar);readJuwai(juwaiVersion);});
 
 const mobileMedia=matchMedia('(max-width:600px)');
 const ukDate=(ts,options)=>new Date(ts).toLocaleString('en-GB',{timeZone:'Europe/London',...options});
@@ -1169,9 +1252,14 @@ function mobileBinLabel(b,unit,long=false){
 }
 // The Shed, Garage, 275 and Total chart. Desktop: lines, with the Power, Voltage or Current choice. Mobile (600 pixels wide or less): bars of estimated generation with per-bar details, or lines for Live periods and for voltage and current, with Total, Shed, Garage and Compare.
 // One per panel: e names that panel's elements, active() says whether its tab is showing. The caller sets history (the /api/tuya/history replies by device), window (the history window), ready and label, then calls draw().
-function genChart(e,active){
+// ids are the meters drawn; the Total line shows only with both Shed and Garage. Without e.mobile (the System detail, one meter) it draws lines at every width.
+const GEN_METERS={shed:['Shed','#38bdf8'],garage:['Garage','#34d399'],p275:['275 watt panels','#f472b6']};
+function genChart(e,active,ids=['shed','garage','p275']){
   const el=k=>$(e[k]);
-  const v={history:{},window:'',ready:false,label:'',chart:null,mobile:null,meter:'total',week:null,bin:null,bins:[]};
+  const v={history:{},window:'',ready:false,label:'',chart:null,mobile:null,meter:'total',week:null,bin:null,bins:[],ids};
+  const both=()=>v.ids.includes('shed')&&v.ids.includes('garage');
+  // Change the meters drawn (the System detail switching between Shed, Garage and 275); the chart is rebuilt on the next draw.
+  v.setIds=list=>{if(v.chart){v.chart.destroy();v.chart=null;}v.ids=list;};
   const missingBins={id:'missingMobileBins',beforeDatasetsDraw(chart){
     const {ctx,chartArea,scales}=chart;if(chart.config.type!=='bar'||!chartArea)return;
     const width=(chartArea.right-chartArea.left)/Math.max(1,v.bins.length)*.78;
@@ -1190,12 +1278,12 @@ function genChart(e,active){
   }};
   v.make=()=>{
     if(v.chart)return;
-    v.chart=new Chart(el('chart'),{type:'line',data:{datasets:['Shed','Garage','275 watt panels','Total'].map((name,i)=>({label:name,data:[],parsing:false,borderColor:['#38bdf8','#34d399','#f472b6','#fbbf24'][i],backgroundColor:['#38bdf8','#34d399','#f472b6','#fbbf24'][i],pointRadius:3,pointHitRadius:10,borderWidth:2,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:v=>new Date(v).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})},grid:{color:'#1e293b'}},y:{ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()+' '+juwaiFields[el('metric').value].unit}}}}});
+    v.chart=new Chart(el('chart'),{type:'line',data:{datasets:[...v.ids.map(id=>GEN_METERS[id]),...(both()?[['Total','#fbbf24']]:[])].map(([name,colour])=>({label:name,data:[],parsing:false,borderColor:colour,backgroundColor:colour,pointRadius:3,pointHitRadius:10,borderWidth:2,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:v=>new Date(v).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})},grid:{color:'#1e293b'}},y:{ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()+' '+juwaiFields[el('metric').value].unit}}}}});
   };
   v.draw=()=>{
     v.make();
     const field=juwaiFields[el('metric').value],chart=v.chart;
-    for(const [i,id] of ['shed','garage','p275'].entries()){
+    for(const [i,id] of v.ids.entries()){
       const series=v.history[id],points=[];
       for(const row of series?.points||[]){
         const prev=points[points.length-1];
@@ -1205,21 +1293,23 @@ function genChart(e,active){
       chart.data.datasets[i].data=points;
       if(series){chart.options.scales.x.min=series.start;chart.options.scales.x.max=series.end;}
     }
-    const combined=chart.data.datasets[3];combined.hidden=el('metric').value!=='power_w';
-    const other=new Map((v.history.garage?.points||[]).map(r=>[r[0],r[4]]));
-    combined.data=(chart.data.datasets[0].data||[]).map(p=>({x:p.x,y:Number.isFinite(p.y)&&Number.isFinite(other.get(p.x))?p.y+other.get(p.x):null}));
+    if(both()){
+      const combined=chart.data.datasets[v.ids.length];combined.hidden=el('metric').value!=='power_w';
+      const other=new Map((v.history.garage?.points||[]).map(r=>[r[0],r[4]]));
+      combined.data=(chart.data.datasets[v.ids.indexOf('shed')].data||[]).map(p=>({x:p.x,y:Number.isFinite(p.y)&&Number.isFinite(other.get(p.x))?p.y+other.get(p.x):null}));
+    }
     chart.options.scales.y.title={display:true,text:field.label+' ('+field.unit+')',color:'#94a3b8'};
     chart.update('none');
-    const energies=['shed','garage'].map(id=>v.history[id]?.energy),complete=energies.every(e=>Number.isFinite(e?.estimated_kwh));
+    const counted=both()?['shed','garage']:v.ids,energies=counted.map(id=>v.history[id]?.energy),complete=energies.every(e=>Number.isFinite(e?.estimated_kwh));
     const covered=energies.map(e=>e?.coverage_s||0), duration=energies[0]?.period_s||0;
     const hours=s=>(s/3600).toLocaleString(undefined,{maximumFractionDigits:1});
-    el('note').textContent=v.ready?('Generation is estimated from '+(v.history.shed?.source==='local'?'1-minute local':'15-minute')+' readings. Gaps over 30 minutes are excluded. '+
-      (duration?'Recorded: Shed '+hours(covered[0])+'h, Garage '+hours(covered[1])+'h of '+hours(duration)+'h. ':'')+
-      (complete?'':'Not enough readings for a combined total. ')+
+    el('note').textContent=v.ready?('Generation is estimated from '+(v.history[counted[0]]?.source==='local'?'1-minute local':'15-minute')+' readings. Gaps over 30 minutes are excluded. '+
+      (duration?'Recorded: '+counted.map((id,i)=>GEN_METERS[id][0]+' '+hours(covered[i])+'h').join(', ')+' of '+hours(duration)+'h. ':'')+
+      (complete||!both()?'':'Not enough readings for a combined total. ')+
       (['today','yesterday'].includes(v.window)?'Calendar days use UK time.':'')):'Loading generation…';
     v.drawMobile();
   };
-  v.fail=()=>{el('coverage').textContent=el('note').textContent='Generation history unavailable. Please try again.';el('total').textContent='— kWh';};
+  v.fail=()=>{for(const k of ['coverage','note'])if(el(k))el(k).textContent='Generation history unavailable. Please try again.';if(el('total'))el('total').textContent='— kWh';};
   v.showBin=index=>{
     if(!v.bins.length){el('details').textContent='No generation intervals available.';return;}
     v.bin=Math.max(0,Math.min(v.bins.length-1,Number(index)||0));
@@ -1235,7 +1325,7 @@ function genChart(e,active){
     el('drill').hidden=unit!=='week';
   };
   v.drawMobile=()=>{
-    if(!mobileMedia.matches)return;
+    if(!mobileMedia.matches||!e.mobile)return;
     v.make();
     const period=v.window, metric=el('metric').value;
     const energies=['shed','garage'].map(id=>v.history[id]?.energy),kwh=e=>Number.isFinite(e?.estimated_kwh)?mobileKwh(e.estimated_kwh):'— kWh';
@@ -1281,6 +1371,7 @@ function genChart(e,active){
       plugins:{legend:{display:datasets.length>1,labels:{color:'#94a3b8',usePointStyle:true,boxWidth:8,padding:16}},tooltip:{enabled:!bars,callbacks:{title:items=>ukDate(items[0].parsed.x,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZoneName:'short'}),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()+' '+juwaiFields[metric].unit}}}}});
   };
   el('metric').addEventListener('change',v.draw);
+  if(!e.mobile)return v;
   el('choice').addEventListener('change',event=>v.showBin(event.target.value));
   el('meters').addEventListener('click',event=>{const button=event.target.closest('button[data-meter]');if(button){v.meter=button.dataset.meter;v.drawMobile();}});
   el('drill').addEventListener('click',()=>{v.week=v.bins[v.bin]?.[0]||null;v.bin=null;v.drawMobile();});
@@ -1511,11 +1602,11 @@ async function readGen(){
   if(genView.ready&&!LIVE_WINDOWS.includes(p.window)&&Date.now()-genTime<300000){genView.draw();return;}
   if(!genView.ready)genView.draw();
   genController?.abort();const c=genController=new AbortController();
-  let rows;
-  try{rows=await Promise.all(['shed','garage','p275'].map(id=>getJSON('/api/tuya/history?device='+id+'&window='+p.window,c.signal).then(data=>[id,data],e=>{if(id==='p275'&&e.name!=='AbortError')return [id,null];throw e;})));}
+  let history;
+  try{history=await tuyaHistory(['shed','garage','p275'],p.window,c.signal);}
   catch(e){if(!c.signal.aborted&&activeTab==='power')genView.fail();return;}
   if(c.signal.aborted||activeTab!=='power'||genView.window!==p.window)return;
-  Object.assign(genView,{history:Object.fromEntries(rows),ready:true});genTime=Date.now();genView.draw();
+  Object.assign(genView,{history,ready:true});genTime=Date.now();genView.draw();
 }
 let flowResize=0;
 window.addEventListener('resize',()=>{clearTimeout(flowResize);flowResize=setTimeout(()=>{if(activeTab==='power'&&flowKey)renderFlow(flowPeriod());},200);});
@@ -1820,7 +1911,10 @@ async function readHome(version){
 }
 // System tab: Dad's wiring sketch with read-only meter, Epever and plug readings; anything stale or missing shows "—".
 let systemTimer=null,systemController=null,systemVersion=0;
-function stopSystem(){systemVersion++;clearTimeout(systemTimer);systemTimer=null;systemController?.abort();systemController=null;}
+// The open System detail (null when closed), the latest poll's readings, its in-flight history read and each device's chosen period.
+let sysDev=null,sysLatest=null,sysDetailController=null,sysDetailKey='',sysDetailAt=0;
+const sysPeriods={};
+function stopSystem(){systemVersion++;clearTimeout(systemTimer);systemTimer=null;systemController?.abort();systemController=null;sysDetailController?.abort();sysDetailController=null;}
 function sysNum(v,unit,digits){return Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:digits??(Math.abs(v)<10?1:0)})+' '+unit:'—';}
 // Set a box's headline figure and up to three detail lines; a stale box shows "—" and keeps its dashed look.
 // The diagram exists twice (phone and wide desktop layouts); both are updated, the other is hidden by CSS.
@@ -1885,27 +1979,109 @@ async function readSystem(version){
   systemController=new AbortController();const signal=systemController.signal;
   try{
     const results=await Promise.allSettled(['/api/tuya/latest','/api/epever/latest','/api/ewelink/latest'].map(url=>getJSON(url,signal)));
-    if(version===systemVersion&&!signal.aborted)renderSystem(results.map(r=>r.status==='fulfilled'?r.value:null));
+    if(version===systemVersion&&!signal.aborted){sysLatest=results.map(r=>r.status==='fulfilled'?r.value:null);renderSystem(sysLatest);sysTabWatts();sysDetailLive();loadSysDetail();}
   }catch(e){if(version===systemVersion)$('systemStatus').textContent='Readings unavailable · retrying';}
   finally{if(version===systemVersion&&activeTab==='system'&&!document.hidden){systemController=null;systemTimer=setTimeout(()=>readSystem(version),3000);}}
 }
-// Tapping a box opens the tab it belongs to and the exact device: "tab:target" in data-goto.
-function flashLink(el){el.scrollIntoView({block:'center',behavior:'smooth'});el.classList.remove('link-flash');void el.offsetWidth;el.classList.add('link-flash');setTimeout(()=>el.classList.remove('link-flash'),2500);}
-// The Epever card stays hidden until its first reading arrives, so wait a few seconds for it.
-function sysFocus(tab,target,tries){
-  if(tab==='ewelink'){window.selectEwelinkDevice?.(target);return;}
-  const card=$({shed:'shedCard',garage:'garageCard',p275:'p275Card',output:'outputCard',epever:'epeverCard'}[target]);
-  if(!card||card.hidden){if(tries<20)setTimeout(()=>sysFocus(tab,target,tries+1),250);return;}
-  if(target==='shed'||target==='garage'){juwaiGen.meter=target;juwaiGen.drawMobile();}
-  if(target==='output'&&$('outputDetail').hidden)$('outputToggle').click();
-  if(target==='epever'&&$('epeverDetail').hidden)$('epeverToggle').click();
-  flashLink(card);
+// System detail: tapping a box opens its device's figures and graph, like the Home graph view. 900 px and wider: beside the narrow diagram; narrower: in place of the diagram.
+// Nine devices, in the order of the buttons under the graph; every diagram box names one in data-dev. view picks the detail layout; box is the diagram box whose headline the button shows.
+const SYS_DEVICES={
+  output:{name:'Total solar to house',view:'Out',box:'Output'},
+  inv1000:{name:'1000 watt inverter',view:'Plug',plug:'inverter-1000',box:'Inv1000'},
+  inv600:{name:'600 watt inverter',view:'Plug',plug:'inverter-600',box:'Inv600'},
+  garden:{name:'Garden: panel, plug meter and inverter',view:'Plug',plug:'garage-inverter',box:'GarInv'},
+  shed:{name:'Shed: panel and meter',view:'Meter',meter:'shed',box:'Shed'},
+  garage:{name:'Garage: panel and meter',view:'Meter',meter:'garage',box:'Garage'},
+  p275:{name:'275 watt panels and meter',view:'Meter',meter:'p275',box:'275'},
+  epever:{name:'Epever and battery',view:'Ep',box:'Epever'},
+  charger:{name:'Mains battery charger',view:'Plug',plug:'charger-inverter',box:'Charger'}};
+const sysPeriod=()=>sysPeriods[sysDev]||'today';
+// History is read only for the open device, only while the System tab is showing.
+const sysShowing=()=>activeTab==='system'&&!document.hidden&&!!sysDev;
+const sysSolar=solarView('sdOut','sdEp',sysPeriod,sysShowing);
+const sysMeterGen=genChart({chart:'sdMeterChart',metric:'sdMeterMetric',note:'sdMeterNote'},sysShowing,['shed']);
+let sysPlugGraph=null;
+const sysPlug=()=>sysPlugGraph||=window.ewelinkGraph?.({chart:'sdPlugChart',details:'sdPlugDetails',drill:'sdPlugDrill',back:'sdPlugBack',bins:'sdPlugBins',heading:'sdPlugHeading',note:'sdPlugNote'},()=>sysShowing()&&!!SYS_DEVICES[sysDev].plug);
+// Live figures for the open device's header, from the System tab's own 3 second poll.
+function sysDetailLive(){
+  if(!sysDev||!sysLatest)return;
+  const [tuya,epever,plugs]=sysLatest,d=SYS_DEVICES[sysDev];
+  if(d.meter)renderMeter((tuya?.devices||[]).find(x=>x.id===d.meter),'sdMeter',juwaiSourceNames[tuya?.source]||'Cloud');
+  else if(d.view==='Out'){sysSolar.latest=plugs;sysSolar.epLatest=epever;renderOutput(sysSolar);}
+  else if(d.view==='Ep'){sysSolar.epLatest=epever;if(epever)renderEpever(sysSolar,epever);else{$('sdEpCard').dataset.stale='true';$('sdEpState').textContent='Unavailable';}}
+  else window.ewelinkDrawCard?.($('sdPlugCard'),(plugs?.devices||[]).find(x=>x.id===d.plug)||{id:d.plug});
 }
-function sysGo(spec){const [tab,target]=spec.split(':');selectTab(tab);if(target)setTimeout(()=>sysFocus(tab,target,0),50);}
-for(const g of document.querySelectorAll('.sys-plan [data-goto]')){
-  g.addEventListener('click',()=>sysGo(g.dataset.goto));
-  g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sysGo(g.dataset.goto);}});
+// Each button shows its device's headline figure from the diagram.
+function sysTabWatts(){for(const b of $('sysDetailTabs').children)b.querySelector('[data-watts]').textContent=($('sys'+SYS_DEVICES[b.dataset.dev].box+'Big')?.textContent||'—').replace(/ in$/,'');}
+// Read the open device's history when its period changes or its copy is old: meters on Live periods every poll, otherwise every five minutes (the Epever every two).
+async function loadSysDetail(){
+  if(!sysShowing()||sysDetailController)return;
+  const dev=sysDev,d=SYS_DEVICES[dev],period=sysPeriod(),key=dev+':'+period;
+  const due=key!==sysDetailKey||Date.now()-sysDetailAt>=(d.meter&&LIVE_WINDOWS.includes(period)?3000:300000);
+  if((d.meter||d.plug)&&!due)return;
+  const c=sysDetailController=new AbortController(),live=()=>!c.signal.aborted&&sysShowing()&&sysDev===dev&&sysPeriod()===period;
+  try{
+    if(d.view==='Out'){await Promise.all([readOutputHistory(sysSolar,c.signal,period),readEpeverHistory(sysSolar,c.signal,period,live)]);if(live())renderOutput(sysSolar);}
+    else if(d.view==='Ep'){await readEpeverHistory(sysSolar,c.signal,period,live);if(live())drawEpever(sysSolar);}
+    else if(d.meter){const history=await tuyaHistory([d.meter],period,c.signal);if(!live())return;Object.assign(sysMeterGen,{history,ready:true,window:period});sysMeterGen.draw();$('sdMeterEnergy').textContent=meterKwh(history[d.meter]?.energy,d.meter==='p275');}
+    else{const r=await getJSON('/api/ewelink/history?device='+encodeURIComponent(d.plug)+'&window='+period,c.signal);if(!live())return;sysPlug()?.set(r,key!==sysDetailKey);window.ewelinkEnergy?.($('sdPlugCard'),r,period);}
+    if(live()){sysDetailKey=key;sysDetailAt=Date.now();}
+  }catch(e){
+    if(!live())return;
+    if(d.meter)sysMeterGen.fail();else if(d.plug)sysPlug()?.fail();else $(d.view==='Out'?'sdOutNote':'sdEpNote').textContent='History unavailable · trying again shortly';
+    sysDetailKey=key;sysDetailAt=Date.now();
+  }finally{if(sysDetailController===c)sysDetailController=null;}
 }
+function markSysDetail(){
+  document.querySelectorAll('.sys-plan [data-dev]').forEach(g=>g.setAttribute('aria-expanded',String(g.dataset.dev===sysDev)));
+  for(const b of $('sysDetailTabs').children){const on=b.dataset.dev===sysDev;b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;}
+}
+// Show one device: its own period, its view, figures cleared until its readings arrive.
+function selectSysDetail(dev){
+  sysDetailController?.abort();sysDetailController=null;sysDetailKey='';
+  sysDev=dev;const d=SYS_DEVICES[dev],period=sysPeriod();
+  $('sysDetailTitle').textContent=d.name;$('sysDetailPeriod').value=period;
+  const label=$('sysDetailPeriod').selectedOptions[0]?.textContent||'';
+  document.querySelectorAll('.sd-period').forEach(n=>n.textContent=label);
+  for(const v of ['Meter','Out','Ep','Plug'])$('sd'+v+'View').hidden=v!==d.view;
+  if(d.meter){sysMeterGen.setIds([d.meter]);Object.assign(sysMeterGen,{history:{},ready:false,window:period,label});sysMeterGen.draw();$('sdMeterEnergy').textContent='— kWh';}
+  if(d.plug){sysPlug()?.clear('Loading recorded readings…');$('sdPlugCard').querySelector('[data-energy]').textContent='— kWh';$('sdPlugCard').querySelector('.ewelink-cumulative-label').textContent='Used '+label.toLowerCase();}
+  if((d.view==='Out'||d.view==='Ep')&&sysSolar.epKey!==period){sysSolar.epHistory=null;sysSolar.epKey='';}
+  if(d.view==='Out')renderOutput(sysSolar);
+  if(d.view==='Ep')drawEpever(sysSolar);
+  markSysDetail();sysDetailLive();loadSysDetail();
+}
+function toggleSysDetail(dev){
+  if(sysDev===dev){closeSysDetail();return;}
+  const wasOpen=!!sysDev;$('sysDetail').hidden=false;$('sysBody').classList.add('detail-open');selectSysDetail(dev);
+  if(!wasOpen&&$('sysDetail').getBoundingClientRect().top<0)$('sysDetail').scrollIntoView({block:'start'}); // only when it would otherwise be off-screen
+}
+function closeSysDetail(){
+  sysDev=null;sysDetailController?.abort();sysDetailController=null;sysDetailKey='';
+  $('sysDetail').hidden=true;$('sysBody').classList.remove('detail-open');markSysDetail();
+}
+let sysOpener=null;
+for(const g of document.querySelectorAll('.sys-plan [data-dev]')){
+  g.addEventListener('click',()=>{sysOpener=g.id;toggleSysDetail(g.dataset.dev);});
+  g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sysOpener=g.id;toggleSysDetail(g.dataset.dev);}});
+}
+// Closing returns focus to the box that opened the detail, in whichever diagram is showing.
+$('sysDetailClose').addEventListener('click',()=>{
+  const from=sysDev;closeSysDetail();
+  const shown=[...document.querySelectorAll('.sys-plan [data-dev="'+from+'"]')].filter(g=>g.getClientRects().length);
+  (shown.find(g=>g.id===sysOpener)||shown[0])?.focus({preventScroll:true});
+});
+$('sysDetailTabs').addEventListener('click',event=>{const b=event.target.closest('[data-dev]');if(b&&b.dataset.dev!==sysDev)selectSysDetail(b.dataset.dev);});
+$('sysDetailTabs').addEventListener('keydown',event=>{
+  const tabs=[...$('sysDetailTabs').children],i=tabs.indexOf(document.activeElement);
+  if(i<0||!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();
+  const step=['ArrowDown','ArrowRight'].includes(event.key)?1:tabs.length-1;
+  const next=tabs[event.key==='Home'?0:event.key==='End'?tabs.length-1:(i+step)%tabs.length];
+  selectSysDetail(next.dataset.dev);next.focus();
+});
+$('sysDetailPeriod').addEventListener('change',()=>{if(!sysDev)return;sysPeriods[sysDev]=$('sysDetailPeriod').value;selectSysDetail(sysDev);});
+// Phones show the plug graph as bars, wider screens as a line.
+mobileMedia.addEventListener('change',()=>{if(sysShowing()&&SYS_DEVICES[sysDev].plug)sysPlugGraph?.draw();});
 // Open the tab named in the URL (e.g. #home); default stays Power.
 function openHashTab(){const name=location.hash.slice(1);if(views.includes(name))selectTab(name);}
 window.addEventListener('hashchange',openHashTab);
