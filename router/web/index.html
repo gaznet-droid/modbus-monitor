@@ -3,7 +3,7 @@
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
       <title>Live Power Monitor · Dad</title>
       <link rel="icon" href="/favicon.ico" sizes="32x32">
       <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -525,6 +525,37 @@
         @media(max-width:600px) { .ewelink-grid > .ewelink-chart-section { margin-top:-.65rem; padding:0 .85rem .85rem; } }
         /* Keep tabs and the time-window menu on one row on phones; last so it wins over earlier tab rules. */
         @media(max-width:600px) { .tabs { gap:.25rem; } .tabs button { width:48px; height:48px; padding:0; } .tab-icon { width:24px; height:24px; } .tab-window { font-size:.8rem; padding:.5rem; max-width:7.5rem; } }
+        /* Mobile: pin the main tab bar to the bottom, clear of the iPhone home indicator. Desktop (601px+) is unchanged. */
+        @media(max-width:600px) {
+          :root { --tab-bar-height: 56px; }
+          body { padding-bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom, 0px) + 1rem); }
+          .tabs {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            box-sizing: border-box;
+            width: 100%;
+            min-height: var(--tab-bar-height);
+            margin: 0;
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            justify-content: space-evenly;
+            gap: .25rem;
+            border-bottom: 0;
+            border-top: 1px solid var(--border);
+            padding: .25rem .5rem;
+            padding-bottom: calc(.25rem + env(safe-area-inset-bottom, 0px));
+            background: var(--bg-base);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+          .tabs button { width: 48px; height: 48px; min-width: 44px; min-height: 44px; padding: 0; flex-shrink: 0; }
+          .tab-window { margin-left: 0; flex: 0 0 auto; }
+        }
+
         /* ---- eWeLink page refresh (Nov 2026): live icon status, cumulative energy, web list+graph ---- */
         .ewelink-cumulative { margin-top:.4rem; color:var(--text-muted); font-size:.78rem; font-variant-numeric:tabular-nums; }
         .ewelink-cumulative [data-energy] { color:var(--text-main); font-weight:600; }
