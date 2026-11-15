@@ -2150,7 +2150,7 @@ function renderSystem([tuya,epever,plugs]){
   const bLive=fresh&&Number.isFinite(ev.batt_v),bits=[];
   if(Number.isFinite(ev.batt_a))bits.push(sysNum(ev.batt_a,'A',1));
   const bState=!Number.isFinite(ev.batt_a)?'':ev.batt_a>0.05?'Charging':ev.batt_a<-0.05?'Discharging':'Idle';
-  sysSet('Batt',bLive,sysNum(ev.batt_v,'V',1),bLive?bits.join(' · '):gone,bLive?bState:'',bLive&&Number.isFinite(ev.batt_temp_c)?sysNum(ev.batt_temp_c,'°C',0):'');
+  sysSet('Batt',bLive,bLive?ev.batt_v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' V':'—',bLive?bits.join(' · '):gone,bLive?bState:'',bLive&&Number.isFinite(ev.batt_temp_c)?sysNum(ev.batt_temp_c,'°C',0):'');
   // Battery icon: filled left to right by the controller's state of charge; pulses while the battery is taking charge.
   const soc=bLive&&Number.isFinite(ev.soc)?Math.max(0,Math.min(100,ev.soc)):null,level=soc==null?'na':soc<=10?'red':soc<=20?'amber':'ok';
   sysAll('BattFill').forEach(fill=>{fill.setAttribute('width',soc==null?0:40*soc/100);fill.dataset.level=level;fill.classList.toggle('charging',bLive&&bState==='Charging');});sysAll('BattPct').forEach(n=>n.textContent=soc==null?'—':Math.round(soc)+'%');
