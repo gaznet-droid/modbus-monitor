@@ -147,6 +147,20 @@ class AuthHttpTests(AuthHttpBase):
             self.assertIn('text/html', r.headers['Content-Type']); self.assertEqual(r.headers['Cache-Control'], 'no-store')
         self.assertEqual(self.status('/solar?x=1', cookie=cookie)[0], 400)
 
+    def test_devices_page_needs_sign_in(self):
+        self.assertEqual(self.status('/devices')[0], 200)            # login off: open like the rest
+        self.enable()
+        self.assertEqual(self.status('/devices'), (303, '/login'))
+        _, cookie = self.google()
+        with self.request('/devices', cookie=cookie) as r:
+            self.assertEqual(r.status, 200); body = r.read().decode()
+            self.assertIn('text/html', r.headers['Content-Type']); self.assertEqual(r.headers['Cache-Control'], 'no-store')
+        for api in ['/api/live', '/api/tuya/latest', '/api/epever/latest', '/api/ewelink/latest', '/api/home/latest']:
+            self.assertIn("'" + api + "'", body, api)                # the page only reads endpoints that exist
+        self.assertEqual(self.status('/devices?x=1', cookie=cookie)[0], 400)
+        index = (Path(monitor.__file__).parent / 'web' / 'index.html').read_text()
+        self.assertIn('<a href="/devices" role="menuitem">', index)
+
     def test_broken_settings_keep_the_site_locked(self):
         self.settings.write_text('{not json')
         self.assertEqual(self.status('/'), (303, '/login'))

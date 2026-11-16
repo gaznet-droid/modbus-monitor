@@ -57,6 +57,13 @@ def ewelink_latest():
  t=int(time.time()*1000)
  return {'status':'Connected','server_time':t,'interval_seconds':300,'devices':[dict(id=k,name=v[0],ts=t,stale=False,online=True,power_w=wobble(v[1]),voltage_v=241.0,current_a=round(v[1]/241,3),switch='on') for k,v in PLUGS.items()]}
 
+def home_latest():
+ t=int(time.time()*1000)
+ return {'configured':True,'server_time':t,'interval_seconds':300,'devices':[
+  dict(id='lounge-temp',name='Lounge',kind='temp',place='room:lounge',ts=t-120000,stale=False,online=True,temperature_c=19.4,humidity_pct=52,battery_pct=88),
+  dict(id='front-door',name='Front door',kind='door',place='door:front',ts=t-2400000,stale=True,online=True,door='closed',battery_pct=71),
+  dict(id='summer-house',name='Summer house',kind='switch',place='section:garden',ts=None,stale=True)]}
+
 def ewelink_history(device,window):
  import math
  start,end=period_bounds(window,now);bucket=max(300000,(end-start)//500);unit='week' if window=='30d' else 'day' if window=='7d' else 'hour';peak=PLUGS[device][1]
@@ -87,6 +94,8 @@ class Handler(BaseHTTPRequestHandler):
   elif u.path=='/api/ewelink/history':b=json.dumps(ewelink_history(q['device'][0],q['window'][0])).encode()
   elif u.path=='/api/tuya/history':b=json.dumps({'energy':fixture_energy(q['device'][0],q['window'][0]),'device':q['device'][0],**fixture_points(q['device'][0],q['window'][0]),'columns':['ts','samples','voltage_v','current_a','power_w']}).encode()
   elif u.path in ('/chart.umd.min.js','/ewelink.js'):b=(root/u.path[1:]).read_bytes();kind='text/javascript'
+  elif u.path=='/devices':b=(root/'devices.html').read_bytes();kind='text/html'
+  elif u.path=='/api/home/latest':b=json.dumps(home_latest()).encode()
   elif u.path=='/':b=(root/'index.html').read_text().replace('<script src=',instrument+'<script src=',1).encode();kind='text/html'
   else:self.send_error(404);return
   self.send_response(200);self.send_header('Content-Type',kind);self.send_header('Content-Length',str(len(b)));self.end_headers();self.wfile.write(b)

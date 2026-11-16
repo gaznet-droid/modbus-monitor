@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Devices · Live Power Monitor</title>
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="theme-color" content="#090d16">
+  <style>
+    :root { --bg-base:#090d16; --card-bg:#141c2e; --border:#222f49; --text-main:#f8fafc; --text-muted:#94a3b8; --import-color:#38bdf8; --ok:#34d399; --warn:#fbbf24; --bad:#f87171; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background:var(--bg-base); color:var(--text-main); padding:1rem; }
+    main { max-width:1100px; margin:0 auto; display:flex; flex-direction:column; gap:1rem; }
+    header { display:flex; justify-content:space-between; align-items:flex-end; gap:1rem; flex-wrap:wrap; padding:.5rem 0; }
+    h1 { font-size:1.5rem; } h2 { font-size:1rem; }
+    a { color:var(--import-color); }
+    p, .muted { color:var(--text-muted); line-height:1.45; font-size:.9rem; }
+    .summary { display:flex; gap:.6rem; flex-wrap:wrap; }
+    .chip { background:var(--card-bg); border:1px solid var(--border); border-radius:999px; padding:.4rem .85rem; font-size:.85rem; color:var(--text-muted); }
+    .chip strong { color:var(--text-main); font-variant-numeric:tabular-nums; }
+    section { background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:1rem 1.2rem; }
+    section > .muted { margin:.2rem 0 .6rem; }
+    table { width:100%; border-collapse:collapse; font-size:.9rem; }
+    th { text-align:left; color:var(--text-muted); font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.04em; padding:.45rem .5rem; }
+    td { padding:.6rem .5rem; border-top:1px solid var(--border); vertical-align:top; }
+    td.name { font-weight:600; } td.num { font-variant-numeric:tabular-nums; }
+    td small { display:block; color:var(--text-muted); font-size:.8rem; font-weight:400; margin-top:.1rem; }
+    th:nth-child(1) { width:24%; } th:nth-child(2) { width:30%; } th:nth-child(3) { width:22%; } th:nth-child(4) { width:12%; } th:nth-child(5) { width:12%; }
+    .badge { display:inline-block; border-radius:6px; padding:.1rem .45rem; font-size:.75rem; font-weight:700; border:1px solid; }
+    .badge.direct { color:var(--ok); border-color:#065f46; background:#052e24; }
+    .badge.remote { color:var(--import-color); border-color:#075985; background:#082f49; }
+    .state { font-weight:600; white-space:nowrap; }
+    .state::before { content:""; display:inline-block; width:.55rem; height:.55rem; border-radius:50%; margin-right:.4rem; background:currentColor; }
+    .state.ok { color:var(--ok); } .state.late { color:var(--warn); } .state.off { color:var(--bad); } .state.none { color:var(--text-muted); }
+    .status { min-height:1.3em; color:var(--warn); font-size:.9rem; }
+    @media (max-width:700px) {
+      thead { position:absolute; left:-9999px; }
+      table, tbody, tr, td { display:block; width:100%; }
+      tr { border-top:1px solid var(--border); padding:.65rem 0; }
+      tbody tr:first-child { border-top:0; }
+      td { border:0; padding:.12rem 0; }
+      td[data-label]::before { content:attr(data-label) ": "; color:var(--text-muted); font-size:.8rem; }
+      td small { display:inline; margin-left:.35rem; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div><a href="/">← Back to the monitor</a><h1>Devices</h1></div>
+    <span id="checked" class="muted" role="status"></span>
+  </header>
+  <p>Every device the monitor reads, and how. <span class="badge direct">Direct</span> means the Pi reads it itself, by wire or over the house Wi-Fi. <span class="badge remote">Remote</span> means the reading comes back through the maker's internet service.</p>
+  <div id="summary" class="summary"></div>
+  <div id="groups"></div>
+  <p id="status" class="status" role="status"></p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const el=(tag,props,...kids)=>{const e=Object.assign(document.createElement(tag),props||{});e.append(...kids);return e;};
+const num=(v,d,unit)=>typeof v==='number'&&isFinite(v)?v.toFixed(d)+unit:null;
+const join=parts=>parts.filter(Boolean).join(' · ')||'No reading yet';
+function ago(ms){
+  if(ms==null)return 'never';
+  const s=Math.max(0,Math.round(ms/1000));
+  if(s<90)return s+' s ago';
+  if(s<5400)return Math.round(s/60)+' min ago';
+  if(s<172800)return Math.round(s/3600)+' h ago';
+  return Math.round(s/86400)+' days ago';
+}
+// How each reading reaches the Pi. The plugs, sensors and solar meters say which route they used; the rest are fixed.
+const ROUTES={
+  wired:['direct','Wired to the Pi','RS485 cable, every few seconds'],
+  epever:['direct','House Wi-Fi','The charger\'s Wi-Fi dongle copies its readings to the Pi, about once a minute'],
+  local:['direct','House Wi-Fi','Read on the local network, every few seconds'],
+  juwaiLocal:['direct','House Wi-Fi','Asked on the local network, about once a minute'],
+  live:['remote','eWeLink live stream','Pushed through eWeLink\'s internet service, every few seconds'],
+  cloud:['remote','eWeLink cloud','Fetched from eWeLink\'s internet service, every 5 minutes'],
+  tuyaCloud:['remote','Tuya cloud','Fetched from Tuya\'s internet service'],
+  unknown:['remote','Not known yet','No reading has said how it arrived']
+};
+function state(d){
+  if(d.ts==null)return ['none','No reading yet'];
+  if(d.online===false)return ['off','Offline'];
+  if(d.stale)return ['late','Delayed'];
+  return ['ok','Reading'];
+}
+function meterRows(live){
+  if(!live)return [];
+  const l=live.latest;
+  return [{name:'House meter',route:'wired',ts:l?l.ts:null,stale:live.stale,
+    reading:join([l?num(l.value,0,' W'):null,live.meter?num(live.meter.kwh,1,' kWh total'):null])}];
+}
+function solarRows(tuya,epever){
+  const rows=[];
+  for(const d of (tuya&&tuya.devices)||[]){
+    const v=d.values||{};
+    rows.push({name:d.name||d.id,route:tuya.source==='local'?'juwaiLocal':'tuyaCloud',ts:d.observed_at,stale:d.stale,
+      reading:join([num(v.power_w,1,' W'),num(v.voltage_v,1,' V'),num(v.current_a,2,' A')])});
+  }
+  if(epever){
+    const v=epever.values||{};
+    rows.push({name:(epever.name||'Epever')+' charger',route:'epever',ts:epever.last_heard_at||epever.observed_at,stale:epever.stale,
+      reading:join([num(v.pv_w,1,' W solar'),num(v.batt_v,2,' V battery'),v.charge_state_name])});
+  }
+  return rows;
+}
+function plugRows(ewelink){
+  return ((ewelink&&ewelink.devices)||[]).map(d=>({name:d.name,route:ROUTES[d.source]?d.source:(d.ts==null?'unknown':'cloud'),
+    ts:d.ts,stale:d.stale,online:d.online,
+    reading:join([d.switch?'Switched '+d.switch:null,num(d.power_w,1,' W'),num(d.voltage_v,1,' V')])}));
+}
+function homeRows(home){
+  return ((home&&home.devices)||[]).map(d=>({name:d.name,route:'cloud',ts:d.ts,stale:d.stale,online:d.online,
+    reading:join([num(d.temperature_c,1,' °C'),num(d.humidity_pct,0,' % humidity'),d.door?'Door '+d.door:null,
+      d.switch?'Switched '+d.switch:null,num(d.power_w,1,' W'),num(d.battery_pct,0,' % battery')])}));
+}
+function table(title,note,rows,now){
+  const body=el('tbody');
+  for(const r of rows){
+    const [kind,how,detail]=ROUTES[r.route],[cls,label]=state(r);
+    body.append(el('tr',null,
+      el('td',{className:'name'},r.name),
+      el('td',null,el('span',{className:'badge '+kind},kind==='direct'?'Direct':'Remote'),' '+how,el('small',null,detail)),
+      el('td',{className:'num'},r.reading),
+      el('td',{className:'num'},ago(r.ts==null?null:now-r.ts)),
+      el('td',null,el('span',{className:'state '+cls},label))));
+  }
+  for(const td of body.querySelectorAll('td.num'))td.dataset.label=td.cellIndex===2?'Reading':'Last heard'; // labels for the phone layout
+  const head=el('thead',null,el('tr',null,...['Device','Read by','Reading','Last heard','State'].map(t=>el('th',{scope:'col'},t))));
+  return el('section',null,el('h2',null,title+' ('+rows.length+')'),el('p',{className:'muted'},note),el('table',null,head,body));
+}
+async function get(url){
+  const r=await fetch(url,{credentials:'same-origin'});
+  if(r.status===401){location.replace('/login');throw new Error('signed out');}
+  return r.ok?r.json():null; // a 404 means that reader is not set up on this Pi
+}
+let busy=false;
+async function load(){
+  if(busy||document.hidden)return;busy=true;
+  try{
+    const [live,tuya,epever,ewelink,home]=await Promise.all(['/api/live','/api/tuya/latest','/api/epever/latest','/api/ewelink/latest','/api/home/latest'].map(u=>get(u).catch(e=>{if(e.message==='signed out')throw e;return null;})));
+    const now=(live&&live.server_time)||(ewelink&&ewelink.server_time)||Date.now();
+    const groups=[
+      ['Mains meter','The meter on the incoming supply.',meterRows(live)],
+      ['Solar','The three panel meters and the battery charger.',solarRows(tuya,epever)],
+      ['Power plugs','The Sonoff plugs on the inverters, charger and fridge.',plugRows(ewelink)],
+      ['House sensors','Temperature, door and switch sensors on the eWeLink bridge.',homeRows(home)]
+    ].filter(g=>g[2].length);
+    const all=groups.flatMap(g=>g[2]);
+    const count=f=>all.filter(f).length;
+    const chips=[['Devices',all.length],['Read directly',count(r=>ROUTES[r.route][0]==='direct')],['Read remotely',count(r=>ROUTES[r.route][0]==='remote')],
+      ['Delayed or offline',count(r=>state(r)[0]!=='ok')]];
+    $('summary').replaceChildren(...chips.map(([t,n])=>el('span',{className:'chip'},el('strong',null,String(n)),' '+t)));
+    $('groups').replaceChildren(...groups.map(g=>table(g[0],g[1],g[2],now)));
+    $('groups').style.cssText='display:flex;flex-direction:column;gap:1rem';
+    $('checked').textContent='Checked '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    $('status').textContent=all.length?'':'No devices answered. Check the connection.';
+  }catch(e){if(e.message!=='signed out')$('status').textContent='Could not load. Check the connection.';}
+  busy=false;
+}
+load();setInterval(load,10000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
+</script>
+</body>
+</html>

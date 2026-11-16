@@ -407,7 +407,7 @@ AUTH_PUBLIC={"/login","/enrol","/auth.js","/health","/version","/api/integration
 AUTH_PAGES={"/login":"login.html","/enrol":"login.html","/admin":"admin.html"}
 
 # Signed-in pages and their scripts. three.js is vendored so the 3D solar page needs no outside host.
-PAGES={"/solar":"solar.html"}
+PAGES={"/solar":"solar.html","/devices":"devices.html"}
 SCRIPTS={"/three.module.min.js":"three.module.min.js","/three-orbit.js":"three-orbit.js"}
 
 BONDS_PREFIX="/bonds"

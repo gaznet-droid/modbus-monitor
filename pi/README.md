@@ -236,6 +236,9 @@ setting is ever sent to a plug, and nothing in the eWeLink account changes.
   UIID 32 plugs (Garage, 600 watt, Charger) only repeat the state they last pushed, sometimes hours
   old, and live power from them would need eWeLink's uiActive write command, so they stay on the
   cloud poll.
+- 16 Nov 2026: Dad swapped the 600 watt inverter's POWR2 for a POWR316 (UIID 190), so it is now read
+  locally too, with its own day counter. Only Garden and Charger are still POWR2. A swapped plug needs one
+  device-list call, then its new ID in ewelink.json and its ID, key and UIID in ewelink-local.json.
 - Readings go into the same ewelink.sqlite3: the latest reading at most every 5 seconds, and a
   history sample every 30 seconds (time-weighted average power). Each reading is marked
   `"source": "local"` or `"cloud"`. History is averaged per five-minute slot before it is
