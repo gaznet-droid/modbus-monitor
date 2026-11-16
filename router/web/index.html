@@ -444,7 +444,13 @@
         .sd-values .label { font-size:.65rem; }
         .sd-energy { text-align:right; }
         .sd-head .juwai-metrics { flex-wrap:wrap; gap:.6rem 2rem; margin:.5rem 0 0; }
-        .sd-head .epever-metrics { display:grid; }
+        /* Epever detail figures: three tiles a row, value on top, label underneath. */
+        .sd-head .epever-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.5rem; margin:.8rem 0 0; }
+        .sd-head .epever-metrics > div { display:flex; flex-direction:column-reverse; flex-wrap:nowrap; justify-content:center; align-items:center; gap:.2rem; min-width:0; padding:.6rem .3rem; border:1px solid var(--border); border-radius:10px; background:rgba(148,163,184,.06); text-align:center; }
+        .sd-head .epever-metrics > div:last-child:nth-child(3n+1) { grid-column:1/-1; }
+        .sd-head .epever-metrics dt { margin:0; font-size:.68rem; line-height:1.2; }
+        .sd-head .epever-metrics dd { margin:0; font-size:1.05rem; font-weight:600; white-space:nowrap; }
+        @media(max-width:600px) { .sd-head .epever-metrics dd { font-size:.95rem; } }
         .sd-head > .period-note { margin:.35rem 0; }
         .sd-head .device-update { margin-top:.7rem; }
         .sd-heading { font-size:.95rem; margin:.2rem 0 .6rem; }
@@ -1036,7 +1042,7 @@
 </div>
 <div id="sdEpView" class="sd-view" hidden><div id="sdEpCard" class="sd-head" data-stale="true">
 <div class="sd-values"><div><div class="label">Latest power</div><div class="juwai-power" id="sdEpPower">— W</div></div><div class="sd-energy"><div class="label">Generation</div><div id="sdEpEnergy" class="juwai-kwh">— kWh</div><div class="period-note sd-period">Today</div></div></div>
-<dl class="juwai-metrics epever-metrics"><div><dt>Battery voltage</dt><dd id="sdEpBattV">— V</dd></div><div><dt>Battery current</dt><dd id="sdEpBattA">— A</dd></div><div><dt>Charging</dt><dd id="sdEpCharge">—</dd></div><div><dt>Generated today</dt><dd id="sdEpGenToday">— kWh</dd></div><div><dt>Battery level</dt><dd id="sdEpSoc">— %</dd></div><div><dt>Panel voltage</dt><dd id="sdEpPvV">— V</dd></div><div><dt>Battery min today</dt><dd id="sdEpBattMin">—</dd></div></dl>
+<dl class="juwai-metrics epever-metrics"><div><dt>Battery voltage</dt><dd id="sdEpBattV">— V</dd></div><div><dt>Battery current</dt><dd id="sdEpBattA">— A</dd></div><div><dt>Battery level</dt><dd id="sdEpSoc">— %</dd></div><div><dt>Battery min today</dt><dd id="sdEpBattMin">—</dd></div><div><dt>Panel voltage</dt><dd id="sdEpPvV">— V</dd></div><div><dt>Generated today</dt><dd id="sdEpGenToday">— kWh</dd></div><div><dt>Charging</dt><dd id="sdEpCharge">—</dd></div></dl>
 <div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="sdEpState">Loading…</span></span><time id="sdEpAge">Waiting for readings</time><span id="sdEpName">Epever</span></div></div>
 <div class="chart-info info-wrap"><button type="button" class="info-tip" aria-label="About the Epever chart" aria-expanded="false" aria-controls="sdEpNoteTip">i</button><div id="sdEpNoteTip" class="info-popover" role="tooltip" hidden><p id="sdEpNote" class="period-note" aria-live="polite">Loading…</p></div></div>
 <div class="juwai-chart"><canvas id="sdEpChart" role="img" aria-label="Solar charger panel power and battery voltage for the period chosen above"></canvas></div>

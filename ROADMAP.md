@@ -36,6 +36,9 @@ UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer pa
 
 - DONE 15 Nov, page-only: System tab 24 volt battery box shows its voltage to two decimals (Dad). The Epever reports in hundredths, so the second decimal is real.
 
+## Gareth's requests (16 Nov)
+- DONE 16 Nov, page-only, awaiting Gareth's eye. System tab, Epever and battery detail: the figures under Latest power and Generation are tiles, three to a row, value on top and label below, with Charging in a full-width tile. Open: whether the meter and plug details should match.
+
 ## UI changes by Grok (15 Nov, via GitHub pull requests 1 to 3, live as cefe374)
 - Mobile tab bar pinned to the bottom of the screen; ModPi icon and name top left.
 - Card headers aligned; System help text moved behind (i) buttons.
