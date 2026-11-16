@@ -274,6 +274,7 @@ class EwelinkLocal:
         self.stop = threading.Event()
         self.last_flush = 0.0
         self.events = []
+        self.seen = {}            # device id -> (ip, announced type, monotonic time), for the Devices page
 
     def load(self):
         keys = load_keys(self.keys_path)
@@ -285,10 +286,19 @@ class EwelinkLocal:
             p = self.plugs.get(slug)
             return bool(p and p.heard and self.clock() - p.heard < LOCAL_FRESH)
 
+    def addresses(self, max_age=900):
+        """{device id: (ip, announced type)} for every eWeLink device heard on the LAN lately."""
+        now = self.clock()
+        with self.lock:
+            return {did: (ip, kind) for did, (ip, kind, heard) in self.seen.items() if now - heard < max_age}
+
     def handle(self, packet, source_ip=None):
         """Decode one mDNS packet. Returns the slugs that were updated."""
         updated = []
-        for did, _, _, txt in self.ann.feed(packet, source_ip):
+        for did, ip, _, txt in self.ann.feed(packet, source_ip):
+            if ip and (did in self.seen or len(self.seen) < 64):
+                with self.lock:
+                    self.seen[did] = (ip, txt.get("type"), self.clock())
             p = self.by_id.get(did)
             if not p:
                 continue

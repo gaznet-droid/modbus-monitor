@@ -428,7 +428,7 @@ def rewrite_bonds_html(body):
     return body.replace(b"<header>",b"<header>"+BONDS_BACK,1)
 
 def handler(store, web, voltage=None, tuya=None, ewelink=None, auth=None, bonds_port=None,
-            juwai_local=None, juwai_source="cloud", epever=None):
+            juwai_local=None, juwai_source="cloud", epever=None, network=None):
     # Juwai readings come from one source: juwai_source ("cloud" or "local") picks what everyone sees.
     juwai_sources={"cloud":tuya,"local":juwai_local}
     class Handler(BaseHTTPRequestHandler):
@@ -694,6 +694,10 @@ def handler(store, web, voltage=None, tuya=None, ewelink=None, auth=None, bonds_
                     if result is None:
                         return self.send(404,{"error":"Not found"})
                     return self.send(200,result)
+                if parsed.path=="/api/devices/network" and network is not None and self.user:
+                    # House-network addresses: only with login on, and only for someone signed in.
+                    if query: raise ValueError()
+                    return self.send(200,network())
                 if parsed.path=="/api/live":
                     since=int(query.get("since",["0"])[0])
                     if not 0<=since<=int(time.time()*1000)+60000:

@@ -49,7 +49,7 @@ class SystemDiagramPage(unittest.TestCase):
         self.assertIn('not part of the solar total', HTML)
         self.assertIn('separate mains input', HTML)
         # The Epever dark-box phrases are in the page script, split so they fit the narrow box.
-        for phrase in ("'Panel '+panel", "'not charging'", "'Float,'", "'battery full'", "'0 W in'"):
+        for phrase in ("'Panel '+panel", "'not charging'", "'Float,'", "'battery full'", "'0.00 W in'"):
             self.assertIn(phrase, HTML)
         self.assertIn('Lit only while charging; a dark box says why', HTML)
 

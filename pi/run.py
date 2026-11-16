@@ -18,6 +18,7 @@ from ewelink import Ewelink
 from ewelink_local import EwelinkLocal
 from ewelink_live import EwelinkLive
 from auth import Auth
+import network
 from storage import Storage
 
 def load_config(path):
@@ -80,10 +81,12 @@ def main():
             if config.get("ewelink_enabled", False):
                 workers.append(ewelink)
             fresh = []
+            seen = lambda: {}
             if config.get("ewelink_local_enabled", False):
                 # The five power plugs over the LAN; the cloud poll above stays as the fallback.
                 local = EwelinkLocal(ewelink, "/var/lib/modpi/private/ewelink-local.json")
                 fresh.append(local.fresh)
+                seen = local.addresses
                 workers.append(local)
             if config.get("ewelink_enabled", False) and config.get("ewelink_live_enabled", True):
                 # Garden, 600 watt and Charger (POWR2) kept streaming with uiActive over eWeLink's
@@ -99,7 +102,8 @@ def main():
                     config.get("bonds_port"),
                     juwai_local=CachedLocal(storage.directory, storage.check),
                     juwai_source=config.get("juwai_source", "cloud"),
-                    epever=CachedEpever(storage.directory, storage.check)))
+                    epever=CachedEpever(storage.directory, storage.check),
+                    network=lambda: network.addresses(ewelink, seen())))
             def stop(*_):
                 for worker in workers:
                     worker.stop.set()

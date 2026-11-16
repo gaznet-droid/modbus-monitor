@@ -17,6 +17,9 @@
     header { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; padding:.5rem 0; }
     h1 { font-size:1.5rem; } h2 { font-size:1rem; margin-bottom:.4rem; }
     a { color:var(--import-color); }
+    .title { display:flex; align-items:center; gap:.7rem; }
+    .back { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; flex-shrink:0; border-radius:10px; border:1px solid var(--border); background:#1e293b; color:var(--text-main); }
+    .back:hover { border-color:var(--import-color); color:var(--import-color); } .back:focus-visible { outline:2px solid var(--text-main); outline-offset:2px; }
     section { background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:1.2rem; }
     p, .muted { color:var(--text-muted); line-height:1.45; font-size:.9rem; }
     .row { display:flex; justify-content:space-between; align-items:center; gap:.75rem; padding:.7rem 0; border-top:1px solid var(--border); }
@@ -36,7 +39,7 @@
 </head>
 <body>
 <main>
-  <header><div><a href="/">← Back to the monitor</a><h1>Admin</h1></div><div class="controls" style="margin:0"><span id="me" class="muted"></span><button id="signOut" type="button">Sign out</button></div></header>
+  <header><div class="title"><a class="back" href="/" aria-label="Back to the monitor" title="Back to the monitor"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7"/></svg></a><h1>Admin</h1></div><div class="controls" style="margin:0"><span id="me" class="muted"></span><button id="signOut" type="button">Sign out</button></div></header>
   <section>
     <h2>Add a device</h2>
     <p>Create a one-time sign-up link and open it on the new phone, tablet or computer. It sets up Face ID or fingerprint sign-in there. Each link works once, for 24 hours.</p>

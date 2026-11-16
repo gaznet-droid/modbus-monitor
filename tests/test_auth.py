@@ -73,7 +73,8 @@ class AuthHttpBase(unittest.TestCase):
         class Store:
             def live(self, *a, **kw): return {'stale': False, 'latest': {'ts': 1}}
         web = Path(monitor.__file__).parent / 'web'
-        self.server = monitor.WebServer(('127.0.0.1', 0), monitor.handler(Store(), web, auth=self.auth, bonds_port=self.bonds_port))
+        self.server = monitor.WebServer(('127.0.0.1', 0), monitor.handler(Store(), web, auth=self.auth, bonds_port=self.bonds_port,
+            network=lambda: {'plugs': {'fridge': '192.168.4.23'}}))
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True); self.thread.start()
         self.base = 'http://127.0.0.1:' + str(self.server.server_port)
     def tearDown(self):
@@ -155,11 +156,20 @@ class AuthHttpTests(AuthHttpBase):
         with self.request('/devices', cookie=cookie) as r:
             self.assertEqual(r.status, 200); body = r.read().decode()
             self.assertIn('text/html', r.headers['Content-Type']); self.assertEqual(r.headers['Cache-Control'], 'no-store')
-        for api in ['/api/live', '/api/tuya/latest', '/api/epever/latest', '/api/ewelink/latest', '/api/home/latest']:
+        for api in ['/api/live', '/api/tuya/latest', '/api/epever/latest', '/api/ewelink/latest', '/api/home/latest', '/api/devices/network']:
             self.assertIn("'" + api + "'", body, api)                # the page only reads endpoints that exist
         self.assertEqual(self.status('/devices?x=1', cookie=cookie)[0], 400)
         index = (Path(monitor.__file__).parent / 'web' / 'index.html').read_text()
         self.assertIn('<a href="/devices" role="menuitem">', index)
+
+    def test_network_addresses_only_for_someone_signed_in(self):
+        self.assertEqual(self.status('/api/devices/network')[0], 404)   # login off: the site is open, so no addresses
+        self.enable()
+        self.assertEqual(self.status('/api/devices/network')[0], 401)
+        _, cookie = self.google()
+        with self.request('/api/devices/network', cookie=cookie) as r:
+            self.assertEqual(json.loads(r.read()), {'plugs': {'fridge': '192.168.4.23'}})
+        self.assertEqual(self.status('/api/devices/network?x=1', cookie=cookie)[0], 400)
 
     def test_broken_settings_keep_the_site_locked(self):
         self.settings.write_text('{not json')

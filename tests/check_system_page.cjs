@@ -48,25 +48,25 @@ const inverters = (w) => ['inverter-1000', 'garage-inverter', 'inverter-600'].ma
 
 epever({ pv_w: 0, pv_v: 32.6, charge_state: 0, charge_state_name: 'Not charging', gen_today_kwh: 1.2, batt_v: 25 });
 assert.equal(state('sysEpever'), 'idle');
-assert.equal(text('sysEpeverBig'), '0 W in');
-assert.equal(text('sysEpeverS1'), 'Panel 32.6 V');
+assert.equal(text('sysEpeverBig'), '0.00 W in');
+assert.equal(text('sysEpeverS1'), 'Panel 32.60 V');
 assert.equal(text('sysEpeverS2'), 'not charging');
-assert.equal(text('sysEpeverS3'), '1.2 kWh today');
+assert.equal(text('sysEpeverS3'), '1.20 kWh today');
 both('sysEpeverS1');
 
 epever({ pv_w: 12, pv_v: 32.6, charge_state: 0, charge_state_name: 'Not charging' });
 assert.equal(state('sysEpever'), 'idle');
-assert.equal(text('sysEpeverBig'), '12 W in');
-assert.equal(text('sysEpeverS1'), 'Panel 32.6 V');
+assert.equal(text('sysEpeverBig'), '12.00 W in');
+assert.equal(text('sysEpeverS1'), 'Panel 32.60 V');
 assert.equal(text('sysEpeverS2'), 'not charging');
 
 epever({ pv_w: 0, charge_state: 0, charge_state_name: 'Not charging' });
 assert.equal(text('sysEpeverS1'), 'Not charging');
-assert.equal(text('sysEpeverS2'), '0 W in');
+assert.equal(text('sysEpeverS2'), '0.00 W in');
 
 epever({ pv_w: 4, charge_state: 0, charge_state_name: 'Not charging' });
 assert.equal(state('sysEpever'), 'idle');
-assert.equal(text('sysEpeverBig'), '4 W in');
+assert.equal(text('sysEpeverBig'), '4.00 W in');
 assert.equal(text('sysEpeverS1'), 'not charging');
 assert.equal(text('sysEpeverS2'), '');
 
@@ -77,32 +77,32 @@ assert.equal(text('sysEpeverS2'), 'battery full');
 
 epever({ pv_w: 0.4, pv_v: 30, charge_state: 1, charge_state_name: 'Float' });
 assert.equal(state('sysEpever'), 'lit');
-assert.equal(text('sysEpeverBig'), '0.4 W in');
+assert.equal(text('sysEpeverBig'), '0.40 W in');
 assert.equal(text('sysEpeverS1'), 'Float,');
 assert.equal(text('sysEpeverS2'), 'battery full');
 
 epever({ pv_w: 40, pv_v: 32.6, charge_state: 1, charge_state_name: 'Float', gen_today_kwh: 2 });
 assert.equal(state('sysEpever'), 'lit');
-assert.equal(text('sysEpeverBig'), '40 W in');
+assert.equal(text('sysEpeverBig'), '40.00 W in');
 assert.equal(text('sysEpeverS1'), 'Float');
-assert.equal(text('sysEpeverS2'), '32.6 V panel');
-assert.equal(text('sysEpeverS3'), '2 kWh today');
+assert.equal(text('sysEpeverS2'), '32.60 V panel');
+assert.equal(text('sysEpeverS3'), '2.00 kWh today');
 
 epever({ pv_w: 0, charge_state: 2, charge_state_name: 'Boost', pv_v: 10 });
 assert.notEqual(state('sysEpever'), 'lit');
-assert.equal(text('sysEpeverBig'), '0 W in');
+assert.equal(text('sysEpeverBig'), '0.00 W in');
 assert.equal(text('sysEpeverS1'), 'Boost');
-assert.equal(text('sysEpeverS2'), '0 W in');
+assert.equal(text('sysEpeverS2'), '0.00 W in');
 
 epever({ pv_w: 0, charge_state: 3, charge_state_name: 'Equalising' });
 assert.equal(text('sysEpeverS1'), 'Equalising');
-assert.equal(text('sysEpeverS2'), '0 W in');
+assert.equal(text('sysEpeverS2'), '0.00 W in');
 assert.notEqual(state('sysEpever'), 'lit');
 
 epever({ pv_w: 55, pv_v: 60, charge_state: 2, charge_state_name: 'Boost' });
 assert.equal(state('sysEpever'), 'lit');
 assert.equal(text('sysEpeverS1'), 'Boost');
-assert.equal(text('sysEpeverS2'), '60 V panel');
+assert.equal(text('sysEpeverS2'), '60.00 V panel');
 
 draw({ stale: true, observed_at: 1, values: { pv_w: 10, pv_v: 32.6, charge_state: 2, charge_state_name: 'Boost' } }, []);
 assert.equal(state('sysEpever'), 'stale');

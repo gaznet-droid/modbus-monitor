@@ -2145,6 +2145,8 @@ let sysDev=null,sysLatest=null,sysDetailController=null,sysDetailKey='',sysDetai
 const sysPeriods={};
 function stopSystem(){systemVersion++;clearTimeout(systemTimer);systemTimer=null;systemController?.abort();systemController=null;sysDetailController?.abort();sysDetailController=null;}
 function sysNum(v,unit,digits){return Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:digits??(Math.abs(v)<10?1:0)})+' '+unit:'—';}
+// The Epever reports in hundredths, so its figures always show two decimals (Dad, 16 Nov).
+const sysNum2=(v,unit)=>Number.isFinite(v)?v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' '+unit:'—';
 // Set a box's headline figure and up to three detail lines; a stale box shows "—" and keeps its dashed look.
 // The diagram exists twice (phone and wide desktop layouts); both are updated, the other is hidden by CSS.
 const sysAll=id=>document.querySelectorAll('#sys'+id);
@@ -2156,11 +2158,11 @@ function sysLine(id,on){for(const p of ['L','LW','F','FW','Plug','PlugW'])sysAll
 function sysLit(id,on){sysAll(id).forEach(g=>{if(g.dataset.state!=='stale')g.dataset.state=on?'lit':'idle';});}
 // Fresh but dark: say why the Epever box is off. Under 1 W of panel power counts as none. The lighting rule is unchanged.
 function epeverLines(ev,lit){
-  const name=ev.charge_state_name||'State unknown',panel=Number.isFinite(ev.pv_v)?sysNum(ev.pv_v,'V',1):'',today=Number.isFinite(ev.gen_today_kwh)?sysNum(ev.gen_today_kwh,'kWh',1)+' today':'',watts=ev.pv_w,near=Math.abs(watts)<1;
+  const name=ev.charge_state_name||'State unknown',panel=Number.isFinite(ev.pv_v)?sysNum2(ev.pv_v,'V'):'',today=Number.isFinite(ev.gen_today_kwh)?sysNum2(ev.gen_today_kwh,'kWh')+' today':'',watts=ev.pv_w,near=Math.abs(watts)<1;
   if((ev.charge_state===1||name==='Float')&&near)return ['Float,','battery full',today];
   if(lit)return [name,panel?panel+' panel':'',today];
   if(ev.charge_state===0&&panel)return ['Panel '+panel,'not charging',today];
-  if(!(watts>0))return [name,near?'0 W in':sysNum(watts,'W')+' in',today];
+  if(!(watts>0))return [name,near?'0.00 W in':sysNum2(watts,'W')+' in',today];
   return ['not charging',today,''];
 }
 function renderSystem([tuya,epever,plugs]){
@@ -2177,10 +2179,10 @@ function renderSystem([tuya,epever,plugs]){
   sysAll('DCS1').forEach(n=>n.textContent=dcVolts.length?sysNum(dcVolts.reduce((t,v)=>t+v,0)/dcVolts.length,'V',1)+(dcVolts.length<3?' ('+dcVolts.length+' of 3)':''):'');
   const ev=epever?.values||{},fresh=!!epever&&!epever.stale,eLive=fresh&&Number.isFinite(ev.pv_w),gone=epever?'Old reading':'No reading',charging=eLive&&ev.pv_w>0&&ev.charge_state!==0;
   if(eLive)times.push(epever.observed_at);
-  sysSet('Epever',eLive,sysNum(ev.pv_w,'W')+' in',...(eLive?epeverLines(ev,charging):[gone,'','']));
+  sysSet('Epever',eLive,sysNum2(ev.pv_w,'W')+' in',...(eLive?epeverLines(ev,charging):[gone,'','']));
   sysLine('Epever',charging);sysLine('Batt',charging);sysLit('Epever',charging);
   const bLive=fresh&&Number.isFinite(ev.batt_v),bits=[];
-  if(Number.isFinite(ev.batt_a))bits.push(sysNum(ev.batt_a,'A',1));
+  if(Number.isFinite(ev.batt_a))bits.push(sysNum2(ev.batt_a,'A'));
   const bState=!Number.isFinite(ev.batt_a)?'':ev.batt_a>0.05?'Charging':ev.batt_a<-0.05?'Discharging':'Idle';
   sysSet('Batt',bLive,bLive?ev.batt_v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' V':'—',bLive?bits.join(' · '):gone,bLive?bState:'',bLive&&Number.isFinite(ev.batt_temp_c)?sysNum(ev.batt_temp_c,'°C',0):'');
   // Battery icon: filled left to right by the controller's state of charge; pulses while the battery is taking charge.

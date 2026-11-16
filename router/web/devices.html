@@ -13,9 +13,12 @@
     * { box-sizing:border-box; margin:0; padding:0; }
     body { font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background:var(--bg-base); color:var(--text-main); padding:1rem; }
     main { max-width:1100px; margin:0 auto; display:flex; flex-direction:column; gap:1rem; }
-    header { display:flex; justify-content:space-between; align-items:flex-end; gap:1rem; flex-wrap:wrap; padding:.5rem 0; }
+    header { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; padding:.5rem 0; }
     h1 { font-size:1.5rem; } h2 { font-size:1rem; }
     a { color:var(--import-color); }
+    .title { display:flex; align-items:center; gap:.7rem; }
+    .back { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; flex-shrink:0; border-radius:10px; border:1px solid var(--border); background:#1e293b; color:var(--text-main); }
+    .back:hover { border-color:var(--import-color); color:var(--import-color); } .back:focus-visible { outline:2px solid var(--text-main); outline-offset:2px; }
     p, .muted { color:var(--text-muted); line-height:1.45; font-size:.9rem; }
     .summary { display:flex; gap:.6rem; flex-wrap:wrap; }
     .chip { background:var(--card-bg); border:1px solid var(--border); border-radius:999px; padding:.4rem .85rem; font-size:.85rem; color:var(--text-muted); }
@@ -27,7 +30,7 @@
     td { padding:.6rem .5rem; border-top:1px solid var(--border); vertical-align:top; }
     td.name { font-weight:600; } td.num { font-variant-numeric:tabular-nums; }
     td small { display:block; color:var(--text-muted); font-size:.8rem; font-weight:400; margin-top:.1rem; }
-    th:nth-child(1) { width:24%; } th:nth-child(2) { width:30%; } th:nth-child(3) { width:22%; } th:nth-child(4) { width:12%; } th:nth-child(5) { width:12%; }
+    th:nth-child(1) { width:19%; } th:nth-child(2) { width:27%; } th:nth-child(3) { width:15%; } th:nth-child(4) { width:19%; } th:nth-child(5) { width:10%; } th:nth-child(6) { width:10%; }
     .badge { display:inline-block; border-radius:6px; padding:.1rem .45rem; font-size:.75rem; font-weight:700; border:1px solid; }
     .badge.direct { color:var(--ok); border-color:#065f46; background:#052e24; }
     .badge.remote { color:var(--import-color); border-color:#075985; background:#082f49; }
@@ -49,10 +52,10 @@
 <body>
 <main>
   <header>
-    <div><a href="/">← Back to the monitor</a><h1>Devices</h1></div>
+    <div class="title"><a class="back" href="/" aria-label="Back to the monitor" title="Back to the monitor"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7"/></svg></a><h1>Devices</h1></div>
     <span id="checked" class="muted" role="status"></span>
   </header>
-  <p>Every device the monitor reads, and how. <span class="badge direct">Direct</span> means the Pi reads it itself, by wire or over the house Wi-Fi. <span class="badge remote">Remote</span> means the reading comes back through the maker's internet service.</p>
+  <p>Every device the monitor reads, and how. <span class="badge direct">Direct</span> means the Pi reads it itself, by wire or over the house Wi-Fi. <span class="badge remote">Remote</span> means the reading comes back through the maker's internet service. Addresses are on the house network, and show only when someone is signed in.</p>
   <div id="summary" class="summary"></div>
   <div id="groups"></div>
   <p id="status" class="status" role="status"></p>
@@ -90,30 +93,35 @@ function state(d){
 function meterRows(live){
   if(!live)return [];
   const l=live.latest;
-  return [{name:'House meter',route:'wired',ts:l?l.ts:null,stale:live.stale,
+  return [{name:'House meter',route:'wired',address:'Wired, no address',ts:l?l.ts:null,stale:live.stale,
     reading:join([l?num(l.value,0,' W'):null,live.meter?num(live.meter.kwh,1,' kWh total'):null])}];
 }
-function solarRows(tuya,epever){
+function solarRows(tuya,epever,net){
   const rows=[];
   for(const d of (tuya&&tuya.devices)||[]){
     const v=d.values||{};
-    rows.push({name:d.name||d.id,route:tuya.source==='local'?'juwaiLocal':'tuyaCloud',ts:d.observed_at,stale:d.stale,
+    rows.push({name:d.name||d.id,address:net&&net.solar&&net.solar[d.id],route:tuya.source==='local'?'juwaiLocal':'tuyaCloud',ts:d.observed_at,stale:d.stale,
       reading:join([num(v.power_w,1,' W'),num(v.voltage_v,1,' V'),num(v.current_a,2,' A')])});
   }
   if(epever){
     const v=epever.values||{};
-    rows.push({name:(epever.name||'Epever')+' charger',route:'epever',ts:epever.last_heard_at||epever.observed_at,stale:epever.stale,
-      reading:join([num(v.pv_w,1,' W solar'),num(v.batt_v,2,' V battery'),v.charge_state_name])});
+    rows.push({name:(epever.name||'Epever')+' charger',address:net&&net.epever,route:'epever',ts:epever.last_heard_at||epever.observed_at,stale:epever.stale,
+      reading:join([num(v.pv_w,2,' W solar'),num(v.batt_v,2,' V battery'),num(v.batt_a,2,' A'),v.charge_state_name])});
   }
   return rows;
 }
-function plugRows(ewelink){
-  return ((ewelink&&ewelink.devices)||[]).map(d=>({name:d.name,route:ROUTES[d.source]?d.source:(d.ts==null?'unknown':'cloud'),
+function plugRows(ewelink,net){
+  return ((ewelink&&ewelink.devices)||[]).map(d=>({name:d.name,address:net&&net.plugs&&net.plugs[d.id],route:ROUTES[d.source]?d.source:(d.ts==null?'unknown':'cloud'),
     ts:d.ts,stale:d.stale,online:d.online,
     reading:join([d.switch?'Switched '+d.switch:null,num(d.power_w,1,' W'),num(d.voltage_v,1,' V')])}));
 }
-function homeRows(home){
-  return ((home&&home.devices)||[]).map(d=>({name:d.name,route:'cloud',ts:d.ts,stale:d.stale,online:d.online,
+function homeAddress(d,net){
+  const h=net&&net.home&&net.home[d.id];
+  if(!h)return null;
+  return h.ip||(h.zigbee?'Zigbee, via bridge'+(net.bridge?' '+net.bridge:''):null);
+}
+function homeRows(home,net){
+  return ((home&&home.devices)||[]).map(d=>({name:d.name,address:homeAddress(d,net),route:'cloud',ts:d.ts,stale:d.stale,online:d.online,
     reading:join([num(d.temperature_c,1,' °C'),num(d.humidity_pct,0,' % humidity'),d.door?'Door '+d.door:null,
       d.switch?'Switched '+d.switch:null,num(d.power_w,1,' W'),num(d.battery_pct,0,' % battery')])}));
 }
@@ -124,12 +132,13 @@ function table(title,note,rows,now){
     body.append(el('tr',null,
       el('td',{className:'name'},r.name),
       el('td',null,el('span',{className:'badge '+kind},kind==='direct'?'Direct':'Remote'),' '+how,el('small',null,detail)),
+      el('td',{className:'num'},r.address||'—'),
       el('td',{className:'num'},r.reading),
       el('td',{className:'num'},ago(r.ts==null?null:now-r.ts)),
       el('td',null,el('span',{className:'state '+cls},label))));
   }
-  for(const td of body.querySelectorAll('td.num'))td.dataset.label=td.cellIndex===2?'Reading':'Last heard'; // labels for the phone layout
-  const head=el('thead',null,el('tr',null,...['Device','Read by','Reading','Last heard','State'].map(t=>el('th',{scope:'col'},t))));
+  for(const td of body.querySelectorAll('td.num'))td.dataset.label=['Address','Reading','Last heard'][td.cellIndex-2]; // labels for the phone layout
+  const head=el('thead',null,el('tr',null,...['Device','Read by','Address','Reading','Last heard','State'].map(t=>el('th',{scope:'col'},t))));
   return el('section',null,el('h2',null,title+' ('+rows.length+')'),el('p',{className:'muted'},note),el('table',null,head,body));
 }
 async function get(url){
@@ -141,13 +150,13 @@ let busy=false;
 async function load(){
   if(busy||document.hidden)return;busy=true;
   try{
-    const [live,tuya,epever,ewelink,home]=await Promise.all(['/api/live','/api/tuya/latest','/api/epever/latest','/api/ewelink/latest','/api/home/latest'].map(u=>get(u).catch(e=>{if(e.message==='signed out')throw e;return null;})));
+    const [live,tuya,epever,ewelink,home,net]=await Promise.all(['/api/live','/api/tuya/latest','/api/epever/latest','/api/ewelink/latest','/api/home/latest','/api/devices/network'].map(u=>get(u).catch(e=>{if(e.message==='signed out')throw e;return null;})));
     const now=(live&&live.server_time)||(ewelink&&ewelink.server_time)||Date.now();
     const groups=[
       ['Mains meter','The meter on the incoming supply.',meterRows(live)],
-      ['Solar','The three panel meters and the battery charger.',solarRows(tuya,epever)],
-      ['Power plugs','The Sonoff plugs on the inverters, charger and fridge.',plugRows(ewelink)],
-      ['House sensors','Temperature, door and switch sensors on the eWeLink bridge.',homeRows(home)]
+      ['Solar','The three panel meters and the battery charger.',solarRows(tuya,epever,net)],
+      ['Power plugs','The Sonoff plugs on the inverters, charger and fridge.',plugRows(ewelink,net)],
+      ['House sensors','Temperature, door and switch sensors on the eWeLink bridge.',homeRows(home,net)]
     ].filter(g=>g[2].length);
     const all=groups.flatMap(g=>g[2]);
     const count=f=>all.filter(f).length;

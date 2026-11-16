@@ -273,6 +273,13 @@ live_error) go to the local_events table.
 On by default when eWeLink is on. Off switch: "ewelink_live_enabled": false in
 /etc/modpi/monitor.json, then restart modpi; or revert the commit.
 
+## Devices page addresses (from 16 Nov 2026)
+/devices lists every device with how it is read. Its Address column comes from /api/devices/network
+(router/network.py), which answers only when login is on and someone is signed in. It reads what the
+Pi already holds: the solar meters' hosts in juwai-local.json, the far end of the dongle's connection
+to the Epever port (from /proc/net/tcp), and the source address of each eWeLink announcement the LAN
+listener hears (kept 15 minutes). Nothing is scanned and device IDs are never sent to the page.
+
 ## Meter over the RS485 HAT (Job 3, live since 11 Nov 2026)
 router/modbus_rtu.py reads the meter over the Pi's serial port (Modbus RTU, 9600 8N1, unit 1,
 read functions 03 and 04 only), using the standard library. The same three reads as over the

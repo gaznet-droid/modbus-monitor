@@ -95,6 +95,8 @@ class Handler(BaseHTTPRequestHandler):
   elif u.path=='/api/tuya/history':b=json.dumps({'energy':fixture_energy(q['device'][0],q['window'][0]),'device':q['device'][0],**fixture_points(q['device'][0],q['window'][0]),'columns':['ts','samples','voltage_v','current_a','power_w']}).encode()
   elif u.path in ('/chart.umd.min.js','/ewelink.js'):b=(root/u.path[1:]).read_bytes();kind='text/javascript'
   elif u.path=='/devices':b=(root/'devices.html').read_bytes();kind='text/html'
+  elif u.path=='/api/devices/network':b=json.dumps({'solar':{'shed':'192.168.7.108','garage':'192.168.7.234','p275':None},'epever':'192.168.7.207','plugs':{'inverter-1000':'192.168.4.202','inverter-600':'192.168.7.231','fridge':'192.168.4.23','garage-inverter':'192.168.7.252','charger-inverter':None},'home':{'lounge-temp':{'ip':None,'zigbee':True},'front-door':{'ip':None,'zigbee':True},'summer-house':{'ip':'192.168.4.49','zigbee':False}},'bridge':'192.168.7.243'}).encode()
+  elif u.path in ('/admin','/solar'):b=(root/(u.path[1:]+'.html')).read_bytes();kind='text/html'
   elif u.path=='/api/home/latest':b=json.dumps(home_latest()).encode()
   elif u.path=='/':b=(root/'index.html').read_text().replace('<script src=',instrument+'<script src=',1).encode();kind='text/html'
   else:self.send_error(404);return
