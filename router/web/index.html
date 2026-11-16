@@ -447,10 +447,29 @@
         /* Epever detail figures: three tiles a row, value on top, label underneath. */
         .sd-head .epever-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.5rem; margin:.8rem 0 0; }
         .sd-head .epever-metrics > div { display:flex; flex-direction:column-reverse; flex-wrap:nowrap; justify-content:center; align-items:center; gap:.2rem; min-width:0; padding:.6rem .3rem; border:1px solid var(--border); border-radius:10px; background:rgba(148,163,184,.06); text-align:center; }
-        .sd-head .epever-metrics > div:last-child:nth-child(3n+1) { grid-column:1/-1; }
         .sd-head .epever-metrics dt { margin:0; font-size:.68rem; line-height:1.2; }
         .sd-head .epever-metrics dd { margin:0; font-size:1.05rem; font-weight:600; white-space:nowrap; }
         @media(max-width:600px) { .sd-head .epever-metrics dd { font-size:.95rem; } }
+        /* The battery is a tall tile that fills from the bottom, like the one on the diagram; the charge state sits under it with no label. */
+        .sd-head .epever-metrics > .ep-tile-bat { grid-row:span 2; gap:.45rem; }
+        .sd-head .epever-metrics > .ep-tile-wide { grid-column:span 2; }
+        .ep-bat { position:relative; display:flex; align-items:center; justify-content:center; width:3.3rem; height:5rem; margin-top:5px; border:2px solid #64748b; border-radius:9px; background:#0b1220; }
+        .ep-bat::before { content:""; position:absolute; top:-7px; left:50%; width:1.1rem; height:5px; margin-left:-.55rem; border-radius:2px 2px 0 0; background:#64748b; }
+        .ep-bat-in { position:absolute; inset:3px; border-radius:5px; overflow:hidden; }
+        .ep-bat-fill { position:absolute; left:0; right:0; bottom:0; height:0; background:var(--export-color); transition:height .6s; }
+        .ep-bat-fill[data-level="amber"] { background:var(--amber-zero); }
+        .ep-bat-fill[data-level="red"] { background:#ef4444; }
+        .sd-head[data-stale="true"] .ep-bat-fill { background:#475569; }
+        .ep-bat-fill.charging { animation:batPulse 1.6s ease-in-out infinite; }
+        .ep-bat-pct { position:relative; font-size:.85rem; font-weight:700; color:#fff; text-shadow:0 0 3px #0b1220,0 0 3px #0b1220,0 0 2px #0b1220; }
+        .sd-head .epever-metrics > .ep-tile-charge { gap:.25rem; }
+        .sd-head .epever-metrics > .ep-tile-charge dd { white-space:normal; line-height:1.15; color:var(--text-muted); }
+        .ep-tile-charge dd span { display:block; }
+        .ep-bolt { display:none; width:1.1rem; height:1.1rem; fill:var(--export-color); }
+        .sd-head .epever-metrics > .ep-tile-charge[data-charging="true"] { border-color:var(--export-color); background:rgba(52,211,153,.12); }
+        .sd-head .epever-metrics > .ep-tile-charge[data-charging="true"] dd { color:var(--export-color); }
+        .ep-tile-charge[data-charging="true"] .ep-bolt { display:block; animation:batPulse 1.6s ease-in-out infinite; }
+        @media(prefers-reduced-motion:reduce) { .ep-bat-fill.charging, .ep-tile-charge[data-charging="true"] .ep-bolt { animation:none; } }
         .sd-head > .period-note { margin:.35rem 0; }
         .sd-head .device-update { margin-top:.7rem; }
         .sd-heading { font-size:.95rem; margin:.2rem 0 .6rem; }
@@ -1042,7 +1061,7 @@
 </div>
 <div id="sdEpView" class="sd-view" hidden><div id="sdEpCard" class="sd-head" data-stale="true">
 <div class="sd-values"><div><div class="label">Latest power</div><div class="juwai-power" id="sdEpPower">— W</div></div><div class="sd-energy"><div class="label">Generation</div><div id="sdEpEnergy" class="juwai-kwh">— kWh</div><div class="period-note sd-period">Today</div></div></div>
-<dl class="juwai-metrics epever-metrics"><div><dt>Battery voltage</dt><dd id="sdEpBattV">— V</dd></div><div><dt>Battery current</dt><dd id="sdEpBattA">— A</dd></div><div><dt>Battery level</dt><dd id="sdEpSoc">— %</dd></div><div><dt>Battery min today</dt><dd id="sdEpBattMin">—</dd></div><div><dt>Panel voltage</dt><dd id="sdEpPvV">— V</dd></div><div><dt>Generated today</dt><dd id="sdEpGenToday">— kWh</dd></div><div><dt>Charging</dt><dd id="sdEpCharge">—</dd></div></dl>
+<dl class="juwai-metrics epever-metrics"><div class="ep-tile-bat"><dt>Battery level</dt><dd><span class="ep-bat"><span class="ep-bat-in"><span class="ep-bat-fill" id="sdEpSocFill"></span></span><span class="ep-bat-pct" id="sdEpSoc">— %</span></span></dd></div><div><dt>Battery voltage</dt><dd id="sdEpBattV">— V</dd></div><div><dt>Battery current</dt><dd id="sdEpBattA">— A</dd></div><div><dt>Battery min today</dt><dd id="sdEpBattMin">—</dd></div><div><dt>Panel voltage</dt><dd id="sdEpPvV">— V</dd></div><div class="ep-tile-charge" data-charging="false"><dt class="visually-hidden">Charging</dt><dd id="sdEpCharge" data-stack>—</dd><svg class="ep-bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></div><div class="ep-tile-wide"><dt>Generated today</dt><dd id="sdEpGenToday">— kWh</dd></div></dl>
 <div class="device-update"><span class="device-connection"><span class="status-dot" aria-hidden="true"></span><span id="sdEpState">Loading…</span></span><time id="sdEpAge">Waiting for readings</time><span id="sdEpName">Epever</span></div></div>
 <div class="chart-info info-wrap"><button type="button" class="info-tip" aria-label="About the Epever chart" aria-expanded="false" aria-controls="sdEpNoteTip">i</button><div id="sdEpNoteTip" class="info-popover" role="tooltip" hidden><p id="sdEpNote" class="period-note" aria-live="polite">Loading…</p></div></div>
 <div class="juwai-chart"><canvas id="sdEpChart" role="img" aria-label="Solar charger panel power and battery voltage for the period chosen above"></canvas></div>
@@ -1364,7 +1383,13 @@ function renderEpever(o,data){
   set('Age',data.observed_at?new Date(data.observed_at).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'No recorded sample');
   if(data.observed_at)$(o.ep+'Age').dateTime=new Date(data.observed_at).toISOString();
   set('BattV',epeverText(v.batt_v,'V',2));set('BattA',epeverText(v.batt_a,'A',2));
-  set('Charge',v.charge_state_name||'—');
+  const chEl=$(o.ep+'Charge'),chName=v.charge_state_name,chOn=!!chName&&chName!=='Not charging'&&!data.stale;
+  if(chEl.dataset.stack!==undefined){ // stacked words, no label: "Boost" over "charging", or "Not" over "charging"
+    chEl.replaceChildren(...(chName?[chName.split(' ')[0],'charging']:['—']).map(w=>{const sp=document.createElement('span');sp.textContent=w;return sp;}));
+    chEl.parentElement.dataset.charging=String(chOn);
+  }else set('Charge',chName||'—');
+  const socFill=$(o.ep+'SocFill');
+  if(socFill){const soc=Number.isFinite(v.soc)?Math.max(0,Math.min(100,v.soc)):null;socFill.style.height=(soc??0)+'%';socFill.dataset.level=soc==null?'na':soc<=10?'red':soc<=20?'amber':'ok';socFill.classList.toggle('charging',chOn);}
   set('GenToday',Number.isFinite(v.gen_today_kwh)?v.gen_today_kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' kWh':'— kWh');
   const minAt=data.times?.batt_v_min_today;
   set('BattMin',Number.isFinite(v.batt_v_min_today)&&minAt?epeverText(v.batt_v_min_today,'V',2):'—'); // voltage only: Dad asked for the time to go (15 Nov)
