@@ -39,6 +39,9 @@ UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer pa
 ## Gareth's requests (16 Nov)
 - DONE 16 Nov, page-only, awaiting Gareth's eye. System tab, Epever and battery detail: the figures under Latest power and Generation are tiles, three to a row, value on top and label below, with Charging in a full-width tile. Gareth, 16 Nov: the meter and plug details stay as they are. Also done 16 Nov: Battery level is a tall battery graphic that fills with the level, and the charge state has no label, stacks its words and turns green with a bolt while charging.
 
+- DONE 16 Nov, page-only: Garden panel is now 200 watts (Dad changed it); diagram, percent of rated and help text updated.
+- BLOCKED 16 Nov: new Sonoff on the 600 watt inverter reads nothing and Dad can't see it on his router. Needs a session that can reach the Pi (Mac over Tailscale): listen for the plug's local announcement for its address and ID, one device-list call for its key, backup, update the 600 watt mapping, restart modpi. If it never announces, it is not on the Wi-Fi yet and needs pairing in the eWeLink app.
+
 ## UI changes by Grok (15 Nov, via GitHub pull requests 1 to 3, live as cefe374)
 - Mobile tab bar pinned to the bottom of the screen; ModPi icon and name top left.
 - Card headers aligned; System help text moved behind (i) buttons.
