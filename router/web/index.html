@@ -786,39 +786,39 @@
         </div>
         <section id="dashboardPanel" class="tab-panel" role="tabpanel" aria-labelledby="dashboardTab">
   <div class="dash-grid" id="dashGrid">
-    <article class="dash-card dash-wide" id="dcNet" data-state="stale" data-go="power" role="link" tabindex="0" aria-label="Open the Power page">
+    <article class="dash-card dash-wide" id="dcNet" data-state="stale" data-go="power" role="button" tabindex="0" aria-label="Open the Power page">
       <header><h2>Live net power</h2><span class="dash-chev" aria-hidden="true">›</span></header>
       <div class="dash-main"><div class="dash-big" id="dcNetBig">— W</div><div class="dash-tag" id="dcNetTag">Waiting</div></div>
       <div class="dash-spark" id="dcNetSpark" role="img" aria-label="Net power, past hour"></div>
       <dl class="dash-facts"><div><dt>Import today</dt><dd id="dcNetImp">—</dd></div><div><dt>Export today</dt><dd id="dcNetExp">—</dd></div><div><dt>Past hour</dt><dd id="dcNetRange">—</dd></div></dl>
     </article>
-    <article class="dash-card dash-wide" id="dcSolar" data-state="stale" data-go="system" data-dev="output" role="link" tabindex="0" aria-label="Open the System page">
+    <article class="dash-card dash-wide" id="dcSolar" data-state="stale" data-go="system" data-dev="output" role="button" tabindex="0" aria-label="Open the System page">
       <header><h2>Total solar live</h2><span class="dash-chev" aria-hidden="true">›</span></header>
       <div class="dash-main"><div class="dash-big" id="dcSolarBig">— W</div><div class="dash-tag" id="dcSolarTag">Waiting</div></div>
       <div class="dash-spark" id="dcSolarSpark" role="img" aria-label="Total solar to the house, past hour"></div>
       <div class="dash-bars" id="dcSolarBars"></div>
     </article>
-    <article class="dash-card" id="dcEpever" data-state="stale" data-go="system" data-dev="epever" role="link" tabindex="0" aria-label="Open the Epever details">
+    <article class="dash-card" id="dcEpever" data-state="stale" data-go="system" data-dev="epever" role="button" tabindex="0" aria-label="Open the Epever details">
       <header><h2>Epever</h2><span class="dash-chev" aria-hidden="true">›</span></header>
       <div class="dash-main"><div class="dash-big" id="dcEpBig">— W</div><div class="dash-tag" id="dcEpTag">Waiting</div></div>
       <div class="dash-spark" id="dcEpSpark" role="img" aria-label="Epever power in, past hour"></div>
       <div class="dash-batt" aria-label="Battery charge"><div class="dash-batt-bar"><span id="dcEpBatt"></span></div><div class="dash-batt-txt" id="dcEpBattTxt">—</div></div>
       <dl class="dash-facts"><div><dt>Battery</dt><dd id="dcEpV">—</dd></div><div><dt>Current</dt><dd id="dcEpA">—</dd></div><div><dt>Today</dt><dd id="dcEpToday">—</dd></div></dl>
     </article>
-    <article class="dash-card" id="dcFridge" data-state="stale" data-go="ewelink" data-card="ew-fridge" role="link" tabindex="0" aria-label="Open the fridge details">
+    <article class="dash-card" id="dcFridge" data-state="stale" data-go="ewelink" data-card="ew-fridge" role="button" tabindex="0" aria-label="Open the fridge details">
       <header><h2>Fridge</h2><span class="dash-chev" aria-hidden="true">›</span></header>
       <div class="dash-main"><div class="dash-big" id="dcFrBig">— W</div><div class="dash-tag" id="dcFrTag">Waiting</div></div>
       <div class="dash-spark" id="dcFrSpark" role="img" aria-label="Fridge power, past hour"></div>
       <dl class="dash-facts"><div><dt>Today</dt><dd id="dcFrToday">—</dd></div><div><dt>Freezer</dt><dd id="dcFrTemp">—</dd></div><div><dt>Past hour avg</dt><dd id="dcFrAvg">—</dd></div></dl>
     </article>
-    <article class="dash-card" id="dcGarden" data-state="stale" data-go="system" data-dev="garden" role="link" tabindex="0" aria-label="Open the Garden inverter details">
+    <article class="dash-card" id="dcGarden" data-state="stale" data-go="system" data-dev="garden" role="button" tabindex="0" aria-label="Open the Garden inverter details">
       <header><h2>Garden inverter</h2><span class="dash-chev" aria-hidden="true">›</span></header>
       <div class="dash-main"><div class="dash-big" id="dcGaBig">— W</div><div class="dash-tag" id="dcGaTag">Waiting</div></div>
       <div class="dash-spark" id="dcGaSpark" role="img" aria-label="Garden inverter power, past hour"></div>
       <div class="dash-batt" aria-label="Share of the 200 watt panel"><div class="dash-batt-bar"><span id="dcGaBar"></span></div><div class="dash-batt-txt" id="dcGaPct">—</div></div>
       <dl class="dash-facts"><div><dt>Volts</dt><dd id="dcGaV">—</dd></div><div><dt>Amps</dt><dd id="dcGaA">—</dd></div><div><dt>Today</dt><dd id="dcGaToday">—</dd></div></dl>
     </article>
-    <article class="dash-card" id="dcExport" data-state="stale" data-go="power" role="link" tabindex="0" aria-label="Open the Power page">
+    <article class="dash-card" id="dcExport" data-state="stale" data-go="power" data-window="1d" role="button" tabindex="0" aria-label="Open the Power page">
       <header><h2>Total export today</h2><span class="dash-chev" aria-hidden="true">›</span></header>
       <div class="dash-main"><div class="dash-big" id="dcExBig">— kWh</div><div class="dash-tag" id="dcExTag">Since midnight</div></div>
       <div class="dash-spark" id="dcExSpark" role="img" aria-label="Export through today, by hour"></div>
@@ -2537,9 +2537,11 @@ async function readDash(version){
 // Each card opens its full view: System opens the matching device's detail, Inverters & fridge opens that card, Power just opens.
 function dashOpen(c){
   const go=c.dataset.go;selectTab(go);
+  if(go==='power'&&c.dataset.window&&$('timeWindow').value!==c.dataset.window){$('timeWindow').value=c.dataset.window;$('timeWindow').dispatchEvent(new Event('change'));}
   if(go==='system'&&c.dataset.dev&&SYS_DEVICES[c.dataset.dev]&&sysDev!==c.dataset.dev)toggleSysDetail(c.dataset.dev);
-  if(go==='ewelink'&&c.dataset.card)setTimeout(()=>$(c.dataset.card)?.click(),0);
   window.scrollTo(0,0);
+  // Fridge: open its card and bring it into view, whichever layout (web selects it beside the graph; phones open the graph under it).
+  if(go==='ewelink'&&c.dataset.card)setTimeout(()=>{const card=$(c.dataset.card);if(!card)return;card.click();setTimeout(()=>card.scrollIntoView({block:'start',behavior:'smooth'}),150);},50);
 }
 document.querySelectorAll('.dash-card[data-go]').forEach(c=>{
   c.addEventListener('click',()=>dashOpen(c));
