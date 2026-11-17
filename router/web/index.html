@@ -709,17 +709,25 @@
         .dash-card[data-go]:hover .dash-chev { color:var(--import-color); }
         .dash-main { display:flex; align-items:baseline; justify-content:space-between; gap:.5rem; flex-wrap:wrap; }
         .dash-big { font-size:clamp(1.6rem,4vw,2.4rem); font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1; color:var(--text-main); white-space:nowrap; }
-        .dash-tag { font-size:.8rem; font-weight:600; color:var(--text-muted); }
-        .dash-card[data-state="live"] .dash-tag { color:var(--export-color); }
+        .dash-tag { font-size:.8rem; font-weight:600; color:#7b8aa6; display:inline-flex; align-items:center; gap:.4rem; }
+        .dash-tag::before { content:""; width:8px; height:8px; border-radius:50%; background:currentColor; flex-shrink:0; }
+        .dash-card[data-act="on"] .dash-tag { color:var(--export-color); }
+        .dash-card[data-act="on"][data-tone="import"] .dash-tag { color:var(--import-color); }
+        .dash-card[data-act="on"] .dash-tag::before { animation:dash-pulse 1.8s ease-in-out infinite; }
+        .dash-card[data-act="none"] .dash-tag { color:var(--text-muted); } .dash-card[data-act="none"] .dash-tag::before { display:none; }
         .dash-card[data-state="warn"] .dash-tag { color:var(--amber-zero); }
+        @keyframes dash-pulse { 0%,100% { opacity:1; box-shadow:0 0 0 0 currentColor; } 50% { opacity:.45; box-shadow:0 0 0 5px transparent; } }
         .dash-card[data-state="stale"] .dash-big { opacity:.5; }
-        .dash-spark { height:64px; }
-        .dash-spark svg { width:100%; height:100%; display:block; overflow:visible; }
+        .dash-spark { min-height:64px; }
+        .dash-spark svg { width:100%; height:64px; display:block; overflow:visible; }
+        .dash-spark .sp-dot { fill:none; stroke:var(--import-color); stroke-width:4; stroke-linecap:round; vector-effect:non-scaling-stroke; }
+        .dash-spark.is-export .sp-dot { stroke:var(--export-color); } .dash-spark.is-amber .sp-dot { stroke:var(--amber-zero); }
+        .sp-axis { display:flex; justify-content:space-between; margin-top:.2rem; font-size:.68rem; color:var(--text-muted); }
         .dash-spark .sp-line { fill:none; stroke:var(--import-color); stroke-width:1.8; stroke-linejoin:round; stroke-linecap:round; vector-effect:non-scaling-stroke; }
         .dash-spark .sp-area { fill:var(--import-color); opacity:.14; stroke:none; }
         .dash-spark .sp-zero { stroke:var(--border); stroke-width:1; stroke-dasharray:3 3; vector-effect:non-scaling-stroke; }
         .dash-spark .sp-bar { fill:var(--export-color); opacity:.85; }
-        .dash-spark .sp-empty { height:100%; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:.8rem; }
+        .dash-spark .sp-empty { height:64px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:.8rem; }
         .dash-spark.is-export .sp-line { stroke:var(--export-color); } .dash-spark.is-export .sp-area { fill:var(--export-color); }
         .dash-spark.is-amber .sp-line { stroke:var(--amber-zero); } .dash-spark.is-amber .sp-area { fill:var(--amber-zero); }
         .dash-facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.5rem; margin-top:auto; }
@@ -737,7 +745,7 @@
         .dash-bar-row .vl { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
         @media(max-width:900px) { .dash-card, .dash-card.dash-wide { grid-column:span 3; } }
         @media(max-width:600px) { .dash-grid { grid-template-columns:1fr; gap:.75rem; } .dash-card, .dash-card.dash-wide { grid-column:auto; } .dash-bar-row { grid-template-columns:6rem 1fr 4rem; } }
-        @media(prefers-reduced-motion:reduce) { .dash-batt-bar span { transition:none; } }
+        @media(prefers-reduced-motion:reduce) { .dash-batt-bar span { transition:none; } .dash-card .dash-tag::before { animation:none !important; } }
       </style>
     </head>
     <body>
@@ -2418,22 +2426,25 @@ const dN=(v,unit,d)=>Number.isFinite(v)?v.toLocaleString(undefined,{minimumFract
 const dKwh=wh=>Number.isFinite(wh)?(wh/1000).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' kWh':'—';
 const dSet=(id,t)=>{const n=$(id);if(n)n.textContent=t;};
 const D_TAGS={dcNet:'dcNetTag',dcSolar:'dcSolarTag',dcEpever:'dcEpTag',dcFridge:'dcFrTag',dcGarden:'dcGaTag',dcExport:'dcExTag'};
-function dCard(id,state,tag){const c=$(id);c.dataset.state=state;dSet(D_TAGS[id],tag);}
+// act: 'on' (doing something: pulses), 'idle' (nothing happening: still, grey-blue), 'none' (a plain label).
+function dCard(id,state,tag,act='idle',tone=''){const c=$(id);c.dataset.state=state;c.dataset.act=state==='stale'?'idle':act;c.dataset.tone=tone;dSet(D_TAGS[id],tag);}
 // Small line graph into a box: pts are [x,y] pairs, y may be null for a gap. zero draws the zero line (for figures that go negative).
-function dSpark(id,pts,{cls='',zero=false,min,max,bars=false}={}){
+function dSpark(id,pts,{cls='',zero=false,min,max,from,to,left='60 min ago'}={}){
   const box=$(id);if(!box)return;box.className='dash-spark '+cls;
-  const p=(pts||[]).filter(q=>Number.isFinite(q[0])&&Number.isFinite(q[1]));
+  const p=(pts||[]).filter(q=>Number.isFinite(q[0])&&Number.isFinite(q[1])).sort((a,b)=>a[0]-b[0]);
   if(p.length<2){box.innerHTML='<div class="sp-empty">Collecting readings…</div>';return;}
-  const xs=p.map(q=>q[0]),ys=p.map(q=>q[1]);
-  const x0=Math.min(...xs),x1=Math.max(...xs),span=x1-x0||1;
-  let lo=min??Math.min(...ys),hi=max??Math.max(...ys);if(zero){lo=Math.min(lo,0);hi=Math.max(hi,0);}if(hi-lo<1e-6){hi=lo+1;}
-  const X=x=>((x-x0)/span*200).toFixed(1),Y=y=>(60-(y-lo)/(hi-lo)*56).toFixed(1);
-  let body='';
+  // The time axis is the whole period, not just where the readings happen to fall, so a late start or a gap shows as empty space.
+  const x0=Number.isFinite(from)?from:p[0][0],x1=Number.isFinite(to)?to:p[p.length-1][0],span=Math.max(1,x1-x0);
+  const ys=p.map(q=>q[1]);let lo=min??Math.min(...ys),hi=max??Math.max(...ys);if(zero){lo=Math.min(lo,0);hi=Math.max(hi,0);}if(hi-lo<1e-6)hi=lo+1;
+  const X=x=>(Math.max(0,Math.min(1,(x-x0)/span))*200).toFixed(1),Y=y=>(60-(y-lo)/(hi-lo)*56).toFixed(1);
+  const gaps=p.slice(1).map((q,i)=>q[0]-p[i][0]).sort((a,b)=>a-b),brk=Math.max(gaps[Math.floor(gaps.length/2)]*2.5,1000);
+  const base=Y(zero?0:lo);let body='',run=[];
+  const flush=()=>{if(run.length>1){const l=run.map((q,i)=>(i?'L':'M')+X(q[0])+' '+Y(q[1])).join('');body+='<path class="sp-area" d="'+l+'L'+X(run[run.length-1][0])+' '+base+'L'+X(run[0][0])+' '+base+'Z"/><path class="sp-line" d="'+l+'"/>';}run=[];};
   if(zero)body+='<line class="sp-zero" x1="0" x2="200" y1="'+Y(0)+'" y2="'+Y(0)+'"/>';
-  const line=p.map((q,i)=>(i?'L':'M')+X(q[0])+' '+Y(q[1])).join('');
-  const base=Y(zero?0:lo);
-  body+='<path class="sp-area" d="'+line+'L'+X(x1)+' '+base+'L'+X(x0)+' '+base+'Z"/><path class="sp-line" d="'+line+'"/>';
-  box.innerHTML='<svg viewBox="0 0 200 64" preserveAspectRatio="none">'+body+'</svg>';
+  p.forEach((q,i)=>{if(i&&q[0]-p[i-1][0]>brk)flush();run.push(q);});flush();
+  // Sparse series (a reading every few minutes): mark each real reading so the graph does not look finer than it is.
+  if(p.length<=40)body+=p.map(q=>'<path class="sp-dot" d="M'+X(q[0])+' '+Y(q[1])+'h0"/>').join('');
+  box.innerHTML='<svg viewBox="0 0 200 64" preserveAspectRatio="none">'+body+'</svg><div class="sp-axis"><span>'+left+'</span><span>now</span></div>';
 }
 const dPlug=id=>(dash.plugs?.devices||[]).find(d=>d.id===id);
 const dPlugLive=d=>!!d&&!!d.ts&&!d.stale&&d.online!==false&&Number.isFinite(d.power_w);
@@ -2446,58 +2457,58 @@ function renderDash(){
   if(latest&&Number.isFinite(latest.value)){
     const v=latest.value,stale=!!lv.stale;
     $('dcNetBig').textContent=(v>0?'+':'')+dN(v,'W');$('dcNetBig').style.color=v<0?'var(--export-color)':'var(--import-color)';
-    dCard('dcNet',stale?'stale':'live',stale?'Old reading':v<0?'Exporting':v>0?'Importing':'Balanced');
+    dCard('dcNet',stale?'stale':'live',stale?'Old reading':v<0?'Exporting':v>0?'Importing':'Balanced',Math.abs(v)>=1?'on':'idle',v>0?'import':'');
   }else{$('dcNetBig').textContent='— W';dCard('dcNet','stale','No reading');}
   const imp=dash.day?.energy?.import_wh,exp=dash.day?.energy?.export_wh;
   dSet('dcNetImp',dKwh(imp));dSet('dcNetExp',dKwh(exp));
   if(hours?.points?.length){const ys=hours.points.map(p=>p[1]).filter(Number.isFinite);dSet('dcNetRange',ys.length?dN(Math.min(...ys),'').trim()+' to '+dN(Math.max(...ys),'W'):'—');}
-  dSpark('dcNetSpark',(hours?.points||[]).map(p=>[p[0],p[1]]),{zero:true});
+  dSpark('dcNetSpark',(hours?.points||[]).map(p=>[p[0],p[1]]),{zero:true,from:hours?.start,to:hours?.end});
   // Total export today: the site's energy total for midnight to now; the graph builds up from the day's power readings.
-  $('dcExBig').textContent=dKwh(exp);dCard('dcExport',Number.isFinite(exp)?'live':'stale','Since midnight');
+  $('dcExBig').textContent=dKwh(exp);dCard('dcExport',Number.isFinite(exp)?'live':'stale','Since midnight','none');
   dSet('dcExImp',dKwh(imp));dSet('dcExMeter',lv?.export&&Number.isFinite(lv.export.kwh)?lv.export.kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:false})+' kWh':'—');
   dSet('dcExNet',Number.isFinite(imp)&&Number.isFinite(exp)?(exp-imp>=0?'+':'−')+dKwh(Math.abs(exp-imp)):'—');
-  const day=dash.day;if(day?.points?.length){let sum=0,out=[];const step=day.step_ms||60000;for(const p of day.points){if(Number.isFinite(p[1]))sum+=Math.max(-p[1],0)*step/3600000;out.push([p[0],sum]);}dSpark('dcExSpark',out,{cls:'is-export',min:0});}else dSpark('dcExSpark',[]);
+  const day=dash.day;if(day?.points?.length){let sum=0,out=[];const step=day.step_ms||60000;for(const p of day.points){if(Number.isFinite(p[1]))sum+=Math.max(-p[1],0)*step/3600000;out.push([p[0],sum]);}dSpark('dcExSpark',out,{cls:'is-export',min:0,from:day.start,to:day.end,left:'midnight'});}else dSpark('dcExSpark',[]);
   // Solar: the three inverters added together, as on the System tab.
   const inv=[['inverter-1000','1000 watt'],['garage-inverter','Garden (200 W)'],['inverter-600','600 watt']];
   const ds=inv.map(([id])=>dPlug(id)),live=ds.map(dPlugLive),all=live.every(Boolean);
   const total=all?ds.reduce((t,d)=>t+d.power_w,0):null,any=live.some(Boolean);
   $('dcSolarBig').textContent=dN(total,'W');
-  dCard('dcSolar',all?'live':any?'warn':'stale',all?(total>0?'Generating':'Idle'):any?live.filter(Boolean).length+' of 3 reporting':'No reading');
+  dCard('dcSolar',all?'live':any?'warn':'stale',all?(total>0?'Generating':'Idle'):any?live.filter(Boolean).length+' of 3 reporting':'No reading',all&&total>0?'on':'idle');
   const max=Math.max(1,...ds.map((d,i)=>live[i]?d.power_w:0));
   $('dcSolarBars').innerHTML=inv.map(([id,name],i)=>'<div class="dash-bar-row"><span class="nm">'+name+'</span><span class="tr"><span style="width:'+(live[i]?Math.max(0,d2(ds[i].power_w)/max*100):0).toFixed(0)+'%"></span></span><span class="vl">'+(live[i]?dN(ds[i].power_w,'W'):dPlugWhy(ds[i])||'—')+'</span></div>').join('');
   const sh=dash.hist;
   if(inv.every(([id])=>sh[id]?.points?.length)){
     const sum=new Map();for(const [id] of inv)for(const p of sh[id].points)if(Number.isFinite(p[1])){const e=sum.get(p[0])||[0,0];e[0]+=p[1];e[1]++;sum.set(p[0],e);}
-    dSpark('dcSolarSpark',[...sum.entries()].filter(([,e])=>e[1]===inv.length).map(([x,e])=>[x,e[0]]).sort((a,b)=>a[0]-b[0]),{cls:'is-amber',min:0});
+    dSpark('dcSolarSpark',[...sum.entries()].filter(([,e])=>e[1]===inv.length).map(([x,e])=>[x,e[0]]).sort((a,b)=>a[0]-b[0]),{cls:'is-amber',min:0,from:sh[inv[0][0]].start,to:sh[inv[0][0]].end});
   }else dSpark('dcSolarSpark',[]);
   // Epever.
   const ep=dash.epever,ev=ep?.values||{},eFresh=!!ep&&!ep.stale&&Number.isFinite(ev.pv_w);
   $('dcEpBig').textContent=eFresh?sysNum2(ev.pv_w,'W'):'— W';
-  dCard('dcEpever',eFresh?'live':'stale',eFresh?(ev.charge_state_name||'State unknown'):ep?'Old reading':'No reading');
+  dCard('dcEpever',eFresh?'live':'stale',eFresh?(ev.charge_state_name||'State unknown'):ep?'Old reading':'No reading',eFresh&&ev.pv_w>0&&ev.charge_state!==0&&ev.charge_state!==1?'on':'idle');
   const bOk=!!ep&&!ep.stale&&Number.isFinite(ev.batt_v);
   dSet('dcEpV',bOk?sysNum2(ev.batt_v,'V'):'—');dSet('dcEpA',bOk&&Number.isFinite(ev.batt_a)?sysNum2(ev.batt_a,'A'):'—');dSet('dcEpToday',Number.isFinite(ev.gen_today_kwh)?sysNum2(ev.gen_today_kwh,'kWh'):'—');
   const soc=bOk&&Number.isFinite(ev.soc)?Math.max(0,Math.min(100,ev.soc)):null,bar=$('dcEpBatt');
   bar.style.width=(soc??0)+'%';bar.dataset.level=soc==null?'':dLevel(soc);
   dSet('dcEpBattTxt',soc==null?'—':Math.round(soc)+'%'+(Number.isFinite(ev.batt_a)?(ev.batt_a>0.05?' ↑':ev.batt_a<-0.05?' ↓':''):''));
-  dSpark('dcEpSpark',(dash.hist.epever?.points||[]).map(p=>[p[0],p[1]]),{cls:'is-amber',min:0});
+  dSpark('dcEpSpark',(dash.hist.epever?.points||[]).map(p=>[p[0],p[1]]),{cls:'is-amber',min:0,from:dash.hist.epever?.start,to:dash.hist.epever?.end});
   // Fridge.
   const fr=dPlug('fridge'),frLive=dPlugLive(fr);
   $('dcFrBig').textContent=frLive?dN(fr.power_w,'W'):'— W';
-  dCard('dcFridge',frLive?'live':'stale',frLive?(fr.switch==='off'?'Switched off':fr.power_w>20?'Compressor on':'Idle'):dPlugWhy(fr));
+  dCard('dcFridge',frLive?'live':'stale',frLive?(fr.switch==='off'?'Switched off':fr.power_w>20?'Compressor on':'Idle'):dPlugWhy(fr),frLive&&fr.switch!=='off'&&fr.power_w>20?'on':'idle');
   dSet('dcFrToday',dKwh(dash.todayWh.fridge));
   const frPts=(dash.hist.fridge?.points||[]).filter(p=>Number.isFinite(p[1]));
   dSet('dcFrAvg',frPts.length?dN(frPts.reduce((t,p)=>t+p[1],0)/frPts.length,'W'):'—');
   const fz=(dash.home?.devices||[]).find(d=>d.kind==='temp'&&/freezer|fridge/i.test((d.name||'')+' '+(d.place||''))&&Number.isFinite(d.temperature_c)),fzT=fz?fz.temperature_c:NaN;
   dSet('dcFrTemp',fz&&!fz.stale?dN(fzT,'°C',1):'—');
-  dSpark('dcFrSpark',frPts.map(p=>[p[0],p[1]]),{min:0});
+  dSpark('dcFrSpark',frPts.map(p=>[p[0],p[1]]),{min:0,from:dash.hist.fridge?.start,to:dash.hist.fridge?.end});
   // Garden inverter.
   const ga=dPlug('garage-inverter'),gLive=dPlugLive(ga);
   $('dcGaBig').textContent=gLive?dN(ga.power_w,'W'):'— W';
-  dCard('dcGarden',gLive?'live':'stale',gLive?(ga.switch==='off'?'Switched off':ga.power_w>0?'Generating':'Idle'):dPlugWhy(ga));
+  dCard('dcGarden',gLive?'live':'stale',gLive?(ga.switch==='off'?'Switched off':ga.power_w>0?'Generating':'Idle'):dPlugWhy(ga),gLive&&ga.switch!=='off'&&ga.power_w>0?'on':'idle');
   dSet('dcGaV',gLive&&Number.isFinite(ga.voltage_v)?dN(ga.voltage_v,'V',0):'—');dSet('dcGaA',gLive&&Number.isFinite(ga.current_a)?dN(ga.current_a,'A',2):'—');
   dSet('dcGaToday',dKwh(dash.todayWh.garden));
   const gp=gLive?Math.max(0,ga.power_w)/200*100:0;$('dcGaBar').style.width=Math.min(100,gp)+'%';dSet('dcGaPct',gLive?Math.round(gp)+'% of 200 W':'—');
-  dSpark('dcGaSpark',(dash.hist['garage-inverter']?.points||[]).map(p=>[p[0],p[1]]),{cls:'is-amber',min:0});
+  dSpark('dcGaSpark',(dash.hist['garage-inverter']?.points||[]).map(p=>[p[0],p[1]]),{cls:'is-amber',min:0,from:dash.hist['garage-inverter']?.start,to:dash.hist['garage-inverter']?.end});
   const times=[latest?.ts,ep?.observed_at,...ds.map(d=>d?.ts),fr?.ts].filter(Number.isFinite);
   $('dashNote').textContent=times.length?'Net power and solar update every few seconds. Latest reading '+homeTime(Math.max(...times))+'. Graphs show the past hour.':'No live readings';
 }
