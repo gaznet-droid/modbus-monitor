@@ -701,9 +701,12 @@
         .dash-card.dash-wide { grid-column:span 3; }
         .dash-card header { display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
         .dash-card h2 { font-size:.8rem; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--text-muted); border:0; padding:0; margin:0; }
-        .dash-more { background:transparent; color:var(--import-color); border:1px solid var(--border); border-radius:8px; padding:.3rem .65rem; min-height:36px; font:inherit; font-size:.82rem; font-weight:600; cursor:pointer; white-space:nowrap; }
-        .dash-more:hover { background:#1e293b; }
-        .dash-more:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        .dash-card[data-go] { cursor:pointer; position:relative; transition:border-color .15s, background .15s; -webkit-tap-highlight-color:transparent; }
+        .dash-card[data-go]:hover { border-color:var(--import-color); background:#17213a; }
+        .dash-card[data-go]:active { background:#1b2744; }
+        .dash-card[data-go]:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        .dash-chev { color:var(--text-muted); font-size:1.4rem; line-height:1; }
+        .dash-card[data-go]:hover .dash-chev { color:var(--import-color); }
         .dash-main { display:flex; align-items:baseline; justify-content:space-between; gap:.5rem; flex-wrap:wrap; }
         .dash-big { font-size:clamp(1.6rem,4vw,2.4rem); font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1; color:var(--text-main); white-space:nowrap; }
         .dash-tag { font-size:.8rem; font-weight:600; color:var(--text-muted); }
@@ -783,40 +786,40 @@
         </div>
         <section id="dashboardPanel" class="tab-panel" role="tabpanel" aria-labelledby="dashboardTab">
   <div class="dash-grid" id="dashGrid">
-    <article class="dash-card dash-wide" id="dcNet" data-state="stale">
-      <header><h2>Live net power</h2><button type="button" class="dash-more" data-go="power" aria-label="Open the Power page">Details <span aria-hidden="true">›</span></button></header>
+    <article class="dash-card dash-wide" id="dcNet" data-state="stale" data-go="power" role="link" tabindex="0" aria-label="Open the Power page">
+      <header><h2>Live net power</h2><span class="dash-chev" aria-hidden="true">›</span></header>
       <div class="dash-main"><div class="dash-big" id="dcNetBig">— W</div><div class="dash-tag" id="dcNetTag">Waiting</div></div>
       <div class="dash-spark" id="dcNetSpark" role="img" aria-label="Net power, past hour"></div>
       <dl class="dash-facts"><div><dt>Import today</dt><dd id="dcNetImp">—</dd></div><div><dt>Export today</dt><dd id="dcNetExp">—</dd></div><div><dt>Past hour</dt><dd id="dcNetRange">—</dd></div></dl>
     </article>
-    <article class="dash-card dash-wide" id="dcSolar" data-state="stale">
-      <header><h2>Total solar live</h2><button type="button" class="dash-more" data-go="system" data-dev="output" aria-label="Open the System page">Details <span aria-hidden="true">›</span></button></header>
+    <article class="dash-card dash-wide" id="dcSolar" data-state="stale" data-go="system" data-dev="output" role="link" tabindex="0" aria-label="Open the System page">
+      <header><h2>Total solar live</h2><span class="dash-chev" aria-hidden="true">›</span></header>
       <div class="dash-main"><div class="dash-big" id="dcSolarBig">— W</div><div class="dash-tag" id="dcSolarTag">Waiting</div></div>
       <div class="dash-spark" id="dcSolarSpark" role="img" aria-label="Total solar to the house, past hour"></div>
       <div class="dash-bars" id="dcSolarBars"></div>
     </article>
-    <article class="dash-card" id="dcEpever" data-state="stale">
-      <header><h2>Epever</h2><button type="button" class="dash-more" data-go="system" data-dev="epever" aria-label="Open the Epever details">Details <span aria-hidden="true">›</span></button></header>
+    <article class="dash-card" id="dcEpever" data-state="stale" data-go="system" data-dev="epever" role="link" tabindex="0" aria-label="Open the Epever details">
+      <header><h2>Epever</h2><span class="dash-chev" aria-hidden="true">›</span></header>
       <div class="dash-main"><div class="dash-big" id="dcEpBig">— W</div><div class="dash-tag" id="dcEpTag">Waiting</div></div>
       <div class="dash-spark" id="dcEpSpark" role="img" aria-label="Epever power in, past hour"></div>
       <div class="dash-batt" aria-label="Battery charge"><div class="dash-batt-bar"><span id="dcEpBatt"></span></div><div class="dash-batt-txt" id="dcEpBattTxt">—</div></div>
       <dl class="dash-facts"><div><dt>Battery</dt><dd id="dcEpV">—</dd></div><div><dt>Current</dt><dd id="dcEpA">—</dd></div><div><dt>Today</dt><dd id="dcEpToday">—</dd></div></dl>
     </article>
-    <article class="dash-card" id="dcFridge" data-state="stale">
-      <header><h2>Fridge</h2><button type="button" class="dash-more" data-go="ewelink" data-card="ew-fridge" aria-label="Open the fridge details">Details <span aria-hidden="true">›</span></button></header>
+    <article class="dash-card" id="dcFridge" data-state="stale" data-go="ewelink" data-card="ew-fridge" role="link" tabindex="0" aria-label="Open the fridge details">
+      <header><h2>Fridge</h2><span class="dash-chev" aria-hidden="true">›</span></header>
       <div class="dash-main"><div class="dash-big" id="dcFrBig">— W</div><div class="dash-tag" id="dcFrTag">Waiting</div></div>
       <div class="dash-spark" id="dcFrSpark" role="img" aria-label="Fridge power, past hour"></div>
       <dl class="dash-facts"><div><dt>Today</dt><dd id="dcFrToday">—</dd></div><div><dt>Freezer</dt><dd id="dcFrTemp">—</dd></div><div><dt>Past hour avg</dt><dd id="dcFrAvg">—</dd></div></dl>
     </article>
-    <article class="dash-card" id="dcGarden" data-state="stale">
-      <header><h2>Garden inverter</h2><button type="button" class="dash-more" data-go="system" data-dev="garden" aria-label="Open the Garden inverter details">Details <span aria-hidden="true">›</span></button></header>
+    <article class="dash-card" id="dcGarden" data-state="stale" data-go="system" data-dev="garden" role="link" tabindex="0" aria-label="Open the Garden inverter details">
+      <header><h2>Garden inverter</h2><span class="dash-chev" aria-hidden="true">›</span></header>
       <div class="dash-main"><div class="dash-big" id="dcGaBig">— W</div><div class="dash-tag" id="dcGaTag">Waiting</div></div>
       <div class="dash-spark" id="dcGaSpark" role="img" aria-label="Garden inverter power, past hour"></div>
       <div class="dash-batt" aria-label="Share of the 200 watt panel"><div class="dash-batt-bar"><span id="dcGaBar"></span></div><div class="dash-batt-txt" id="dcGaPct">—</div></div>
       <dl class="dash-facts"><div><dt>Volts</dt><dd id="dcGaV">—</dd></div><div><dt>Amps</dt><dd id="dcGaA">—</dd></div><div><dt>Today</dt><dd id="dcGaToday">—</dd></div></dl>
     </article>
-    <article class="dash-card" id="dcExport" data-state="stale">
-      <header><h2>Total export today</h2><button type="button" class="dash-more" data-go="power" aria-label="Open the Power page">Details <span aria-hidden="true">›</span></button></header>
+    <article class="dash-card" id="dcExport" data-state="stale" data-go="power" role="link" tabindex="0" aria-label="Open the Power page">
+      <header><h2>Total export today</h2><span class="dash-chev" aria-hidden="true">›</span></header>
       <div class="dash-main"><div class="dash-big" id="dcExBig">— kWh</div><div class="dash-tag" id="dcExTag">Since midnight</div></div>
       <div class="dash-spark" id="dcExSpark" role="img" aria-label="Export through today, by hour"></div>
       <dl class="dash-facts"><div><dt>Imported today</dt><dd id="dcExImp">—</dd></div><div><dt>Meter export</dt><dd id="dcExMeter">—</dd></div><div><dt>Net today</dt><dd id="dcExNet">—</dd></div></dl>
@@ -2531,13 +2534,17 @@ async function readDash(version){
   }catch(e){if(version===dashVersion&&e.name!=='AbortError')$('dashNote').textContent='Readings unavailable · retrying';}
   finally{if(version===dashVersion&&activeTab==='dashboard'&&!document.hidden){dashController=null;dashTimer=setTimeout(()=>readDash(version),3000);}}
 }
-// Details buttons: System opens the matching device's detail, Inverters & fridge opens that card, Power just opens.
-document.querySelectorAll('.dash-more').forEach(b=>b.addEventListener('click',()=>{
-  const go=b.dataset.go;selectTab(go);
-  if(go==='system'&&b.dataset.dev&&SYS_DEVICES[b.dataset.dev]&&sysDev!==b.dataset.dev)toggleSysDetail(b.dataset.dev);
-  if(go==='ewelink'&&b.dataset.card)setTimeout(()=>$(b.dataset.card)?.click(),0);
+// Each card opens its full view: System opens the matching device's detail, Inverters & fridge opens that card, Power just opens.
+function dashOpen(c){
+  const go=c.dataset.go;selectTab(go);
+  if(go==='system'&&c.dataset.dev&&SYS_DEVICES[c.dataset.dev]&&sysDev!==c.dataset.dev)toggleSysDetail(c.dataset.dev);
+  if(go==='ewelink'&&c.dataset.card)setTimeout(()=>$(c.dataset.card)?.click(),0);
   window.scrollTo(0,0);
-}));
+}
+document.querySelectorAll('.dash-card[data-go]').forEach(c=>{
+  c.addEventListener('click',()=>dashOpen(c));
+  c.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();dashOpen(c);}});
+});
 
 function closeSiteMenu(){
   const btn=$('siteMenuBtn'),menu=$('siteMenu');
