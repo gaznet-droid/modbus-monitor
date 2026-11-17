@@ -828,9 +828,9 @@
     </article>
     <article class="dash-card" id="dcExport" data-state="stale" data-go="power" data-window="1d" role="button" tabindex="0" aria-label="Open the Power page">
       <header><h2>Total export today</h2><span class="dash-chev" aria-hidden="true">›</span></header>
-      <div class="dash-main"><div class="dash-big" id="dcExBig">— kWh</div><div class="dash-tag" id="dcExTag">Since midnight</div></div>
+      <div class="dash-main"><div class="dash-big" id="dcExBig">— Wh</div><div class="dash-tag" id="dcExTag">Since midnight</div></div>
       <div class="dash-spark" id="dcExSpark" role="img" aria-label="Export through today, by hour"></div>
-      <dl class="dash-facts"><div><dt>Imported today</dt><dd id="dcExImp">—</dd></div><div><dt>Meter export</dt><dd id="dcExMeter">—</dd></div><div><dt>Net today</dt><dd id="dcExNet">—</dd></div></dl>
+      <dl class="dash-facts"><div><dt>Imported today</dt><dd id="dcExImp">—</dd></div><div><dt>Biggest export</dt><dd id="dcExPeak">—</dd></div><div><dt>Past hour</dt><dd id="dcExHour">—</dd></div></dl>
     </article>
   </div>
   <p class="period-note" id="dashNote" role="status">Loading readings…</p>
@@ -2423,6 +2423,7 @@ let dashTimer=null,dashController=null,dashVersion=0,dashSlowAt=0,dashHomeAt=0;
 const dash={live:null,epever:null,plugs:null,home:null,hist:{},day:null,hour:null,todayWh:{}};
 function stopDash(){dashVersion++;clearTimeout(dashTimer);dashTimer=null;dashController?.abort();dashController=null;}
 const dN=(v,unit,d)=>Number.isFinite(v)?v.toLocaleString(undefined,{minimumFractionDigits:d??0,maximumFractionDigits:d??(Math.abs(v)<10?1:0)})+' '+unit:'—';
+const dWh=wh=>Number.isFinite(wh)?Math.round(wh).toLocaleString()+' Wh':'—';
 const dKwh=wh=>Number.isFinite(wh)?(wh/1000).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' kWh':'—';
 const dSet=(id,t)=>{const n=$(id);if(n)n.textContent=t;};
 const D_TAGS={dcNet:'dcNetTag',dcSolar:'dcSolarTag',dcEpever:'dcEpTag',dcFridge:'dcFrTag',dcGarden:'dcGaTag',dcExport:'dcExTag'};
@@ -2464,9 +2465,12 @@ function renderDash(){
   if(hours?.points?.length){const ys=hours.points.map(p=>p[1]).filter(Number.isFinite);dSet('dcNetRange',ys.length?dN(Math.min(...ys),'').trim()+' to '+dN(Math.max(...ys),'W'):'—');}
   dSpark('dcNetSpark',(hours?.points||[]).map(p=>[p[0],p[1]]),{zero:true,from:hours?.start,to:hours?.end});
   // Total export today: the site's energy total for midnight to now; the graph builds up from the day's power readings.
-  $('dcExBig').textContent=dKwh(exp);dCard('dcExport',Number.isFinite(exp)?'live':'stale','Since midnight','none');
-  dSet('dcExImp',dKwh(imp));dSet('dcExMeter',lv?.export&&Number.isFinite(lv.export.kwh)?lv.export.kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:false})+' kWh':'—');
-  dSet('dcExNet',Number.isFinite(imp)&&Number.isFinite(exp)?(exp-imp>=0?'+':'−')+dKwh(Math.abs(exp-imp)):'—');
+  $('dcExBig').textContent=dWh(exp);dCard('dcExport',Number.isFinite(exp)?'live':'stale','Since midnight','none');
+  dSet('dcExImp',dWh(imp));
+  const dayPts=(dash.day?.points||[]).map(p=>p[1]).filter(Number.isFinite);
+  dSet('dcExPeak',dayPts.length?dN(Math.max(0,-Math.min(...dayPts)),'W'):'—');
+  const hStep=hours?.step_ms||60000,hExp=(hours?.points||[]).reduce((t,p)=>t+(Number.isFinite(p[1])?Math.max(-p[1],0)*hStep/3600000:0),0);
+  dSet('dcExHour',hours?.points?.length?dWh(hExp):'—');
   const day=dash.day;if(day?.points?.length){let sum=0,out=[];const step=day.step_ms||60000;for(const p of day.points){if(Number.isFinite(p[1]))sum+=Math.max(-p[1],0)*step/3600000;out.push([p[0],sum]);}dSpark('dcExSpark',out,{cls:'is-export',min:0,from:day.start,to:day.end,left:'midnight'});}else dSpark('dcExSpark',[]);
   // Solar: the three inverters added together, as on the System tab.
   const inv=[['inverter-1000','1000 watt'],['garage-inverter','Garden (200 W)'],['inverter-600','600 watt']];
