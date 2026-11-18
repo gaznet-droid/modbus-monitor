@@ -51,7 +51,7 @@ assert.equal(state('sysEpever'), 'idle');
 assert.equal(text('sysEpeverBig'), '0.00 W in');
 assert.equal(text('sysEpeverS1'), 'Panel 32.60 V');
 assert.equal(text('sysEpeverS2'), 'not charging');
-assert.equal(text('sysEpeverS3'), '1.20 kWh today');
+assert.equal(text('sysEpeverS3'), '1,200 Wh today');
 both('sysEpeverS1');
 
 epever({ pv_w: 12, pv_v: 32.6, charge_state: 0, charge_state_name: 'Not charging' });
@@ -86,7 +86,7 @@ assert.equal(state('sysEpever'), 'lit');
 assert.equal(text('sysEpeverBig'), '40.00 W in');
 assert.equal(text('sysEpeverS1'), 'Float');
 assert.equal(text('sysEpeverS2'), '32.60 V panel');
-assert.equal(text('sysEpeverS3'), '2.00 kWh today');
+assert.equal(text('sysEpeverS3'), '2,000 Wh today');
 
 epever({ pv_w: 0, charge_state: 2, charge_state_name: 'Boost', pv_v: 10 });
 assert.notEqual(state('sysEpever'), 'lit');

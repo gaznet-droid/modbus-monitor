@@ -1488,14 +1488,14 @@ function renderEpever(o,data){
   }else set('Charge',chName||'—');
   const socFill=$(o.ep+'SocFill');
   if(socFill){const soc=Number.isFinite(v.soc)?Math.max(0,Math.min(100,v.soc)):null;socFill.style.height=(soc??0)+'%';socFill.dataset.level=soc==null?'na':soc<=10?'red':soc<=20?'amber':'ok';socFill.classList.toggle('charging',chOn);}
-  set('GenToday',Number.isFinite(v.gen_today_kwh)?v.gen_today_kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' kWh':'— kWh');
+  set('GenToday',kwhToWh(v.gen_today_kwh));
   const minAt=data.times?.batt_v_min_today;
   set('BattMin',Number.isFinite(v.batt_v_min_today)&&minAt?epeverText(v.batt_v_min_today,'V',2):'—'); // voltage only: Dad asked for the time to go (15 Nov)
   set('Soc',epeverText(v.soc,'%',0));set('PvV',epeverText(v.pv_v,'V',2));
 }
 function drawEpever(o){
   const energy=o.epHistory?.energy,history=o.epHistory;
-  $(o.ep+'Energy').textContent=Number.isFinite(energy?.generated_kwh)?energy.generated_kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' kWh':'— kWh';
+  $(o.ep+'Energy').textContent=kwhToWh(energy?.generated_kwh);
   if($(o.ep+'Detail')?.hidden)return;
   if(!o.epChart)o.epChart=new Chart($(o.ep+'Chart'),{type:'line',data:{datasets:[['Panel power (W)','#fbbf24','y'],['Battery voltage (V)','#38bdf8','y1']].map(([label,colour,axis])=>({label,data:[],parsing:false,yAxisID:axis,borderColor:colour,backgroundColor:colour,pointRadius:2,pointHitRadius:10,borderWidth:2,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:v=>new Date(v).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})},grid:{color:'#1e293b'}},y:{min:0,title:{display:true,text:'Power (W)',color:'#94a3b8'},ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}},y1:{position:'right',title:{display:true,text:'Battery (V)',color:'#94a3b8'},ticks:{color:'#94a3b8'},grid:{drawOnChartArea:false}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()}}}}});
   for(const [i,column] of [1,2].entries()){
@@ -2243,6 +2243,8 @@ let sysDev=null,sysLatest=null,sysDetailController=null,sysDetailKey='',sysDetai
 const sysPeriods={};
 function stopSystem(){systemVersion++;clearTimeout(systemTimer);systemTimer=null;systemController?.abort();systemController=null;sysDetailController?.abort();sysDetailController=null;}
 function sysNum(v,unit,digits){return Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:digits??(Math.abs(v)<10?1:0)})+' '+unit:'—';}
+// Epever energy is reported in kWh; Dad reads it in watt hours (18 Nov).
+function kwhToWh(kwh){return Number.isFinite(kwh)?Math.round(kwh*1000).toLocaleString()+' Wh':'— Wh';}
 // The Epever reports in hundredths, so its figures always show two decimals (Dad, 16 Nov).
 const sysNum2=(v,unit)=>Number.isFinite(v)?v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' '+unit:'—';
 // Set a box's headline figure and up to three detail lines; a stale box shows "—" and keeps its dashed look.
@@ -2256,7 +2258,7 @@ function sysLine(id,on){for(const p of ['L','LW','F','FW','Plug','PlugW'])sysAll
 function sysLit(id,on){sysAll(id).forEach(g=>{if(g.dataset.state!=='stale')g.dataset.state=on?'lit':'idle';});}
 // Fresh but dark: say why the Epever box is off. Under 1 W of panel power counts as none. The lighting rule is unchanged.
 function epeverLines(ev,lit){
-  const name=ev.charge_state_name||'State unknown',panel=Number.isFinite(ev.pv_v)?sysNum2(ev.pv_v,'V'):'',today=Number.isFinite(ev.gen_today_kwh)?sysNum2(ev.gen_today_kwh,'kWh')+' today':'',watts=ev.pv_w,near=Math.abs(watts)<1;
+  const name=ev.charge_state_name||'State unknown',panel=Number.isFinite(ev.pv_v)?sysNum2(ev.pv_v,'V'):'',today=Number.isFinite(ev.gen_today_kwh)?kwhToWh(ev.gen_today_kwh)+' today':'',watts=ev.pv_w,near=Math.abs(watts)<1;
   if((ev.charge_state===1||name==='Float')&&near)return ['Float,','battery full',today];
   if(lit)return [name,panel?panel+' panel':'',today];
   if(ev.charge_state===0&&panel)return ['Panel '+panel,'not charging',today];
@@ -2424,7 +2426,6 @@ const dash={live:null,epever:null,plugs:null,home:null,hist:{},day:null,hour:nul
 function stopDash(){dashVersion++;clearTimeout(dashTimer);dashTimer=null;dashController?.abort();dashController=null;}
 const dN=(v,unit,d)=>Number.isFinite(v)?v.toLocaleString(undefined,{minimumFractionDigits:d??0,maximumFractionDigits:d??(Math.abs(v)<10?1:0)})+' '+unit:'—';
 const dWh=wh=>Number.isFinite(wh)?Math.round(wh).toLocaleString()+' Wh':'—';
-const dKwh=wh=>Number.isFinite(wh)?(wh/1000).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' kWh':'—';
 const dSet=(id,t)=>{const n=$(id);if(n)n.textContent=t;};
 const D_TAGS={dcNet:'dcNetTag',dcSolar:'dcSolarTag',dcEpever:'dcEpTag',dcFridge:'dcFrTag',dcGarden:'dcGaTag',dcExport:'dcExTag'};
 // act: 'on' (doing something: pulses), 'idle' (nothing happening: still, grey-blue), 'none' (a plain label).
@@ -2461,7 +2462,7 @@ function renderDash(){
     dCard('dcNet',stale?'stale':'live',stale?'Old reading':v<0?'Exporting':v>0?'Importing':'Balanced',Math.abs(v)>=1?'on':'idle',v>0?'import':'');
   }else{$('dcNetBig').textContent='— W';dCard('dcNet','stale','No reading');}
   const imp=dash.day?.energy?.import_wh,exp=dash.day?.energy?.export_wh;
-  dSet('dcNetImp',dKwh(imp));dSet('dcNetExp',dKwh(exp));
+  dSet('dcNetImp',dWh(imp));dSet('dcNetExp',dWh(exp));
   if(hours?.points?.length){const ys=hours.points.map(p=>p[1]).filter(Number.isFinite);dSet('dcNetRange',ys.length?dN(Math.min(...ys),'').trim()+' to '+dN(Math.max(...ys),'W'):'—');}
   dSpark('dcNetSpark',(hours?.points||[]).map(p=>[p[0],p[1]]),{zero:true,from:hours?.start,to:hours?.end});
   // Total export today: the site's energy total for midnight to now; the graph builds up from the day's power readings.
@@ -2490,7 +2491,7 @@ function renderDash(){
   $('dcEpBig').textContent=eFresh?sysNum2(ev.pv_w,'W'):'— W';
   dCard('dcEpever',eFresh?'live':'stale',eFresh?(ev.charge_state_name||'State unknown'):ep?'Old reading':'No reading',eFresh&&ev.pv_w>0&&ev.charge_state!==0&&ev.charge_state!==1?'on':'idle');
   const bOk=!!ep&&!ep.stale&&Number.isFinite(ev.batt_v);
-  dSet('dcEpV',bOk?sysNum2(ev.batt_v,'V'):'—');dSet('dcEpA',bOk&&Number.isFinite(ev.batt_a)?sysNum2(ev.batt_a,'A'):'—');dSet('dcEpToday',Number.isFinite(ev.gen_today_kwh)?sysNum2(ev.gen_today_kwh,'kWh'):'—');
+  dSet('dcEpV',bOk?sysNum2(ev.batt_v,'V'):'—');dSet('dcEpA',bOk&&Number.isFinite(ev.batt_a)?sysNum2(ev.batt_a,'A'):'—');dSet('dcEpToday',kwhToWh(ev.gen_today_kwh));
   const soc=bOk&&Number.isFinite(ev.soc)?Math.max(0,Math.min(100,ev.soc)):null,bar=$('dcEpBatt');
   bar.style.width=(soc??0)+'%';bar.dataset.level=soc==null?'':dLevel(soc);
   dSet('dcEpBattTxt',soc==null?'—':Math.round(soc)+'%'+(Number.isFinite(ev.batt_a)?(ev.batt_a>0.05?' ↑':ev.batt_a<-0.05?' ↓':''):''));
@@ -2499,7 +2500,7 @@ function renderDash(){
   const fr=dPlug('fridge'),frLive=dPlugLive(fr);
   $('dcFrBig').textContent=frLive?dN(fr.power_w,'W'):'— W';
   dCard('dcFridge',frLive?'live':'stale',frLive?(fr.switch==='off'?'Switched off':fr.power_w>20?'Compressor on':'Idle'):dPlugWhy(fr),frLive&&fr.switch!=='off'&&fr.power_w>20?'on':'idle');
-  dSet('dcFrToday',dKwh(dash.todayWh.fridge));
+  dSet('dcFrToday',dWh(dash.todayWh.fridge));
   const frPts=(dash.hist.fridge?.points||[]).filter(p=>Number.isFinite(p[1]));
   dSet('dcFrAvg',frPts.length?dN(frPts.reduce((t,p)=>t+p[1],0)/frPts.length,'W'):'—');
   const fz=(dash.home?.devices||[]).find(d=>d.kind==='temp'&&/freezer|fridge/i.test((d.name||'')+' '+(d.place||''))&&Number.isFinite(d.temperature_c)),fzT=fz?fz.temperature_c:NaN;
@@ -2510,7 +2511,7 @@ function renderDash(){
   $('dcGaBig').textContent=gLive?dN(ga.power_w,'W'):'— W';
   dCard('dcGarden',gLive?'live':'stale',gLive?(ga.switch==='off'?'Switched off':ga.power_w>0?'Generating':'Idle'):dPlugWhy(ga),gLive&&ga.switch!=='off'&&ga.power_w>0?'on':'idle');
   dSet('dcGaV',gLive&&Number.isFinite(ga.voltage_v)?dN(ga.voltage_v,'V',0):'—');dSet('dcGaA',gLive&&Number.isFinite(ga.current_a)?dN(ga.current_a,'A',2):'—');
-  dSet('dcGaToday',dKwh(dash.todayWh.garden));
+  dSet('dcGaToday',dWh(dash.todayWh.garden));
   const gp=gLive?Math.max(0,ga.power_w)/200*100:0;$('dcGaBar').style.width=Math.min(100,gp)+'%';dSet('dcGaPct',gLive?Math.round(gp)+'% of 200 W':'—');
   dSpark('dcGaSpark',(dash.hist['garage-inverter']?.points||[]).map(p=>[p[0],p[1]]),{cls:'is-amber',min:0,from:dash.hist['garage-inverter']?.start,to:dash.hist['garage-inverter']?.end});
   const times=[latest?.ts,ep?.observed_at,...ds.map(d=>d?.ts),fr?.ts].filter(Number.isFinite);
