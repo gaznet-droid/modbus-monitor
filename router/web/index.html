@@ -808,6 +808,28 @@
         .dash-card[data-go]:active { background:#1b2744; }
         .dash-card[data-go]:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
         .dash-chev { color:var(--text-muted); font-size:1.4rem; line-height:1; }
+        /* Dashboard order (Dad, 25 Nov): the pencil makes the cards wobble; drag a card by its grip, or use the arrows; Done saves. */
+        .dash-edit-bar { display:inline-flex; gap:.4rem; align-items:center; }
+        .dash-edit-bar[hidden] { display:none; }
+        .dash-edit-btn { display:inline-flex; align-items:center; gap:.35rem; min-height:40px; min-width:40px; justify-content:center; padding:.4rem .6rem; border:1px solid var(--border); border-radius:8px; background:#1e293b; color:var(--text-main); font:inherit; font-size:.85rem; cursor:pointer; }
+        .dash-edit-btn:focus-visible, .dash-move button:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        .dash-edit-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+        #dashEdit .ic-done, #dashEdit .dash-edit-word { display:none; }
+        #dashEdit[aria-pressed="true"] { color:#04121f; background:var(--import-color); border-color:var(--import-color); font-weight:600; }
+        #dashEdit[aria-pressed="true"] .ic-pen { display:none; }
+        #dashEdit[aria-pressed="true"] :is(.ic-done,.dash-edit-word) { display:inline; }
+        .dash-move { display:none; align-items:center; gap:.25rem; }
+        .dash-move button { display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border:1px solid var(--border); border-radius:8px; background:#1e293b; color:var(--text-main); font:inherit; font-size:1rem; cursor:pointer; }
+        .dash-move button:disabled { opacity:.35; cursor:default; }
+        .dash-move .dash-grip { touch-action:none; cursor:grab; color:var(--import-color); border-color:var(--import-color); }
+        .dash-move svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+        .dash-grid.editing .dash-move { display:inline-flex; }
+        .dash-grid.editing .dash-chev { display:none; }
+        .dash-grid.editing .dash-card { cursor:default; outline:1px dashed rgba(56,189,248,.5); outline-offset:-1px; animation:dashWobble .32s ease-in-out infinite alternate; }
+        .dash-grid.editing .dash-card:nth-child(even) { animation-delay:-.16s; animation-direction:alternate-reverse; }
+        .dash-grid.editing .dash-card.dragging { animation:none; transform:scale(1.02); box-shadow:0 12px 30px rgba(0,0,0,.45); outline:2px solid var(--import-color); z-index:2; position:relative; }
+        @keyframes dashWobble { from { transform:rotate(-.5deg); } to { transform:rotate(.5deg); } }
+        @media(prefers-reduced-motion:reduce) { .dash-grid.editing .dash-card { animation:none; } }
         .dash-card[data-go]:hover .dash-chev { color:var(--import-color); }
         .dash-main { display:flex; align-items:baseline; justify-content:space-between; gap:.5rem; flex-wrap:wrap; }
         .dash-big { font-size:clamp(1.6rem,4vw,2.4rem); font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1; color:var(--text-main); white-space:nowrap; }
@@ -891,6 +913,7 @@
           </select>
           <select hidden id="ewelinkPeriod" class="time-select tab-window" aria-label="Period"><option value="15m">Live</option><option value="live">Past hour</option><option value="2h">Past 2 hours</option><option value="4h">Past 4 hours</option><option value="8h">Past 8 hours</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select>
           <span id="homeStatus" class="header-status" role="status" hidden>Loading readings…</span>
+          <span id="dashEditBar" class="dash-edit-bar" hidden><button type="button" id="dashReset" class="dash-edit-btn" hidden>Reset</button><button type="button" id="dashEdit" class="dash-edit-btn" aria-pressed="false" aria-label="Change the order of the cards" title="Change the order of the cards"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ic-pen" d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4zM13.5 6.5l4 4"/><path class="ic-done" d="M5 12.5l4.5 4.5L19 7.5"/></svg><span class="dash-edit-word">Done</span></button></span>
           <span id="systemStatus" class="header-status" role="status" hidden>Loading readings…</span>
           </div>
         </div>
@@ -1400,6 +1423,7 @@ function selectTab(name) {
   $('ewelinkPeriod').hidden=name!=='ewelink';
   $('homeStatus').hidden=name!=='home';
   $('systemStatus').hidden=name!=='system';
+  $('dashEditBar').hidden=name!=='dashboard';if(name!=='dashboard')dashEditing(false);
   const info=$('sysHeaderInfo');if(info)info.hidden=name!=='system';
   const title=$('siteTitle');if(title)title.textContent=SITE_TITLES[name]||'ModPi';
   if(location.hash!=='#'+name)history.replaceState(null,'','#'+name);
@@ -2701,6 +2725,7 @@ async function readDash(version){
 }
 // Each card opens its full view: System opens the matching device's detail, Inverters & fridge opens that card, Power just opens.
 function dashOpen(c){
+  if($('dashGrid').classList.contains('editing'))return;
   const go=c.dataset.go;selectTab(go);
   if(go==='power'&&c.dataset.window&&$('timeWindow').value!==c.dataset.window){$('timeWindow').value=c.dataset.window;$('timeWindow').dispatchEvent(new Event('change'));}
   if(go==='system'&&c.dataset.dev&&SYS_DEVICES[c.dataset.dev]&&sysDev!==c.dataset.dev)toggleSysDetail(c.dataset.dev);
@@ -2710,8 +2735,53 @@ function dashOpen(c){
 }
 document.querySelectorAll('.dash-card[data-go]').forEach(c=>{
   c.addEventListener('click',()=>dashOpen(c));
-  c.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();dashOpen(c);}});
+  c.addEventListener('keydown',e=>{if(e.target!==c)return;if(e.key==='Enter'||e.key===' '){e.preventDefault();dashOpen(c);}});
 });
+// Dashboard card order (Dad, 25 Nov). Saved on this device; new cards added later go to the end.
+const DASH_ORDER_KEY='modpi-dash-order',dashGrid=$('dashGrid'),dashDefault=[...dashGrid.children].map(c=>c.id);
+const dashCards=()=>[...dashGrid.querySelectorAll(':scope > .dash-card')];
+function dashApply(ids){const byId=new Map(dashCards().map(c=>[c.id,c]));for(const id of [...ids.filter(id=>byId.has(id)),...dashDefault.filter(id=>!ids.includes(id))])dashGrid.append(byId.get(id));dashArrows();}
+function dashArrows(){const cards=dashCards();cards.forEach((c,i)=>{c.querySelector('.dash-up').disabled=i===0;c.querySelector('.dash-down').disabled=i===cards.length-1;});}
+for(const c of dashCards()){
+  const name=c.querySelector('h2')?.textContent||'card',m=document.createElement('span');m.className='dash-move';
+  m.innerHTML='<button type="button" class="dash-up" aria-label="Move '+name+' up"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button><button type="button" class="dash-down" aria-label="Move '+name+' down"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><button type="button" class="dash-grip" aria-label="Drag '+name+' to move it"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14M5 12h14M5 16h14"/></svg></button>';
+  c.querySelector('header').append(m);
+  m.addEventListener('click',e=>{
+    e.stopPropagation();const b=e.target.closest('button');if(!b||b.classList.contains('dash-grip'))return;
+    if(b.classList.contains('dash-up')&&c.previousElementSibling)dashGrid.insertBefore(c,c.previousElementSibling);
+    if(b.classList.contains('dash-down')&&c.nextElementSibling)dashGrid.insertBefore(c.nextElementSibling,c);
+    dashArrows();b.disabled||b.focus();c.scrollIntoView({block:'nearest',behavior:'smooth'});
+  });
+  m.addEventListener('keydown',e=>e.stopPropagation());
+  // Drag by the grip: the card swaps into the slot under the finger; near the top or bottom of the screen the page scrolls.
+  const grip=m.querySelector('.dash-grip');
+  grip.addEventListener('pointerdown',e=>{
+    if(!dashGrid.classList.contains('editing'))return;
+    e.preventDefault();grip.setPointerCapture(e.pointerId);c.classList.add('dragging');
+    let x=e.clientX,y=e.clientY,frame=0,live=true;
+    const place=()=>{
+      c.style.pointerEvents='none';const under=document.elementFromPoint(x,y)?.closest('.dash-card');c.style.pointerEvents='';
+      if(!under||under===c||under.parentElement!==dashGrid)return;
+      const before=[...dashGrid.children].indexOf(c)>[...dashGrid.children].indexOf(under);
+      dashGrid.insertBefore(c,before?under:under.nextElementSibling);
+    };
+    const step=()=>{if(!live)return;const edge=90,bottom=innerHeight-150;if(y<edge)scrollBy(0,-Math.ceil((edge-y)/6));else if(y>bottom)scrollBy(0,Math.ceil((y-bottom)/6));place();frame=requestAnimationFrame(step);};
+    const move=ev=>{x=ev.clientX;y=ev.clientY;};
+    const end=()=>{live=false;cancelAnimationFrame(frame);c.classList.remove('dragging');grip.removeEventListener('pointermove',move);dashArrows();};
+    grip.addEventListener('pointermove',move);grip.addEventListener('pointerup',end,{once:true});grip.addEventListener('pointercancel',end,{once:true});
+    frame=requestAnimationFrame(step);
+  });
+}
+function dashEditing(on){
+  if(dashGrid.classList.contains('editing')===on)return;
+  dashGrid.classList.toggle('editing',on);$('dashEdit').setAttribute('aria-pressed',String(on));$('dashReset').hidden=!on;
+  $('dashEdit').setAttribute('aria-label',on?'Save the card order':'Change the order of the cards');
+  for(const c of dashCards())c.tabIndex=on?-1:0;
+  if(!on)try{localStorage.setItem(DASH_ORDER_KEY,JSON.stringify(dashCards().map(c=>c.id)));}catch(_){}
+}
+$('dashEdit').addEventListener('click',()=>dashEditing(!dashGrid.classList.contains('editing')));
+$('dashReset').addEventListener('click',()=>dashApply(dashDefault));
+try{const saved=JSON.parse(localStorage.getItem(DASH_ORDER_KEY)||'null');if(Array.isArray(saved))dashApply(saved);else dashArrows();}catch(_){dashArrows();}
 
 function closeSiteMenu(){
   const btn=$('siteMenuBtn'),menu=$('siteMenu');

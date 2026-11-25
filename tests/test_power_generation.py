@@ -62,3 +62,14 @@ class PowerGenerationCard(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class DashboardOrderTest(unittest.TestCase):
+    def test_dashboard_cards_can_be_reordered_and_saved(self):
+        # Dad, 25 Nov: a pencil on the Dashboard header makes the cards movable (grip, up and down);
+        # Done saves the order on that device, Reset puts back the original order.
+        self.assertIn('id="dashEdit"', HTML)
+        self.assertIn('id="dashReset"', HTML)
+        self.assertIn("const DASH_ORDER_KEY='modpi-dash-order'", HTML)
+        self.assertIn("if($('dashGrid').classList.contains('editing'))return;", HTML)
+        self.assertIn("$('dashEditBar').hidden=name!=='dashboard'", HTML)
