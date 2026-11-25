@@ -811,7 +811,7 @@
         .dash-spark .sp-dot { fill:none; stroke:var(--import-color); stroke-width:4; stroke-linecap:round; vector-effect:non-scaling-stroke; }
         .dash-spark.is-export .sp-dot { stroke:var(--export-color); } .dash-spark.is-amber .sp-dot { stroke:var(--amber-zero); }
         .sp-axis { display:flex; justify-content:space-between; margin-top:.2rem; font-size:.68rem; color:var(--text-muted); }
-        .dash-spark .sp-line { fill:none; stroke:var(--import-color); stroke-width:1.8; stroke-linejoin:round; stroke-linecap:round; vector-effect:non-scaling-stroke; }
+        .dash-spark .sp-line { fill:none; stroke:var(--import-color); stroke-width:1.5; stroke-linejoin:round; stroke-linecap:round; vector-effect:non-scaling-stroke; }
         .dash-spark .sp-area { fill:var(--import-color); opacity:.14; stroke:none; }
         .dash-spark .sp-zero { stroke:var(--border); stroke-width:1; stroke-dasharray:3 3; vector-effect:non-scaling-stroke; }
         .dash-spark .sp-bar { fill:var(--export-color); opacity:.85; }
@@ -2529,11 +2529,11 @@ function dSpark(id,pts,{cls='',zero=false,min,max,from,to,left='60 min ago'}={})
   const X=x=>(Math.max(0,Math.min(1,(x-x0)/span))*200).toFixed(1),Y=y=>(60-(y-lo)/(hi-lo)*56).toFixed(1);
   const gaps=p.slice(1).map((q,i)=>q[0]-p[i][0]).sort((a,b)=>a-b),brk=Math.max(gaps[Math.floor(gaps.length/2)]*2.5,1000);
   const base=Y(zero?0:lo);let body='',run=[];
-  const flush=()=>{if(run.length>1){const l=run.map((q,i)=>(i?'L':'M')+X(q[0])+' '+Y(q[1])).join('');body+='<path class="sp-area" d="'+l+'L'+X(run[run.length-1][0])+' '+base+'L'+X(run[0][0])+' '+base+'Z"/><path class="sp-line" d="'+l+'"/>';}run=[];};
+  const flush=()=>{if(run.length>1){const l=run.map((q,i)=>(i?'L':'M')+X(q[0])+' '+Y(q[1])).join('');body+='<path class="sp-area" d="'+l+'L'+X(run[run.length-1][0])+' '+base+'L'+X(run[0][0])+' '+base+'Z"/><path class="sp-line" d="'+l+'"/>';}
+    // Same rule as the big graphs: no dots, except a reading with a gap either side, which would otherwise not show at all.
+    else if(run.length===1)body+='<path class="sp-dot" d="M'+X(run[0][0])+' '+Y(run[0][1])+'h0"/>';run=[];};
   if(zero)body+='<line class="sp-zero" x1="0" x2="200" y1="'+Y(0)+'" y2="'+Y(0)+'"/>';
   p.forEach((q,i)=>{if(i&&q[0]-p[i-1][0]>brk)flush();run.push(q);});flush();
-  // Sparse series (a reading every few minutes): mark each real reading so the graph does not look finer than it is.
-  if(p.length<=40)body+=p.map(q=>'<path class="sp-dot" d="M'+X(q[0])+' '+Y(q[1])+'h0"/>').join('');
   box.innerHTML='<svg viewBox="0 0 200 64" preserveAspectRatio="none">'+body+'</svg><div class="sp-axis"><span>'+left+'</span><span>now</span></div>';
 }
 const dPlug=id=>(dash.plugs?.devices||[]).find(d=>d.id===id);
