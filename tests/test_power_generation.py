@@ -70,10 +70,14 @@ if __name__ == '__main__':
 
 class DashboardOrderTest(unittest.TestCase):
     def test_dashboard_cards_can_be_reordered_and_saved(self):
-        # Dad, 25 Nov: a pencil on the Dashboard header makes the cards movable (grip, up and down);
-        # Done saves the order on that device, Reset puts back the original order.
+        # Dad, 25 Nov: a pencil on the Dashboard header makes the cards wobble with up and down arrows;
+        # Save the order on that device, Reset puts back the original order.
         self.assertIn('id="dashEdit"', HTML)
         self.assertIn('id="dashReset"', HTML)
+        # Gareth, 25 Nov: dragging was clunky, so arrows only, and Save sits in a bar pinned to the top.
+        self.assertIn('id="dashSave"', HTML)
+        self.assertIn('.dash-save-bar { position:fixed;', HTML)
+        self.assertNotIn('dash-grip', HTML)
         self.assertIn("const DASH_ORDER_KEY='modpi-dash-order'", HTML)
         self.assertIn("if($('dashGrid').classList.contains('editing'))return;", HTML)
         self.assertIn("$('dashEditBar').hidden=name!=='dashboard'", HTML)
