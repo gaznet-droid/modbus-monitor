@@ -812,7 +812,7 @@
         /* Dashboard order (Dad, 25 Nov): the pencil makes the cards wobble; the arrows move a card; Save, pinned to the top, saves. */
         .dash-edit-bar { display:inline-flex; gap:.4rem; align-items:center; }
         .dash-edit-bar[hidden] { display:none; }
-        .dash-edit-btn { display:inline-flex; align-items:center; gap:.35rem; min-height:40px; min-width:40px; justify-content:center; padding:.4rem .6rem; border:1px solid var(--border); border-radius:8px; background:#1e293b; color:var(--text-main); font:inherit; font-size:.85rem; cursor:pointer; }
+        .dash-edit-btn { display:inline-flex; align-items:center; gap:.35rem; min-height:44px; min-width:44px; justify-content:center; padding:.4rem .6rem; border:1px solid var(--border); border-radius:8px; background:#1e293b; color:var(--text-main); font:inherit; font-size:.85rem; cursor:pointer; }
         .dash-edit-btn:focus-visible, .dash-move button:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
         .dash-edit-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
         .dash-save-bar { position:fixed; z-index:50; top:calc(env(safe-area-inset-top) + .5rem); left:50%; transform:translateX(-50%); width:min(36rem,calc(100% - 2rem)); display:flex; align-items:center; gap:.5rem; padding:.5rem .5rem .5rem .9rem; border:1px solid var(--import-color); border-radius:12px; background:rgba(9,13,22,.94); box-shadow:0 10px 30px rgba(0,0,0,.5); color:var(--text-muted); font-size:.85rem; }
@@ -914,7 +914,7 @@
           </select>
           <select hidden id="ewelinkPeriod" class="time-select tab-window" aria-label="Period"><option value="15m">Live</option><option value="live">Past hour</option><option value="2h">Past 2 hours</option><option value="4h">Past 4 hours</option><option value="8h">Past 8 hours</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select>
           <span id="homeStatus" class="header-status" role="status" hidden>Loading readings…</span>
-          <span id="dashEditBar" class="dash-edit-bar" hidden><select id="dashPeriod" class="time-select" aria-label="Period for the card graphs"><option value="hour">Past hour</option><option value="h4">Past 4 hours</option><option value="today">Today</option></select><button type="button" id="dashEdit" class="dash-edit-btn" aria-pressed="false" aria-label="Change the order of the cards" title="Change the order of the cards"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4zM13.5 6.5l4 4"/></svg></button></span>
+          <span id="dashEditBar" class="dash-edit-bar" hidden><select id="dashPeriod" class="time-select tab-window" aria-label="Period for the card graphs"><option value="hour">Past hour</option><option value="h4">Past 4 hours</option><option value="today">Today</option></select><button type="button" id="dashEdit" class="dash-edit-btn" aria-pressed="false" aria-label="Change the order of the cards" title="Change the order of the cards"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4zM13.5 6.5l4 4"/></svg></button></span>
           <span id="systemStatus" class="header-status" role="status" hidden>Loading readings…</span>
           </div>
         </div>
