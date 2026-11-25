@@ -39,8 +39,16 @@ class PowerGenerationCard(unittest.TestCase):
     def test_mobile_compare_includes_the_total_series(self):
         # Compare used to copy only Shed and Garage (indexes 0 and 1). Total is the
         # dataset appended after the meter series; it must be on the Compare chart too.
-        self.assertIn("v.meter==='compare'?[0,1,totalI]", HTML)
-        self.assertIn('Shed, Garage and Total', HTML)
+        self.assertIn("v.meter==='compare'?[...shown.map(at),...(power?[totalI]:[])]", HTML)
+        self.assertIn("...(power?['Total']:[])", HTML)
+
+    def test_power_tab_generation_includes_garden(self):
+        # Dad, 25 Nov: the 200 watt Garden panel, read from the Garden inverter's plug, is on the
+        # Power tab's Generation card, has its own button and counts in Total.
+        self.assertIn('data-meter="garden"', HTML.split('id="genMeterButtons"', 1)[1].split('</div>', 1)[0])
+        self.assertIn("/api/ewelink/history?device=garage-inverter&window='+p.window", HTML)
+        self.assertIn("()=>activeTab==='power',['shed','garage','p275','garden'])", HTML)
+        self.assertIn("const parts=()=>['shed','garage',...(v.ids.includes('garden')?['garden']:[])]", HTML)
         # Total is shed+garage from the already-drawn series, aligned by sample step,
         # not a raw timestamp lookup that missed near-matches on mobile.
         self.assertIn('const bucket=x=>Math.round(x/step)', HTML)

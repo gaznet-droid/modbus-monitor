@@ -365,7 +365,8 @@
           #mobileGenerationSplit, .mobile-generation-split { margin-top:.15rem; color:var(--text-main); }
           .mobile-generation-label { margin-top:.15rem; color:var(--text-muted); font-size:.85rem; }
           #mobileChartHeading, .mobile-chart-heading { font-size:1rem; margin-bottom:.8rem; }
-          .mobile-meter-buttons { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.25rem; margin-bottom:.8rem; }
+          .mobile-meter-buttons { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr); gap:.25rem; margin-bottom:.8rem; }
+          .mobile-meter-buttons button { padding:.5rem .2rem; }
           .mobile-meter-buttons button, #mobileWeekBack, #mobileWeekDrill, .mobile-week-button { min-height:44px; border:1px solid var(--border); border-radius:8px; background:#1e293b; color:var(--text-main); font:inherit; font-size:.8rem; padding:.5rem; cursor:pointer; }
           .mobile-meter-buttons button[aria-pressed="true"] { color:var(--import-color); border-color:var(--import-color); }
           .mobile-chart { position:relative; height:300px; margin:0 -.4rem; }
@@ -973,7 +974,7 @@
           <div class="juwai-mobile-only">
             <div class="mobile-generation-summary"><strong id="genMobileTotal">— kWh</strong><div id="genMobileSplit" class="mobile-generation-split"></div><span class="mobile-generation-label">Estimated</span></div>
             <h3 id="genMobileHeading" class="mobile-chart-heading">Generation by hour</h3>
-            <div class="mobile-meter-buttons" id="genMeterButtons" role="group" aria-label="Chart meter"><button type="button" data-meter="total" aria-pressed="true">Total</button><button type="button" data-meter="shed" aria-pressed="false">Shed</button><button type="button" data-meter="garage" aria-pressed="false">Garage</button><button type="button" data-meter="compare" aria-pressed="false">Compare</button></div>
+            <div class="mobile-meter-buttons" id="genMeterButtons" role="group" aria-label="Chart meter"><button type="button" data-meter="total" aria-pressed="true">Total</button><button type="button" data-meter="shed" aria-pressed="false">Shed</button><button type="button" data-meter="garage" aria-pressed="false">Garage</button><button type="button" data-meter="garden" aria-pressed="false">Garden</button><button type="button" data-meter="compare" aria-pressed="false" aria-label="Compare all">All</button></div>
             <button type="button" id="genWeekBack" class="mobile-week-button" hidden>← All weeks</button>
             <div class="mobile-chart"><canvas id="genMobileChart" role="img" aria-label="Generation chart; use the period details selector below for values"></canvas></div>
             <div id="genBinControls" class="mobile-bin-controls"><label for="genBucketChoice">Details for <select id="genBucketChoice" class="mobile-bucket-choice"></select></label><div id="genBucketDetails" class="mobile-bucket-details" role="status" aria-live="polite"></div><button type="button" id="genWeekDrill" class="mobile-week-button" hidden>View daily detail</button></div>
@@ -1651,11 +1652,25 @@ function mobileBinLabel(b,unit,long=false){
 // The Shed, Garage, 275 and Total chart. Desktop: lines, with the Power, Voltage or Current choice. Mobile (600 pixels wide or less): bars of estimated generation with per-bar details, or lines for Live periods and for voltage and current, with Total, Shed, Garage and Compare.
 // One per panel: e names that panel's elements, active() says whether its tab is showing. The caller sets history (the /api/tuya/history replies by device), window (the history window), ready and label, then calls draw().
 // ids are the meters drawn; the Total line shows only with both Shed and Garage. Without e.mobile (the System detail, one meter) it draws lines at every width.
-const GEN_METERS={shed:['Shed','#38bdf8'],garage:['Garage','#34d399'],p275:['275 watt panels','#f472b6']};
+const GEN_METERS={shed:['Shed','#38bdf8'],garage:['Garage','#34d399'],p275:['275 watt panels','#f472b6'],garden:['Garden','#a78bfa']};
+// Dad, 25 Nov: the 200 watt Garden panel on the Power tab's Generation card. Its only reading is the Garden inverter's eWeLink plug,
+// so its history is reshaped to look like a meter's: power only, and energy per slot from the plug's five-minute averages.
+function gardenAsMeter(h){
+  if(!h)return null;
+  const slot=300,kwh=b=>Number.isFinite(b.mean_w)?b.mean_w*b.samples*slot/3600000:null;
+  const bins=list=>(list||[]).map(b=>({start:b.start,end:b.end,estimated_kwh:kwh(b),coverage_s:b.samples*slot,period_s:(b.end-b.start)/1000}));
+  const buckets=bins(h.bins);
+  return {device:'garden',start:h.start,end:h.end,step_ms:h.bucket_ms,source:'plug',points:(h.points||[]).map(([ts,w])=>[ts,1,null,null,w]),
+    energy:{estimated_kwh:Number.isFinite(h.energy?.wh)?h.energy.wh/1000:null,method:h.energy?.method,coverage_s:buckets.reduce((t,b)=>t+b.coverage_s,0),
+      period_s:(h.end-h.start)/1000,bucket_unit:h.bucket_unit,buckets,daily_buckets:h.daily_bins?bins(h.daily_bins):buckets}};
+}
 function genChart(e,active,ids=['shed','garage','p275']){
   const el=k=>$(e[k]);
   const v={history:{},window:'',ready:false,label:'',chart:null,mobile:null,meter:'total',week:null,bin:null,bins:[],ids};
   const both=()=>v.ids.includes('shed')&&v.ids.includes('garage');
+  // What Total adds up: Shed and Garage, plus Garden where this card shows it.
+  const parts=()=>['shed','garage',...(v.ids.includes('garden')?['garden']:[])];
+  const named=list=>list.length>1?list.slice(0,-1).join(', ')+' and '+list[list.length-1]:list[0]||'';
   // Change the meters drawn (the System detail switching between Shed, Garage and 275); the chart is rebuilt on the next draw.
   v.setIds=list=>{if(v.chart){v.chart.destroy();v.chart=null;}v.ids=list;};
   const missingBins={id:'missingMobileBins',beforeDatasetsDraw(chart){
@@ -1691,6 +1706,8 @@ function genChart(e,active,ids=['shed','garage','p275']){
       chart.data.datasets[i].data=points;
       if(series){chart.options.scales.x.min=series.start;chart.options.scales.x.max=series.end;}
     }
+    // Garden has power readings only, so it steps aside for voltage and current.
+    if(v.ids.includes('garden'))chart.data.datasets[v.ids.indexOf('garden')].hidden=el('metric').value!=='power_w';
     if(both()){
       const combined=chart.data.datasets[v.ids.length];combined.hidden=el('metric').value!=='power_w';
       const shed=chart.data.datasets[v.ids.indexOf('shed')].data||[];
@@ -1699,14 +1716,17 @@ function genChart(e,active,ids=['shed','garage','p275']){
       const bucket=x=>Math.round(x/step);
       const gMap=new Map();
       for(const p of garage){if(Number.isFinite(p.y))gMap.set(bucket(p.x),p.y);}
+      // Garden readings are five-minute averages: each meter time takes the latest Garden reading within its slot.
+      const gi=v.ids.indexOf('garden'),garden=gi<0?null:(chart.data.datasets[gi].data||[]).filter(p=>Number.isFinite(p.y)),gStep=v.history.garden?.step_ms||300000;
+      const gardenAt=x=>{if(!garden)return 0;let lo=0,hi=garden.length-1,best=null;while(lo<=hi){const m=(lo+hi)>>1;if(garden[m].x<=x){best=garden[m];lo=m+1;}else hi=m-1;}return best&&x-best.x<gStep*1.5?best.y:null;};
       combined.data=shed.map(p=>{
-        const gy=gMap.get(bucket(p.x));
-        return {x:p.x,y:Number.isFinite(p.y)&&Number.isFinite(gy)?p.y+gy:null};
+        const gy=gMap.get(bucket(p.x)),dy=gardenAt(p.x);
+        return {x:p.x,y:Number.isFinite(p.y)&&Number.isFinite(gy)&&Number.isFinite(dy)?p.y+gy+dy:null};
       });
     }
     chart.$units=[{id:'y',text:field.label+' ('+field.unit+')'}]; // drawn above the axis by the shared graph style
     chart.update('none');
-    const counted=both()?['shed','garage']:v.ids,energies=counted.map(id=>v.history[id]?.energy),complete=energies.every(e=>Number.isFinite(e?.estimated_kwh));
+    const counted=both()?parts():v.ids,energies=counted.map(id=>v.history[id]?.energy),complete=energies.every(e=>Number.isFinite(e?.estimated_kwh));
     const covered=energies.map(e=>e?.coverage_s||0), duration=energies[0]?.period_s||0;
     const hours=s=>(s/3600).toLocaleString(undefined,{maximumFractionDigits:1});
     el('note').textContent=v.ready?('Generation is estimated from '+(v.history[counted[0]]?.source==='local'?'1-minute local':'15-minute')+' readings. Gaps over 30 minutes are excluded. '+
@@ -1721,12 +1741,12 @@ function genChart(e,active,ids=['shed','garage','p275']){
     v.bin=Math.max(0,Math.min(v.bins.length-1,Number(index)||0));
     const pair=v.bins[v.bin],unit=v.week?'day':v.history.shed?.energy?.bucket_unit||'hour';
     el('choice').value=String(v.bin);
-    const complete=pair.every(b=>Number.isFinite(b?.estimated_kwh));
-    const lines=[mobileBinLabel(pair[0]||pair[1],unit,true),
-      'Shed: '+mobileKwh(pair[0]?.estimated_kwh),'Garage: '+mobileKwh(pair[1]?.estimated_kwh),
-      'Total: '+(complete?mobileKwh(pair[0].estimated_kwh+pair[1].estimated_kwh):'Unavailable · missing readings')];
+    const complete=pair.every(b=>Number.isFinite(b?.estimated_kwh)),names=parts().map(id=>GEN_METERS[id][0]);
+    const lines=[mobileBinLabel(pair.find(Boolean),unit,true),
+      ...names.map((n,i)=>n+': '+mobileKwh(pair[i]?.estimated_kwh)),
+      'Total: '+(complete?mobileKwh(pair.reduce((t,b)=>t+b.estimated_kwh,0)):'Unavailable · missing readings')];
     const minutes=b=>b?(b.period_s>=3600?(b.coverage_s/3600).toLocaleString(undefined,{maximumFractionDigits:1})+' / '+(b.period_s/3600).toLocaleString(undefined,{maximumFractionDigits:1})+' h':Math.round(b.coverage_s/60)+' / '+Math.round(b.period_s/60)+' min'):'No data';
-    lines.push('Recorded · Shed '+minutes(pair[0])+'; Garage '+minutes(pair[1]));
+    lines.push('Recorded · '+names.map((n,i)=>n+' '+minutes(pair[i])).join('; '));
     el('details').textContent=lines.join('\n');
     el('drill').hidden=unit!=='week';
   };
@@ -1734,13 +1754,13 @@ function genChart(e,active,ids=['shed','garage','p275']){
     if(!mobileMedia.matches||!e.mobile)return;
     v.make();
     const period=v.window, metric=el('metric').value;
-    const energies=['shed','garage'].map(id=>v.history[id]?.energy),kwh=e=>Number.isFinite(e?.estimated_kwh)?mobileKwh(e.estimated_kwh):'— kWh';
+    const ids=parts(),names=ids.map(id=>GEN_METERS[id][0]),energies=ids.map(id=>v.history[id]?.energy),kwh=e=>Number.isFinite(e?.estimated_kwh)?mobileKwh(e.estimated_kwh):'— kWh';
     if(el('period'))el('period').textContent=v.label;
-    el('total').textContent=energies.every(e=>Number.isFinite(e?.estimated_kwh))?mobileKwh(energies[0].estimated_kwh+energies[1].estimated_kwh):'— kWh';
-    el('split').textContent='Shed '+kwh(energies[0])+' · Garage '+kwh(energies[1]);
+    el('total').textContent=energies.every(e=>Number.isFinite(e?.estimated_kwh))?mobileKwh(energies.reduce((t,e)=>t+e.estimated_kwh,0)):'— kWh';
+    el('split').textContent=names.map((n,i)=>n+' '+kwh(energies[i])).join(' · ');
     const duration=energies[0]?.period_s||0;
     const hours=s=>(s/3600).toLocaleString(undefined,{maximumFractionDigits:1});
-    el('coverage').textContent=v.ready?'Recorded: Shed '+hours(energies[0]?.coverage_s||0)+'h · Garage '+hours(energies[1]?.coverage_s||0)+'h of '+hours(duration)+'h. Hatched slots have missing or incomplete readings.':'Loading generation…';
+    el('coverage').textContent=v.ready?'Recorded: '+names.map((n,i)=>n+' '+hours(energies[i]?.coverage_s||0)+'h').join(' · ')+' of '+hours(duration)+'h. Hatched slots have missing or incomplete readings.':'Loading generation…';
     if(v.mobile){v.mobile.destroy();v.mobile=null;}
     const bars=metric==='power_w'&&!LIVE_WINDOWS.includes(period);
     el('metric').querySelector('[value=power_w]').textContent=bars?'Generation (kWh)':'Power (W)';
@@ -1752,22 +1772,25 @@ function genChart(e,active,ids=['shed','garage','p275']){
       const rows=energies.map(e=>(v.week?e?.daily_buckets:e?.buckets)||[]);
       const left=rows[0].filter(b=>!v.week||b.start>=v.week.start&&b.end<=v.week.end);
       const key=b=>unit==='hour'?Math.floor(b.start/3600000):ukDate(b.start,{year:'numeric',month:'2-digit',day:'2-digit'});
-      const right=new Map(rows[1].map(b=>[key(b),b]));
-      v.bins=left.map(b=>[b,right.get(key(b))]);
+      const others=rows.slice(1).map(list=>new Map(list.map(b=>[key(b),b])));
+      v.bins=left.map(b=>[b,...others.map(m=>m.get(key(b)))]);
       labels=v.bins.map(pair=>mobileBinLabel(pair[0],unit));
-      datasets=['Shed','Garage'].map((name,i)=>({label:name,data:v.bins.map(pair=>pair[i]?.estimated_kwh??null),backgroundColor:['#38bdf8','#34d399'][i],borderRadius:3,barPercentage:.8,categoryPercentage:.85,minBarLength:2}));
+      datasets=ids.map((id,i)=>({label:names[i],data:v.bins.map(pair=>pair[i]?.estimated_kwh??null),backgroundColor:GEN_METERS[id][1],borderRadius:3,barPercentage:.8,categoryPercentage:.85,minBarLength:2}));
       el('heading').textContent='Estimated generation by '+unit+(v.week?' · '+mobileBinLabel(v.week,'week'):'');
       el('choice').replaceChildren(...labels.map((label,i)=>{const o=document.createElement('option');o.value=i;o.textContent=mobileBinLabel(v.bins[i][0],unit,true);return o;}));
       if(v.bin===null&&v.bins.length)v.bin=v.bins.length-1;
       v.showBin(v.bin);
     }else{
       const field=juwaiFields[metric];if(metric!=='power_w'&&v.meter==='total')v.meter='compare';
-      for(const button of el('meters').querySelectorAll('button')){button.hidden=metric!=='power_w'&&button.dataset.meter==='total';button.setAttribute('aria-pressed',String(button.dataset.meter===v.meter));}
+      // Garden is read from its plug, which gives power only.
+      if(metric!=='power_w'&&v.meter==='garden')v.meter='compare';
+      for(const button of el('meters').querySelectorAll('button')){button.hidden=metric!=='power_w'&&['total','garden'].includes(button.dataset.meter);button.setAttribute('aria-pressed',String(button.dataset.meter===v.meter));}
       const source=v.chart.data.datasets;
       const totalI=v.ids.length; // Total is appended after the meter series when both Shed and Garage are present
-      const ids=v.meter==='compare'?[0,1,totalI]:[v.meter==='total'?totalI:v.meter==='shed'?0:1];
-      datasets=ids.map(i=>source[i]&&({...source[i],data:source[i].data,hidden:false,pointRadius:0,pointHitRadius:16,borderWidth:2,fill:false})).filter(Boolean);
-      el('heading').textContent=(v.meter==='compare'?'Shed, Garage and Total':v.meter[0].toUpperCase()+v.meter.slice(1))+' '+field.label.toLowerCase();
+      const power=metric==='power_w',shown=power?ids:['shed','garage'],at=id=>v.ids.indexOf(id);
+      const pick=v.meter==='compare'?[...shown.map(at),...(power?[totalI]:[])]:[v.meter==='total'?totalI:at(v.meter)];
+      datasets=pick.map(i=>source[i]&&({...source[i],data:source[i].data,hidden:false,fill:false})).filter(Boolean);
+      el('heading').textContent=(v.meter==='compare'?named([...shown.map(id=>GEN_METERS[id][0]),...(power?['Total']:[])]):v.meter==='total'?'Total':GEN_METERS[v.meter][0])+' '+field.label.toLowerCase();
     }
     const series=v.history.shed||v.history.garage;
     const tick=t=>ukDate(t,LIVE_WINDOWS.includes(period)||['today','yesterday','24h','previous24h'].includes(period)?{hour:'2-digit',minute:'2-digit'}:{day:'numeric',month:'short'});
@@ -1997,7 +2020,7 @@ function drawFlow(r,node,total){
   $('flowTable').replaceChildren(...rows.map(cells=>{const tr=document.createElement('tr');for(const c of cells){const td=document.createElement('td');td.textContent=c;tr.appendChild(td);}return tr;}));
 }
 // Generation chart on the Power tab: the Shed, Garage, 275 and Total chart for the Power tab's period. It is read with the net power history (on a period change and every minute), only while this tab is showing.
-const genView=genChart({chart:'genChart',metric:'genMetric',note:'genNote',total:'genMobileTotal',split:'genMobileSplit',coverage:'genCoverage',heading:'genMobileHeading',meters:'genMeterButtons',back:'genWeekBack',mobile:'genMobileChart',bins:'genBinControls',choice:'genBucketChoice',details:'genBucketDetails',drill:'genWeekDrill'},()=>activeTab==='power');
+const genView=genChart({chart:'genChart',metric:'genMetric',note:'genNote',total:'genMobileTotal',split:'genMobileSplit',coverage:'genCoverage',heading:'genMobileHeading',meters:'genMeterButtons',back:'genWeekBack',mobile:'genMobileChart',bins:'genBinControls',choice:'genBucketChoice',details:'genBucketDetails',drill:'genWeekDrill'},()=>activeTab==='power',['shed','garage','p275','garden']);
 let genController=null,genTime=0;
 // The Power tab's period as a generation history window. Over 30 days or custom dates show the past 30 days, as the Energy flow does.
 const GEN_WINDOWS={'15m':'15m','30m':'live','1h':'live','2h':'2h','4h':'4h','8h':'8h','1d':'today','24h':'24h','7d':'7d','30d':'30d'};
@@ -2017,7 +2040,11 @@ async function readGen(){
   if(!genView.ready)genView.draw();
   genController?.abort();const c=genController=new AbortController();
   let history;
-  try{history=await tuyaHistory(['shed','garage','p275'],p.window,c.signal);}
+  try{
+    // The Garden plug's history is optional: without it the card still shows the meters, and Total shows as unavailable.
+    const garden=getJSON('/api/ewelink/history?device=garage-inverter&window='+p.window,c.signal).then(gardenAsMeter,e=>{if(e.name==='AbortError')throw e;return null;});
+    let g;[history,g]=await Promise.all([tuyaHistory(['shed','garage','p275'],p.window,c.signal),garden]);history.garden=g;
+  }
   catch(e){if(!c.signal.aborted&&activeTab==='power')genView.fail();return;}
   if(c.signal.aborted||activeTab!=='power'||genView.window!==p.window)return;
   Object.assign(genView,{history,ready:true});genTime=Date.now();genView.draw();
