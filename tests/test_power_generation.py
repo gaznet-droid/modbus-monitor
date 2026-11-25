@@ -42,19 +42,16 @@ class PowerGenerationCard(unittest.TestCase):
         self.assertIn("v.meter==='compare'?[...shown.map(at),...(power?[totalI]:[])]", HTML)
         self.assertIn("...(power?['Total']:[])", HTML)
 
-    def test_power_tab_generation_includes_garden(self):
-        # Dad, 25 Nov: the 200 watt Garden panel, read from the Garden inverter's plug, is on the
-        # Power tab's Generation card, has its own button and counts in Total.
-        self.assertIn('data-meter="garden"', HTML.split('id="genMeterButtons"', 1)[1].split('</div>', 1)[0])
+    def test_power_tab_generation_includes_275_and_garden_together(self):
+        # Dad, 25 Nov: the 275 watt panels and the 200 watt Garden (read from the Garden inverter's plug)
+        # are one source on the Power tab's Generation card, with one button, and count in Total.
+        buttons = HTML.split('id="genMeterButtons"', 1)[1].split('</div>', 1)[0]
+        self.assertIn('data-meter="combo"', buttons)
+        self.assertNotIn('data-meter="garden"', buttons)
         self.assertIn("/api/ewelink/history?device=garage-inverter&window='+p.window", HTML)
-        self.assertIn("()=>activeTab==='power',['shed','garage','p275','garden'])", HTML)
-        self.assertIn("const parts=()=>['shed','garage',...(v.ids.includes('garden')?['p275','garden']:[])]", HTML)
-        # Dad, 25 Nov: the 275 joins Total too, but only for periods where it recorded anything.
-        self.assertIn('data-meter="p275"', HTML.split('id="genMeterButtons"', 1)[1].split('</div>', 1)[0])
-        self.assertIn("const inTotal=id=>id!=='p275'||has275();", HTML)
-        # Total is shed+garage from the already-drawn series, aligned by sample step,
-        # not a raw timestamp lookup that missed near-matches on mobile.
-        self.assertIn('const bucket=x=>Math.round(x/step)', HTML)
+        self.assertIn("history.combo=comboMeter(history.p275,g)", HTML)
+        self.assertIn("()=>activeTab==='power',['shed','garage','combo'])", HTML)
+        self.assertIn("const parts=()=>['shed','garage',...(v.ids.includes('combo')?['combo']:[])]", HTML)
 
     def test_reads_only_while_the_power_tab_is_showing(self):
         body = HTML.split('async function readGen(){', 1)[1].split('\n}', 1)[0]
