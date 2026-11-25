@@ -292,6 +292,7 @@
         .card-title-block .period-note { width:auto; margin:0; }
         .card-actions { display:flex; align-items:center; gap:.6rem; flex:0 1 auto; margin-left:auto; }
         .card-actions label { display:flex; gap:.6rem; align-items:center; color:var(--text-muted); font-size:.85rem; white-space:nowrap; }
+        .card-actions label[hidden] { display:none; }
         .card-actions select { min-height:44px; max-width:100%; background:#1e293b; color:var(--text-main); border:1px solid var(--border); border-radius:8px; padding:.5rem; font:inherit; color-scheme:dark; }
         .card-actions select:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
         .card-close { flex-shrink:0; min-width:44px; min-height:44px; border:1px solid var(--border); border-radius:8px; background:#1e293b; color:var(--text-main); font:inherit; font-size:1rem; cursor:pointer; }
@@ -1004,7 +1005,7 @@
               <h2 id="genTitle">Generation</h2>
               <span id="genPeriod" class="period-note">Loading…</span>
             </div>
-            <div class="card-actions"><div class="chart-style juwai-mobile-only" id="genStyle" role="group" aria-label="Graph type" hidden><button type="button" data-style="bars" aria-pressed="true" aria-label="Bar chart"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 14V8M6 14V4M10 14V7M14 14V2"/></svg>Bars</button><button type="button" data-style="line" aria-pressed="false" aria-label="Line graph"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 12.5 5.5 7l3 3 6-7.5"/></svg>Line</button></div><label for="genMetric"><span class="gen-metric-word">Chart</span> <select id="genMetric"><option value="power_w">Power (W)</option><option value="voltage_v">Voltage (V)</option><option value="current_a">Current (A)</option></select></label></div>
+            <div class="card-actions"><div class="chart-style juwai-mobile-only" id="genStyle" role="group" aria-label="Graph type" hidden><button type="button" data-style="bars" aria-pressed="true" aria-label="Bar chart"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 14V8M6 14V4M10 14V7M14 14V2"/></svg>Bars</button><button type="button" data-style="line" aria-pressed="false" aria-label="Line graph"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 12.5 5.5 7l3 3 6-7.5"/></svg>Line</button></div><label for="genMetric" hidden><span class="gen-metric-word">Chart</span> <select id="genMetric"><option value="power_w">Power (W)</option><option value="voltage_v">Voltage (V)</option><option value="current_a">Current (A)</option></select></label></div>
           </div>
           <p id="genLimit" class="period-note" hidden></p>
           <div class="juwai-mobile-only">
@@ -1722,6 +1723,9 @@ function genChart(e,active,ids=['shed','garage','p275']){
   const both=()=>v.ids.includes('shed')&&v.ids.includes('garage');
   // What Total adds up: Shed and Garage; on the Power tab's card also the 275 and Garden together (Dad, 25 Nov).
   const parts=()=>['shed','garage',...(v.ids.includes('combo')?['combo']:[])];
+  // Dad, 25 Nov: on the Power tab's card everything is added together into one line, with no meter buttons;
+  // each source on its own is on the System tab.
+  const single=()=>v.ids.includes('combo');
   const named=list=>list.length>1?list.slice(0,-1).join(', ')+' and '+list[list.length-1]:list[0]||'';
   // Change the meters drawn (the System detail switching between Shed, Garage and 275); the chart is rebuilt on the next draw.
   v.setIds=list=>{if(v.chart){v.chart.destroy();v.chart=null;}v.ids=list;};
@@ -1760,6 +1764,7 @@ function genChart(e,active,ids=['shed','garage','p275']){
     }
     // 275 + Garden is power only (the Garden plug measures mains), so it steps aside for voltage and current.
     if(v.ids.includes('combo'))chart.data.datasets[v.ids.indexOf('combo')].hidden=el('metric').value!=='power_w';
+    if(single()){v.ids.forEach((id,i)=>{chart.data.datasets[i].hidden=true;});chart.options.plugins.legend.display=false;}
     if(both()){
       const combined=chart.data.datasets[v.ids.length];combined.hidden=el('metric').value!=='power_w';
       const shed=chart.data.datasets[v.ids.indexOf('shed')].data||[];
@@ -1810,7 +1815,7 @@ function genChart(e,active,ids=['shed','garage','p275']){
     const used=energies;
     if(el('period'))el('period').textContent=v.label;
     el('total').textContent=used.every(e=>Number.isFinite(e?.estimated_kwh))?mobileKwh(used.reduce((t,e)=>t+e.estimated_kwh,0)):'— kWh';
-    el('split').textContent=names.map((n,i)=>n+' '+kwh(energies[i])).join(' · ');
+    el('split').textContent=names.map((n,i)=>n+' '+kwh(energies[i])).join(' · ');el('split').hidden=single();
     const duration=energies[0]?.period_s||0;
     const hours=s=>(s/3600).toLocaleString(undefined,{maximumFractionDigits:1});
     el('coverage').textContent=v.ready?'Recorded: '+names.map((n,i)=>n+' '+hours(energies[i]?.coverage_s||0)+'h').join(' · ')+' of '+hours(duration)+'h. Hatched slots have missing or incomplete readings.':'Loading generation…';
@@ -1819,7 +1824,7 @@ function genChart(e,active,ids=['shed','garage','p275']){
     const canBars=metric==='power_w'&&!LIVE_WINDOWS.includes(period),bars=canBars&&v.style!=='line';
     if(el('style')){el('style').hidden=!canBars;for(const b of el('style').querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.dataset.style===(bars?'bars':'line')));}
     el('metric').querySelector('[value=power_w]').textContent=bars?'Energy (kWh)':'Power (W)';
-    el('meters').hidden=bars;el('bins').hidden=!bars;el('back').hidden=!bars||!v.week;
+    el('meters').hidden=bars||single();el('bins').hidden=!bars;el('back').hidden=!bars||!v.week;
     if(!bars)v.week=null;
     let datasets,labels=[],unit='hour';
     if(bars){
@@ -1830,7 +1835,9 @@ function genChart(e,active,ids=['shed','garage','p275']){
       const others=rows.slice(1).map(list=>new Map(list.map(b=>[key(b),b])));
       v.bins=left.map(b=>[b,...others.map(m=>m.get(key(b)))]);
       labels=v.bins.map(pair=>mobileBinLabel(pair[0],unit));
-      datasets=ids.map((id,i)=>({label:names[i],data:v.bins.map(pair=>pair[i]?.estimated_kwh??null),backgroundColor:GEN_METERS[id][1],borderRadius:3,barPercentage:.8,categoryPercentage:.85,minBarLength:2}));
+      const sum=pair=>pair.every(b=>Number.isFinite(b?.estimated_kwh))?pair.reduce((t,b)=>t+b.estimated_kwh,0):null;
+      datasets=single()?[{label:'All solar',data:v.bins.map(sum),backgroundColor:'#fbbf24',borderRadius:3,barPercentage:.8,categoryPercentage:.85,minBarLength:2}]
+        :ids.map((id,i)=>({label:names[i],data:v.bins.map(pair=>pair[i]?.estimated_kwh??null),backgroundColor:GEN_METERS[id][1],borderRadius:3,barPercentage:.8,categoryPercentage:.85,minBarLength:2}));
       el('heading').textContent='Estimated generation by '+unit+(v.week?' · '+mobileBinLabel(v.week,'week'):'');
       el('choice').replaceChildren(...labels.map((label,i)=>{const o=document.createElement('option');o.value=i;o.textContent=mobileBinLabel(v.bins[i][0],unit,true);return o;}));
       if(v.bin===null&&v.bins.length)v.bin=v.bins.length-1;
@@ -1843,9 +1850,10 @@ function genChart(e,active,ids=['shed','garage','p275']){
       const source=v.chart.data.datasets;
       const totalI=v.ids.length; // Total is appended after the meter series when both Shed and Garage are present
       const power=metric==='power_w',shown=power?ids:ids.filter(id=>id!=='combo'),at=id=>v.ids.indexOf(id);
+      if(single())v.meter='total';
       const pick=v.meter==='compare'?[...shown.map(at),...(power?[totalI]:[])]:[v.meter==='total'?totalI:at(v.meter)];
       datasets=pick.map(i=>source[i]&&({...source[i],data:source[i].data,hidden:false,fill:false})).filter(Boolean);
-      el('heading').textContent=(v.meter==='compare'?named([...shown.map(id=>GEN_METERS[id][0]),...(power?['Total']:[])]):v.meter==='total'?'Total':GEN_METERS[v.meter][0])+' '+field.label.toLowerCase();
+      el('heading').textContent=single()?'All solar power':(v.meter==='compare'?named([...shown.map(id=>GEN_METERS[id][0]),...(power?['Total']:[])]):v.meter==='total'?'Total':GEN_METERS[v.meter][0])+' '+field.label.toLowerCase();
     }
     const series=v.history.shed||v.history.garage;
     v.mobile=new Chart(el('mobile'),{type:bars?'bar':'line',data:{labels,datasets},plugins:bars?[missingBins]:[],options:{responsive:true,maintainAspectRatio:false,animation:false,

@@ -52,6 +52,10 @@ class PowerGenerationCard(unittest.TestCase):
         self.assertIn("history.combo=comboMeter(history.p275,g)", HTML)
         self.assertIn("()=>activeTab==='power',['shed','garage','combo'])", HTML)
         self.assertIn("const parts=()=>['shed','garage',...(v.ids.includes('combo')?['combo']:[])]", HTML)
+        # Dad, 25 Nov (later): everything added together into one line, no meter buttons, no split, no metric choice.
+        self.assertIn("const single=()=>v.ids.includes('combo');", HTML)
+        self.assertIn("el('meters').hidden=bars||single();", HTML)
+        self.assertIn('<label for="genMetric" hidden>', HTML)
 
     def test_reads_only_while_the_power_tab_is_showing(self):
         body = HTML.split('async function readGen(){', 1)[1].split('\n}', 1)[0]
