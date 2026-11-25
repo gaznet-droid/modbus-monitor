@@ -12,6 +12,92 @@
       <meta name="theme-color" content="#090d16">
       <meta name="apple-mobile-web-app-title" content="Power">
       <script src="/chart.umd.min.js"></script>
+      <script>
+      // One look for every line graph (Dad, 25 Nov): thin lines, no dots, units printed above the axes instead of
+      // sideways titles, short time labels, and a guide line where you touch. Applied once here so each graph needn't repeat it.
+      (()=>{
+        if(!window.Chart)return;
+        const muted='#94a3b8',grid='#1b2539';
+        Chart.defaults.color=muted;Chart.defaults.font.size=11;
+        // Touch anywhere along the line to read it; there are no dots to aim for.
+        Chart.overrides.line.interaction={mode:'nearest',axis:'x',intersect:false};
+        const real=v=>v!=null&&Number.isFinite(typeof v==='object'?v.y:v);
+        // A reading with a gap either side would vanish with no dot, so only those keep a small one.
+        const lonely=ctx=>{const d=ctx.dataset.data,i=ctx.dataIndex;return real(d[i])&&!real(d[i-1])&&!real(d[i+1])?2.5:0;};
+        // Time labels: hours and minutes on a day or less (with the date at midnight), the date on anything longer.
+        window.modTimeTick=function(value){
+          const d=new Date(value),span=(this.max-this.min)||0;
+          if(span>36*3600000)return d.toLocaleDateString(undefined,{day:'numeric',month:'short'});
+          return d.getHours()===0&&d.getMinutes()===0&&span>6*3600000?d.toLocaleDateString(undefined,{day:'numeric',month:'short'}):d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+        };
+        const tidy=chart=>{
+          const config=chart.config,o=config.options;
+          if(config.type!=='line'||o.modTidy===false)return;
+          for(const ds of config.data.datasets||[]){
+            ds.borderWidth=(ds.borderWidth||0)>2.5?2:1.5;
+            ds.pointRadius=lonely;ds.pointHoverRadius=4;ds.pointHitRadius=Math.max(ds.pointHitRadius||0,8);
+            ds.pointHoverBorderWidth=2;ds.borderJoinStyle='round';ds.borderCapStyle='round';
+          }
+          // Time axes: labels on whole hours or days, as many as fit (about one per 80 pixels).
+          const x=o.scales?.x;
+          if(x&&x.ticks?.callback===window.modTimeTick)x.afterBuildTicks=axis=>{
+            const {min,max}=axis;if(!(max>min))return;
+            const want=Math.max(2,Math.floor(axis.width/80)),H=3600000,steps=[H,2*H,3*H,4*H,6*H,12*H,24*H,48*H,7*24*H,14*24*H];
+            const step=steps.find(s=>(max-min)/s<=want)||steps[steps.length-1],ticks=[];
+            const local=t=>t-new Date(t).getTimezoneOffset()*60000;
+            for(let t=Math.ceil(local(min)/step)*step;t<=local(max);t+=step){const v=t+new Date(t).getTimezoneOffset()*60000;if(v>=min&&v<=max)ticks.push({value:v});}
+            if(ticks.length)axis.ticks=ticks;
+          };
+          const units=[];
+          for(const [id,s] of Object.entries(o.scales||{})){
+            s.border={...(s.border||{}),display:false};
+            s.ticks=s.ticks||{};s.ticks.maxRotation=0;s.ticks.autoSkipPadding=s.ticks.autoSkipPadding??16;
+            if(s.grid&&s.grid.color==='#1e293b')s.grid.color=grid;
+            if(id.startsWith('y')){
+              s.ticks.maxTicksLimit=s.ticks.maxTicksLimit??6;
+              if(s.title?.display){units.push({id,text:s.title.text});s.title.display=false;}
+            }
+          }
+          chart.$units=units;
+          const legend=o.plugins?.legend;
+          if(legend&&legend.display!==false){
+            legend.align='start';
+            legend.labels={...(legend.labels||{}),usePointStyle:true,pointStyle:'line',pointStyleWidth:18,boxHeight:2,padding:12,font:{size:11}};
+          }
+          // Two value scales: colour each one's numbers and unit to match its line, so the legend explains both sides.
+          const ys=Object.keys(o.scales||{}).filter(id=>id.startsWith('y'));
+          if(ys.length>1)for(const id of ys){
+            const ds=(config.data.datasets||[]).find(d=>(d.yAxisID||'y')===id),colour=typeof ds?.borderColor==='string'?ds.borderColor:null;
+            if(colour){o.scales[id].ticks.color=colour;const u=units.find(u=>u.id===id);if(u)u.colour=colour;}
+          }
+        };
+        Chart.register({id:'modTidy',
+          beforeInit(chart){
+            tidy(chart);
+            // A thin row under the legend that holds the unit of each value scale, above its numbers (empty when there are none).
+            if(chart.config.type!=='line'||chart.config.options.modTidy===false)return;
+            Chart.layouts.addBox(chart,{position:'top',weight:-10,fullSize:true,options:{},left:0,top:0,right:0,bottom:0,width:0,height:0,
+              update(width){this.width=width;this.height=chart.$units?.length?22:0;},isHorizontal:()=>true,getPadding:()=>({left:0,right:0,top:0,bottom:0}),
+              draw(){
+                if(!chart.$units?.length)return;
+                const ctx=chart.ctx;ctx.save();ctx.font='600 11px '+Chart.defaults.font.family;ctx.textBaseline='middle';
+                for(const u of chart.$units){
+                  const s=chart.scales[u.id];if(!s||s.options.display===false)continue;
+                  const right=s.position==='right';ctx.textAlign=right?'right':'left';ctx.fillStyle=u.colour||muted;
+                  ctx.fillText(u.text,right?s.right:s.left,this.top+8);
+                }
+                ctx.restore();
+              }});
+          },
+          // A faint upright line through the reading being shown.
+          afterDatasetsDraw(chart){
+            if(chart.config.type!=='line'||chart.options.modTidy===false)return;
+            const active=chart.tooltip?.getActiveElements?.()||[];if(!active.length)return;
+            const x=active[0].element.x,{top,bottom}=chart.chartArea,ctx=chart.ctx;
+            ctx.save();ctx.strokeStyle='rgba(148,163,184,.35)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x,bottom);ctx.stroke();ctx.restore();
+          }});
+      })();
+      </script>
       <script src="/ewelink.js?v=card-graphs-8" defer></script>
       <style>
         :root {
@@ -192,6 +278,8 @@
         .juwai-controls select { min-height:44px; background:#1e293b; color:var(--text-main); border:1px solid var(--border); border-radius:8px; padding:.5rem .6rem; font:inherit; color-scheme:dark; }
         .juwai-controls select:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
         .juwai-chart { position:relative; height:280px; }
+        /* Phones: let graphs use the card's side padding too; the numbers sit right at the card edge. */
+        @media(max-width:600px) { .juwai-chart, .ewelink-chart, .mobile-chart, .home-graph-chart { margin-left:-.45rem; margin-right:-.45rem; width:auto; } }
         @media(max-width:600px) { .juwai-grid { grid-template-columns:1fr; } .tabs { gap:.2rem; } .tabs button { padding:.75rem 1rem; } }
 
         .juwai-group { padding:clamp(.8rem,3vw,1.5rem); }
@@ -1385,7 +1473,7 @@ function renderOutput(o){
 // Graph of the total on the plugs' time buckets: a bucket counts only when all three plugs and the Epever have a reading in it; anything else is left as a gap.
 function drawOutput(o){
   if($(o.out+'Detail')?.hidden)return;
-  if(!o.chart)o.chart=new Chart($(o.out+'Chart'),{type:'line',data:{datasets:[['Total to house','#fbbf24',3],['Battery charging (Epever)','#38bdf8',1.5]].map(([label,colour,width])=>({label,data:[],parsing:false,borderColor:colour,backgroundColor:colour,pointRadius:width>2?2:0,pointHitRadius:10,borderWidth:width,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:v=>new Date(v).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})},grid:{color:'#1e293b'}},y:{title:{display:true,text:'Power (W)',color:'#94a3b8'},ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString(undefined,{maximumFractionDigits:1})+' W'}}}}});
+  if(!o.chart)o.chart=new Chart($(o.out+'Chart'),{type:'line',data:{datasets:[['Total to house','#fbbf24',3],['Battery charging (Epever)','#38bdf8',1.5]].map(([label,colour,width])=>({label,data:[],parsing:false,borderColor:colour,backgroundColor:colour,pointRadius:width>2?2:0,pointHitRadius:10,borderWidth:width,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:modTimeTick},grid:{color:'#1e293b'}},y:{title:{display:true,text:'Power (W)',color:'#94a3b8'},ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString(undefined,{maximumFractionDigits:1})+' W'}}}}});
   const chart=o.chart,period=o.period(),ready=o.key===period&&o.epKey===period&&!!o.epHistory,first=o.history[OUTPUT_IDS[0]],bucket=first?.bucket_ms||300000,lines=[[],[]];
   if(ready&&first){
     const plugs=OUTPUT_IDS.map(id=>new Map((o.history[id]?.points||[]).filter(r=>Number.isFinite(r[1])).map(r=>[r[0],r[1]]))),sums=new Map();
@@ -1497,7 +1585,7 @@ function drawEpever(o){
   const energy=o.epHistory?.energy,history=o.epHistory;
   $(o.ep+'Energy').textContent=kwhToWh(energy?.generated_kwh);
   if($(o.ep+'Detail')?.hidden)return;
-  if(!o.epChart)o.epChart=new Chart($(o.ep+'Chart'),{type:'line',data:{datasets:[['Panel power (W)','#fbbf24','y'],['Battery voltage (V)','#38bdf8','y1']].map(([label,colour,axis])=>({label,data:[],parsing:false,yAxisID:axis,borderColor:colour,backgroundColor:colour,pointRadius:2,pointHitRadius:10,borderWidth:2,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:v=>new Date(v).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})},grid:{color:'#1e293b'}},y:{min:0,title:{display:true,text:'Power (W)',color:'#94a3b8'},ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}},y1:{position:'right',title:{display:true,text:'Battery (V)',color:'#94a3b8'},ticks:{color:'#94a3b8'},grid:{drawOnChartArea:false}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()}}}}});
+  if(!o.epChart)o.epChart=new Chart($(o.ep+'Chart'),{type:'line',data:{datasets:[['Panel power','#fbbf24','y'],['Battery voltage','#38bdf8','y1']].map(([label,colour,axis])=>({label,data:[],parsing:false,yAxisID:axis,borderColor:colour,backgroundColor:colour,pointRadius:2,pointHitRadius:10,borderWidth:2,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:modTimeTick},grid:{color:'#1e293b'}},y:{min:0,title:{display:true,text:'Power (W)',color:'#94a3b8'},ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}},y1:{position:'right',title:{display:true,text:'Battery (V)',color:'#94a3b8'},ticks:{color:'#94a3b8'},grid:{drawOnChartArea:false}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()}}}}});
   for(const [i,column] of [1,2].entries()){
     const points=[];
     for(const row of history?.points||[]){
@@ -1588,7 +1676,7 @@ function genChart(e,active,ids=['shed','garage','p275']){
   }};
   v.make=()=>{
     if(v.chart)return;
-    v.chart=new Chart(el('chart'),{type:'line',data:{datasets:[...v.ids.map(id=>GEN_METERS[id]),...(both()?[['Total','#fbbf24']]:[])].map(([name,colour])=>({label:name,data:[],parsing:false,borderColor:colour,backgroundColor:colour,pointRadius:3,pointHitRadius:10,borderWidth:2,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:v=>new Date(v).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})},grid:{color:'#1e293b'}},y:{ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()+' '+juwaiFields[el('metric').value].unit}}}}});
+    v.chart=new Chart(el('chart'),{type:'line',data:{datasets:[...v.ids.map(id=>GEN_METERS[id]),...(both()?[['Total','#fbbf24']]:[])].map(([name,colour])=>({label:name,data:[],parsing:false,borderColor:colour,backgroundColor:colour,pointRadius:3,pointHitRadius:10,borderWidth:2,spanGaps:false,tension:0}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,scales:{x:{type:'linear',ticks:{color:'#94a3b8',maxTicksLimit:5,callback:modTimeTick},grid:{color:'#1e293b'}},y:{ticks:{color:'#94a3b8'},grid:{color:'#1e293b'}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:{callbacks:{title:items=>new Date(items[0].parsed.x).toLocaleString(),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()+' '+juwaiFields[el('metric').value].unit}}}}});
   };
   v.draw=()=>{
     v.make();
@@ -1616,7 +1704,7 @@ function genChart(e,active,ids=['shed','garage','p275']){
         return {x:p.x,y:Number.isFinite(p.y)&&Number.isFinite(gy)?p.y+gy:null};
       });
     }
-    chart.options.scales.y.title={display:true,text:field.label+' ('+field.unit+')',color:'#94a3b8'};
+    chart.$units=[{id:'y',text:field.label+' ('+field.unit+')'}]; // drawn above the axis by the shared graph style
     chart.update('none');
     const counted=both()?['shed','garage']:v.ids,energies=counted.map(id=>v.history[id]?.energy),complete=energies.every(e=>Number.isFinite(e?.estimated_kwh));
     const covered=energies.map(e=>e?.coverage_s||0), duration=energies[0]?.period_s||0;

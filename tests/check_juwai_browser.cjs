@@ -68,7 +68,7 @@ const path=require('node:path');
   await until("juwaiHistoryKey==='live'");
   assert.equal(await js('mobileChart.config.type'),'line');
   assert.equal(await js('mobileChart.data.datasets.length'),1);
-  assert.equal(await js('mobileChart.data.datasets[0].pointRadius'),0);
+  assert.equal(await js('typeof mobileChart.data.datasets[0].pointRadius'),'function');
   for(const metric of ['voltage_v','current_a']){await js("document.getElementById('juwaiMetric').value='"+metric+"';document.getElementById('juwaiMetric').dispatchEvent(new Event('change'))");assert.equal(await js('mobileChart.config.type'),'line');}
   await js("document.getElementById('juwaiMetric').value='power_w';document.getElementById('juwaiMetric').dispatchEvent(new Event('change'))");
   await js("document.getElementById('juwaiWindow').value='7d';document.getElementById('juwaiWindow').dispatchEvent(new Event('change'))");
