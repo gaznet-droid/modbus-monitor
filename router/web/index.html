@@ -378,6 +378,8 @@
           #mobileChartHeading, .mobile-chart-heading { font-size:1rem; margin-bottom:.8rem; }
           .mobile-meter-buttons { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr); gap:.25rem; margin-bottom:.8rem; }
           .mobile-meter-buttons button { padding:.5rem .2rem; }
+          /* Power tab: six meters (Total, Shed, Garage, 275, Garden, All), so two rows of three. */
+          #genMeterButtons { grid-auto-flow:row; grid-template-columns:repeat(3,minmax(0,1fr)); }
           .mobile-meter-buttons button, #mobileWeekBack, #mobileWeekDrill, .mobile-week-button { min-height:44px; border:1px solid var(--border); border-radius:8px; background:#1e293b; color:var(--text-main); font:inherit; font-size:.8rem; padding:.5rem; cursor:pointer; }
           .mobile-meter-buttons button[aria-pressed="true"] { color:var(--import-color); border-color:var(--import-color); }
           .mobile-chart { position:relative; height:300px; margin:0 -.4rem; }
@@ -985,7 +987,7 @@
           <div class="juwai-mobile-only">
             <div class="mobile-generation-summary"><strong id="genMobileTotal">— kWh</strong><div id="genMobileSplit" class="mobile-generation-split"></div><span class="mobile-generation-label">Estimated</span></div>
             <h3 id="genMobileHeading" class="mobile-chart-heading">Generation by hour</h3>
-            <div class="mobile-meter-buttons" id="genMeterButtons" role="group" aria-label="Chart meter"><button type="button" data-meter="total" aria-pressed="true">Total</button><button type="button" data-meter="shed" aria-pressed="false">Shed</button><button type="button" data-meter="garage" aria-pressed="false">Garage</button><button type="button" data-meter="garden" aria-pressed="false">Garden</button><button type="button" data-meter="compare" aria-pressed="false" aria-label="Compare all">All</button></div>
+            <div class="mobile-meter-buttons" id="genMeterButtons" role="group" aria-label="Chart meter"><button type="button" data-meter="total" aria-pressed="true">Total</button><button type="button" data-meter="shed" aria-pressed="false">Shed</button><button type="button" data-meter="garage" aria-pressed="false">Garage</button><button type="button" data-meter="p275" aria-pressed="false" aria-label="275 watt panels">275</button><button type="button" data-meter="garden" aria-pressed="false">Garden</button><button type="button" data-meter="compare" aria-pressed="false" aria-label="Compare all">All</button></div>
             <button type="button" id="genWeekBack" class="mobile-week-button" hidden>← All weeks</button>
             <div class="mobile-chart"><canvas id="genMobileChart" role="img" aria-label="Generation chart; use the period details selector below for values"></canvas></div>
             <div id="genBinControls" class="mobile-bin-controls"><label for="genBucketChoice">Details for <select id="genBucketChoice" class="mobile-bucket-choice"></select></label><div id="genBucketDetails" class="mobile-bucket-details" role="status" aria-live="polite"></div><button type="button" id="genWeekDrill" class="mobile-week-button" hidden>View daily detail</button></div>
@@ -1679,8 +1681,11 @@ function genChart(e,active,ids=['shed','garage','p275']){
   const el=k=>$(e[k]);
   const v={history:{},window:'',ready:false,label:'',chart:null,mobile:null,meter:'total',week:null,bin:null,bins:[],ids};
   const both=()=>v.ids.includes('shed')&&v.ids.includes('garage');
-  // What Total adds up: Shed and Garage, plus Garden where this card shows it.
-  const parts=()=>['shed','garage',...(v.ids.includes('garden')?['garden']:[])];
+  // What Total adds up: Shed and Garage; on the Power tab's card also the 275 and Garden (Dad, 25 Nov).
+  const parts=()=>['shed','garage',...(v.ids.includes('garden')?['p275','garden']:[])];
+  // The 275 counts in Total only for periods where it has recorded something; before it was fitted Total is the rest.
+  const has275=()=>v.history.p275?.energy?.coverage_s>0;
+  const inTotal=id=>id!=='p275'||has275();
   const named=list=>list.length>1?list.slice(0,-1).join(', ')+' and '+list[list.length-1]:list[0]||'';
   // Change the meters drawn (the System detail switching between Shed, Garage and 275); the chart is rebuilt on the next draw.
   v.setIds=list=>{if(v.chart){v.chart.destroy();v.chart=null;}v.ids=list;};
@@ -1730,14 +1735,15 @@ function genChart(e,active,ids=['shed','garage','p275']){
       // Garden readings are five-minute averages: each meter time takes the latest Garden reading within its slot.
       const gi=v.ids.indexOf('garden'),garden=gi<0?null:(chart.data.datasets[gi].data||[]).filter(p=>Number.isFinite(p.y)),gStep=v.history.garden?.step_ms||300000;
       const gardenAt=x=>{if(!garden)return 0;let lo=0,hi=garden.length-1,best=null;while(lo<=hi){const m=(lo+hi)>>1;if(garden[m].x<=x){best=garden[m];lo=m+1;}else hi=m-1;}return best&&x-best.x<gStep*1.5?best.y:null;};
+      const pMap=parts().includes('p275')&&has275()?new Map((chart.data.datasets[v.ids.indexOf('p275')].data||[]).filter(p=>Number.isFinite(p.y)).map(p=>[bucket(p.x),p.y])):null;
       combined.data=shed.map(p=>{
-        const gy=gMap.get(bucket(p.x)),dy=gardenAt(p.x);
-        return {x:p.x,y:Number.isFinite(p.y)&&Number.isFinite(gy)&&Number.isFinite(dy)?p.y+gy+dy:null};
+        const gy=gMap.get(bucket(p.x)),dy=gardenAt(p.x),py=pMap?pMap.get(bucket(p.x)):0;
+        return {x:p.x,y:Number.isFinite(p.y)&&Number.isFinite(gy)&&Number.isFinite(dy)&&Number.isFinite(py)?p.y+gy+dy+py:null};
       });
     }
     chart.$units=[{id:'y',text:field.label+' ('+field.unit+')'}]; // drawn above the axis by the shared graph style
     chart.update('none');
-    const counted=both()?parts():v.ids,energies=counted.map(id=>v.history[id]?.energy),complete=energies.every(e=>Number.isFinite(e?.estimated_kwh));
+    const counted=both()?parts():v.ids,energies=counted.map(id=>v.history[id]?.energy),complete=energies.every((e,i)=>!inTotal(counted[i])||Number.isFinite(e?.estimated_kwh));
     const covered=energies.map(e=>e?.coverage_s||0), duration=energies[0]?.period_s||0;
     const hours=s=>(s/3600).toLocaleString(undefined,{maximumFractionDigits:1});
     el('note').textContent=v.ready?('Generation is estimated from '+(v.history[counted[0]]?.source==='local'?'1-minute local':'15-minute')+' readings. Gaps over 30 minutes are excluded. '+
@@ -1752,10 +1758,10 @@ function genChart(e,active,ids=['shed','garage','p275']){
     v.bin=Math.max(0,Math.min(v.bins.length-1,Number(index)||0));
     const pair=v.bins[v.bin],unit=v.week?'day':v.history.shed?.energy?.bucket_unit||'hour';
     el('choice').value=String(v.bin);
-    const complete=pair.every(b=>Number.isFinite(b?.estimated_kwh)),names=parts().map(id=>GEN_METERS[id][0]);
+    const ids=parts(),names=ids.map(id=>GEN_METERS[id][0]),use=pair.filter((b,i)=>inTotal(ids[i])),complete=use.every(b=>Number.isFinite(b?.estimated_kwh));
     const lines=[mobileBinLabel(pair.find(Boolean),unit,true),
       ...names.map((n,i)=>n+': '+mobileKwh(pair[i]?.estimated_kwh)),
-      'Total: '+(complete?mobileKwh(pair.reduce((t,b)=>t+b.estimated_kwh,0)):'Unavailable · missing readings')];
+      'Total: '+(complete?mobileKwh(use.reduce((t,b)=>t+b.estimated_kwh,0)):'Unavailable · missing readings')];
     const minutes=b=>b?(b.period_s>=3600?(b.coverage_s/3600).toLocaleString(undefined,{maximumFractionDigits:1})+' / '+(b.period_s/3600).toLocaleString(undefined,{maximumFractionDigits:1})+' h':Math.round(b.coverage_s/60)+' / '+Math.round(b.period_s/60)+' min'):'No data';
     lines.push('Recorded · '+names.map((n,i)=>n+' '+minutes(pair[i])).join('; '));
     el('details').textContent=lines.join('\n');
@@ -1765,10 +1771,11 @@ function genChart(e,active,ids=['shed','garage','p275']){
     if(!mobileMedia.matches||!e.mobile)return;
     v.make();
     const period=v.window, metric=el('metric').value;
-    const ids=parts(),names=ids.map(id=>GEN_METERS[id][0]),energies=ids.map(id=>v.history[id]?.energy),kwh=e=>Number.isFinite(e?.estimated_kwh)?mobileKwh(e.estimated_kwh):'— kWh';
+    const ids=parts(),names=ids.map(id=>id==='p275'?'275':GEN_METERS[id][0]),energies=ids.map(id=>v.history[id]?.energy),kwh=(e,id)=>(id!=='p275'||e?.coverage_s>0)&&Number.isFinite(e?.estimated_kwh)?mobileKwh(e.estimated_kwh):'— kWh';
+    const used=energies.filter((e,i)=>inTotal(ids[i]));
     if(el('period'))el('period').textContent=v.label;
-    el('total').textContent=energies.every(e=>Number.isFinite(e?.estimated_kwh))?mobileKwh(energies.reduce((t,e)=>t+e.estimated_kwh,0)):'— kWh';
-    el('split').textContent=names.map((n,i)=>n+' '+kwh(energies[i])).join(' · ');
+    el('total').textContent=used.every(e=>Number.isFinite(e?.estimated_kwh))?mobileKwh(used.reduce((t,e)=>t+e.estimated_kwh,0)):'— kWh';
+    el('split').textContent=names.map((n,i)=>n+' '+kwh(energies[i],ids[i])).join(' · ')+(ids.includes('p275')&&!has275()?' · 275 not recorded in this period, so not in the total':'');
     const duration=energies[0]?.period_s||0;
     const hours=s=>(s/3600).toLocaleString(undefined,{maximumFractionDigits:1});
     el('coverage').textContent=v.ready?'Recorded: '+names.map((n,i)=>n+' '+hours(energies[i]?.coverage_s||0)+'h').join(' · ')+' of '+hours(duration)+'h. Hatched slots have missing or incomplete readings.':'Loading generation…';
@@ -1800,10 +1807,10 @@ function genChart(e,active,ids=['shed','garage','p275']){
       for(const button of el('meters').querySelectorAll('button')){button.hidden=metric!=='power_w'&&['total','garden'].includes(button.dataset.meter);button.setAttribute('aria-pressed',String(button.dataset.meter===v.meter));}
       const source=v.chart.data.datasets;
       const totalI=v.ids.length; // Total is appended after the meter series when both Shed and Garage are present
-      const power=metric==='power_w',shown=power?ids:['shed','garage'],at=id=>v.ids.indexOf(id);
+      const power=metric==='power_w',shown=power?ids:ids.filter(id=>id!=='garden'),at=id=>v.ids.indexOf(id);
       const pick=v.meter==='compare'?[...shown.map(at),...(power?[totalI]:[])]:[v.meter==='total'?totalI:at(v.meter)];
       datasets=pick.map(i=>source[i]&&({...source[i],data:source[i].data,hidden:false,fill:false})).filter(Boolean);
-      el('heading').textContent=(v.meter==='compare'?named([...shown.map(id=>GEN_METERS[id][0]),...(power?['Total']:[])]):v.meter==='total'?'Total':GEN_METERS[v.meter][0])+' '+field.label.toLowerCase();
+      el('heading').textContent=(v.meter==='compare'?named([...shown.map(id=>id==='p275'?'275':GEN_METERS[id][0]),...(power?['Total']:[])]):v.meter==='total'?'Total':GEN_METERS[v.meter][0])+' '+field.label.toLowerCase();
     }
     const series=v.history.shed||v.history.garage;
     v.mobile=new Chart(el('mobile'),{type:bars?'bar':'line',data:{labels,datasets},plugins:bars?[missingBins]:[],options:{responsive:true,maintainAspectRatio:false,animation:false,

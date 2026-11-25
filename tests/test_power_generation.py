@@ -48,7 +48,10 @@ class PowerGenerationCard(unittest.TestCase):
         self.assertIn('data-meter="garden"', HTML.split('id="genMeterButtons"', 1)[1].split('</div>', 1)[0])
         self.assertIn("/api/ewelink/history?device=garage-inverter&window='+p.window", HTML)
         self.assertIn("()=>activeTab==='power',['shed','garage','p275','garden'])", HTML)
-        self.assertIn("const parts=()=>['shed','garage',...(v.ids.includes('garden')?['garden']:[])]", HTML)
+        self.assertIn("const parts=()=>['shed','garage',...(v.ids.includes('garden')?['p275','garden']:[])]", HTML)
+        # Dad, 25 Nov: the 275 joins Total too, but only for periods where it recorded anything.
+        self.assertIn('data-meter="p275"', HTML.split('id="genMeterButtons"', 1)[1].split('</div>', 1)[0])
+        self.assertIn("const inTotal=id=>id!=='p275'||has275();", HTML)
         # Total is shed+garage from the already-drawn series, aligned by sample step,
         # not a raw timestamp lookup that missed near-matches on mobile.
         self.assertIn('const bucket=x=>Math.round(x/step)', HTML)
