@@ -32,8 +32,9 @@
         };
         const tidy=chart=>{
           const config=chart.config,o=config.options;
-          if(config.type!=='line'||o.modTidy===false)return;
-          for(const ds of config.data.datasets||[]){
+          const line=config.type==='line';
+          if(!['line','bar'].includes(config.type)||o.modTidy===false)return;
+          if(line)for(const ds of config.data.datasets||[]){
             ds.borderWidth=(ds.borderWidth||0)>2.5?2:1.5;
             ds.pointRadius=lonely;ds.pointHoverRadius=4;ds.pointHitRadius=Math.max(ds.pointHitRadius||0,8);
             ds.pointHoverBorderWidth=2;ds.borderJoinStyle='round';ds.borderCapStyle='round';
@@ -62,7 +63,7 @@
           const legend=o.plugins?.legend;
           if(legend&&legend.display!==false){
             legend.align='start';
-            legend.labels={...(legend.labels||{}),usePointStyle:true,pointStyle:'line',pointStyleWidth:18,boxHeight:2,padding:12,font:{size:11}};
+            legend.labels={...(legend.labels||{}),usePointStyle:true,padding:12,font:{size:11},...(line?{pointStyle:'line',pointStyleWidth:18,boxHeight:2}:{pointStyle:'rectRounded',pointStyleWidth:10,boxWidth:10,boxHeight:10})};
           }
           // Two value scales: colour each one's numbers and unit to match its line, so the legend explains both sides.
           const ys=Object.keys(o.scales||{}).filter(id=>id.startsWith('y'));
@@ -75,7 +76,7 @@
           beforeInit(chart){
             tidy(chart);
             // A thin row under the legend that holds the unit of each value scale, above its numbers (empty when there are none).
-            if(chart.config.type!=='line'||chart.config.options.modTidy===false)return;
+            if(!['line','bar'].includes(chart.config.type)||chart.config.options.modTidy===false)return;
             Chart.layouts.addBox(chart,{position:'top',weight:-10,fullSize:true,options:{},left:0,top:0,right:0,bottom:0,width:0,height:0,
               update(width){this.width=width;this.height=chart.$units?.length?22:0;},isHorizontal:()=>true,getPadding:()=>({left:0,right:0,top:0,bottom:0}),
               draw(){
@@ -351,9 +352,19 @@
         .juwai-period { margin:0; }
 
         .juwai-mobile-only { display:none; }
+        /* Bars or line switch on the Generation card (phones), on the Chart row, left. */
+        .chart-style { display:none; gap:.2rem; padding:.2rem; margin-right:auto; border:1px solid var(--border); border-radius:10px; background:#101828; }
+        .chart-style button { display:flex; align-items:center; gap:.35rem; min-height:40px; padding:.4rem .7rem; border:0; border-radius:8px; background:none; color:var(--text-muted); font:inherit; font-size:.85rem; cursor:pointer; }
+        .chart-style button[aria-pressed="true"] { background:#1e293b; color:var(--import-color); }
+        .chart-style button:focus-visible { outline:2px solid var(--import-color); outline-offset:2px; }
+        .chart-style svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
         @media(max-width:600px) {
           .juwai-desktop-chart, #juwaiHistoryNote { display:none; }
           .juwai-mobile-only { display:block; }
+          .chart-style.juwai-mobile-only { display:flex; }
+          .chart-style[hidden] { display:none; }
+          #genCard .card-actions { width:100%; }
+          #genCard .gen-metric-word { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
           .juwai-group { padding:.75rem; }
           .juwai-grid { gap:.65rem; }
           .juwai-group .juwai-card { padding:.8rem; }
@@ -968,7 +979,7 @@
               <h2 id="genTitle">Generation</h2>
               <span id="genPeriod" class="period-note">Loading…</span>
             </div>
-            <div class="card-actions"><label for="genMetric">Chart <select id="genMetric"><option value="power_w">Power (W)</option><option value="voltage_v">Voltage (V)</option><option value="current_a">Current (A)</option></select></label></div>
+            <div class="card-actions"><div class="chart-style juwai-mobile-only" id="genStyle" role="group" aria-label="Graph type" hidden><button type="button" data-style="bars" aria-pressed="true" aria-label="Bar chart"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 14V8M6 14V4M10 14V7M14 14V2"/></svg>Bars</button><button type="button" data-style="line" aria-pressed="false" aria-label="Line graph"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 12.5 5.5 7l3 3 6-7.5"/></svg>Line</button></div><label for="genMetric"><span class="gen-metric-word">Chart</span> <select id="genMetric"><option value="power_w">Power (W)</option><option value="voltage_v">Voltage (V)</option><option value="current_a">Current (A)</option></select></label></div>
           </div>
           <p id="genLimit" class="period-note" hidden></p>
           <div class="juwai-mobile-only">
@@ -1762,8 +1773,10 @@ function genChart(e,active,ids=['shed','garage','p275']){
     const hours=s=>(s/3600).toLocaleString(undefined,{maximumFractionDigits:1});
     el('coverage').textContent=v.ready?'Recorded: '+names.map((n,i)=>n+' '+hours(energies[i]?.coverage_s||0)+'h').join(' · ')+' of '+hours(duration)+'h. Hatched slots have missing or incomplete readings.':'Loading generation…';
     if(v.mobile){v.mobile.destroy();v.mobile=null;}
-    const bars=metric==='power_w'&&!LIVE_WINDOWS.includes(period);
-    el('metric').querySelector('[value=power_w]').textContent=bars?'Generation (kWh)':'Power (W)';
+    // Bars need power and a period longer than the live hour; the switch picks bars or a line for those (Gareth, 25 Nov).
+    const canBars=metric==='power_w'&&!LIVE_WINDOWS.includes(period),bars=canBars&&v.style!=='line';
+    if(el('style')){el('style').hidden=!canBars;for(const b of el('style').querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.dataset.style===(bars?'bars':'line')));}
+    el('metric').querySelector('[value=power_w]').textContent=bars?'Energy (kWh)':'Power (W)';
     el('meters').hidden=bars;el('bins').hidden=!bars;el('back').hidden=!bars||!v.week;
     if(!bars)v.week=null;
     let datasets,labels=[],unit='hour';
@@ -1793,16 +1806,19 @@ function genChart(e,active,ids=['shed','garage','p275']){
       el('heading').textContent=(v.meter==='compare'?named([...shown.map(id=>GEN_METERS[id][0]),...(power?['Total']:[])]):v.meter==='total'?'Total':GEN_METERS[v.meter][0])+' '+field.label.toLowerCase();
     }
     const series=v.history.shed||v.history.garage;
-    const tick=t=>ukDate(t,LIVE_WINDOWS.includes(period)||['today','yesterday','24h','previous24h'].includes(period)?{hour:'2-digit',minute:'2-digit'}:{day:'numeric',month:'short'});
     v.mobile=new Chart(el('mobile'),{type:bars?'bar':'line',data:{labels,datasets},plugins:bars?[missingBins]:[],options:{responsive:true,maintainAspectRatio:false,animation:false,
       interaction:{mode:'index',intersect:false},onClick:(event)=>{if(bars&&v.mobile?.chartArea){const i=Math.round(v.mobile.scales.x.getValueForPixel(event.x));v.showBin(i);}},
-      scales:{x:bars?{type:'category',stacked:true,grid:{display:false},ticks:{color:'#94a3b8',maxRotation:0,autoSkip:true,maxTicksLimit:unit==='hour'?5:7}}:{type:'linear',min:series?.start,max:series?.end,grid:{display:false},ticks:{color:'#94a3b8',maxTicksLimit:4,callback:tick}},
-        y:{stacked:bars,beginAtZero:bars,title:{display:true,text:bars?'Generation (kWh)':juwaiFields[metric].unit,color:'#94a3b8'},ticks:{color:'#94a3b8',maxTicksLimit:5},grid:{color:'#222f49'}}},
+      scales:{x:bars?{type:'category',stacked:true,grid:{display:false},ticks:{color:'#94a3b8',maxRotation:0,autoSkip:true,maxTicksLimit:unit==='hour'?5:7}}:{type:'linear',min:series?.start,max:series?.end,grid:{display:false},ticks:{color:'#94a3b8',maxTicksLimit:4,callback:modTimeTick}},
+        y:{stacked:bars,beginAtZero:bars,title:{display:true,text:bars?'kWh':juwaiFields[metric].unit,color:'#94a3b8'},ticks:{color:'#94a3b8',maxTicksLimit:5},grid:{color:'#222f49'}}},
       plugins:{legend:{display:datasets.length>1,labels:{color:'#94a3b8',usePointStyle:true,boxWidth:8,padding:16}},tooltip:{enabled:!bars,callbacks:{title:items=>ukDate(items[0].parsed.x,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZoneName:'short'}),label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()+' '+juwaiFields[metric].unit}}}}});
   };
   el('metric').addEventListener('change',v.draw);
   if(!e.mobile)return v;
   el('choice').addEventListener('change',event=>v.showBin(event.target.value));
+  if(el('style')){
+    try{v.style=localStorage.getItem('modpi-gen-style')||'bars';}catch(_){v.style='bars';}
+    el('style').addEventListener('click',event=>{const b=event.target.closest('button[data-style]');if(!b||b.dataset.style===v.style)return;v.style=b.dataset.style;try{localStorage.setItem('modpi-gen-style',v.style);}catch(_){}v.drawMobile();});
+  }
   el('meters').addEventListener('click',event=>{const button=event.target.closest('button[data-meter]');if(button){v.meter=button.dataset.meter;v.drawMobile();}});
   el('drill').addEventListener('click',()=>{v.week=v.bins[v.bin]?.[0]||null;v.bin=null;v.drawMobile();});
   el('back').addEventListener('click',()=>{v.week=null;v.bin=null;v.drawMobile();});
@@ -2020,7 +2036,7 @@ function drawFlow(r,node,total){
   $('flowTable').replaceChildren(...rows.map(cells=>{const tr=document.createElement('tr');for(const c of cells){const td=document.createElement('td');td.textContent=c;tr.appendChild(td);}return tr;}));
 }
 // Generation chart on the Power tab: the Shed, Garage, 275 and Total chart for the Power tab's period. It is read with the net power history (on a period change and every minute), only while this tab is showing.
-const genView=genChart({chart:'genChart',metric:'genMetric',note:'genNote',total:'genMobileTotal',split:'genMobileSplit',coverage:'genCoverage',heading:'genMobileHeading',meters:'genMeterButtons',back:'genWeekBack',mobile:'genMobileChart',bins:'genBinControls',choice:'genBucketChoice',details:'genBucketDetails',drill:'genWeekDrill'},()=>activeTab==='power',['shed','garage','p275','garden']);
+const genView=genChart({chart:'genChart',metric:'genMetric',note:'genNote',total:'genMobileTotal',split:'genMobileSplit',coverage:'genCoverage',heading:'genMobileHeading',meters:'genMeterButtons',back:'genWeekBack',mobile:'genMobileChart',bins:'genBinControls',choice:'genBucketChoice',details:'genBucketDetails',drill:'genWeekDrill',style:'genStyle'},()=>activeTab==='power',['shed','garage','p275','garden']);
 let genController=null,genTime=0;
 // The Power tab's period as a generation history window. Over 30 days or custom dates show the past 30 days, as the Energy flow does.
 const GEN_WINDOWS={'15m':'15m','30m':'live','1h':'live','2h':'2h','4h':'4h','8h':'8h','1d':'today','24h':'24h','7d':'7d','30d':'30d'};

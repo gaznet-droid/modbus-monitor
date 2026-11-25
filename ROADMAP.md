@@ -52,6 +52,7 @@ UI tweaks and new integrations while the Pi keeps running at Gareth's. Prefer pa
 - System diagram tightened for phones: the Charger sits below the Epever with its feed round the right; inverter plugs turn blue when feeding.
 
 ## Next
+- DONE 25 Nov, page-only, awaiting Dad's eye: Bars or Line switch on the Power tab's Generation card (phones, periods longer than the live hour), remembered per phone.
 - DONE 25 Nov, page-only, awaiting Dad's eye: Garden (200 watt panel, from the Garden inverter plug) on the Power tab's Generation card, with its own button and counted in Total. Open: the 275 watt panels are still not in the phone view or in Total; Dad to say if they should be.
 - DONE 25 Nov, page-only, awaiting Dad's eye: one tidy style for every line graph (thin lines, no dots, units above the axes, whole-hour time labels, touch guide line, wider on phones). Dad happy, 25 Nov. Dashboard card graphs now follow the same rule.
 - Garden and Charger plugs read locally (16 Nov, Gareth asked why they say Remote). They are POWR2 and come through eWeLink's live stream. Their LAN announcements do update while the stream's keep-awake is running, about four new readings a minute. Option: take those as a local source too, so readings survive an eWeLink outage for as long as the plugs stay awake; the keep-awake itself still needs the internet. Gareth to decide.
