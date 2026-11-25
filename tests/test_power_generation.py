@@ -78,6 +78,9 @@ class DashboardOrderTest(unittest.TestCase):
         self.assertIn('id="dashSave"', HTML)
         self.assertIn('.dash-save-bar { position:fixed;', HTML)
         self.assertNotIn('dash-grip', HTML)
+        # Gareth, 25 Nov: a period dropdown beside the pencil sets what the card graphs show.
+        self.assertIn('<select id="dashPeriod"', HTML)
+        self.assertIn("get('/api/history?window='+dashP().net)", HTML)
         self.assertIn("const DASH_ORDER_KEY='modpi-dash-order'", HTML)
         self.assertIn("if($('dashGrid').classList.contains('editing'))return;", HTML)
         self.assertIn("$('dashEditBar').hidden=name!=='dashboard'", HTML)

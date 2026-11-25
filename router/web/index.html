@@ -914,7 +914,7 @@
           </select>
           <select hidden id="ewelinkPeriod" class="time-select tab-window" aria-label="Period"><option value="15m">Live</option><option value="live">Past hour</option><option value="2h">Past 2 hours</option><option value="4h">Past 4 hours</option><option value="8h">Past 8 hours</option><option value="today" selected>Today</option><option value="24h">Past 24 hours</option><option value="previous24h">Previous 24 hours</option><option value="yesterday">Yesterday</option><option value="7d">Past week</option><option value="30d">Past month · 30 days</option></select>
           <span id="homeStatus" class="header-status" role="status" hidden>Loading readings…</span>
-          <span id="dashEditBar" class="dash-edit-bar" hidden><button type="button" id="dashEdit" class="dash-edit-btn" aria-pressed="false" aria-label="Change the order of the cards" title="Change the order of the cards"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4zM13.5 6.5l4 4"/></svg></button></span>
+          <span id="dashEditBar" class="dash-edit-bar" hidden><select id="dashPeriod" class="time-select" aria-label="Period for the card graphs"><option value="hour">Past hour</option><option value="h4">Past 4 hours</option><option value="today">Today</option></select><button type="button" id="dashEdit" class="dash-edit-btn" aria-pressed="false" aria-label="Change the order of the cards" title="Change the order of the cards"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4zM13.5 6.5l4 4"/></svg></button></span>
           <span id="systemStatus" class="header-status" role="status" hidden>Loading readings…</span>
           </div>
         </div>
@@ -925,7 +925,7 @@
       <header><h2>Live net power</h2><span class="dash-chev" aria-hidden="true">›</span></header>
       <div class="dash-main"><div class="dash-big" id="dcNetBig">— W</div><div class="dash-tag" id="dcNetTag">Waiting</div></div>
       <div class="dash-spark" id="dcNetSpark" role="img" aria-label="Net power, past hour"></div>
-      <dl class="dash-facts"><div><dt>Import today</dt><dd id="dcNetImp">—</dd></div><div><dt>Export today</dt><dd id="dcNetExp">—</dd></div><div><dt>Past hour</dt><dd id="dcNetRange">—</dd></div></dl>
+      <dl class="dash-facts"><div><dt>Import today</dt><dd id="dcNetImp">—</dd></div><div><dt>Export today</dt><dd id="dcNetExp">—</dd></div><div><dt class="dash-plabel">Past hour</dt><dd id="dcNetRange">—</dd></div></dl>
     </article>
     <article class="dash-card dash-wide" id="dcSolar" data-state="stale" data-go="system" data-dev="output" role="button" tabindex="0" aria-label="Open the System page">
       <header><h2>Total solar live</h2><span class="dash-chev" aria-hidden="true">›</span></header>
@@ -944,7 +944,7 @@
       <header><h2>Fridge</h2><span class="dash-chev" aria-hidden="true">›</span></header>
       <div class="dash-main"><div class="dash-big" id="dcFrBig">— W</div><div class="dash-tag" id="dcFrTag">Waiting</div></div>
       <div class="dash-spark" id="dcFrSpark" role="img" aria-label="Fridge power, past hour"></div>
-      <dl class="dash-facts"><div><dt>Today</dt><dd id="dcFrToday">—</dd></div><div><dt>Freezer</dt><dd id="dcFrTemp">—</dd></div><div><dt>Past hour avg</dt><dd id="dcFrAvg">—</dd></div></dl>
+      <dl class="dash-facts"><div><dt>Today</dt><dd id="dcFrToday">—</dd></div><div><dt>Freezer</dt><dd id="dcFrTemp">—</dd></div><div><dt class="dash-plabel" data-suffix=" avg">Past hour avg</dt><dd id="dcFrAvg">—</dd></div></dl>
     </article>
     <article class="dash-card" id="dcGarden" data-state="stale" data-go="system" data-dev="garden" role="button" tabindex="0" aria-label="Open the Garden inverter details">
       <header><h2>Garden inverter</h2><span class="dash-chev" aria-hidden="true">›</span></header>
@@ -957,7 +957,7 @@
       <header><h2>Total export today</h2><span class="dash-chev" aria-hidden="true">›</span></header>
       <div class="dash-main"><div class="dash-big" id="dcExBig">— Wh</div><div class="dash-tag" id="dcExTag">Since midnight</div></div>
       <div class="dash-spark" id="dcExSpark" role="img" aria-label="Export through today, by hour"></div>
-      <dl class="dash-facts"><div><dt>Imported today</dt><dd id="dcExImp">—</dd></div><div><dt>Biggest export</dt><dd id="dcExPeak">—</dd></div><div><dt>Past hour</dt><dd id="dcExHour">—</dd></div></dl>
+      <dl class="dash-facts"><div><dt>Imported today</dt><dd id="dcExImp">—</dd></div><div><dt>Biggest export</dt><dd id="dcExPeak">—</dd></div><div><dt class="dash-plabel">Past hour</dt><dd id="dcExHour">—</dd></div></dl>
     </article>
   </div>
   <p class="period-note" id="dashNote" role="status">Loading readings…</p>
@@ -2605,6 +2605,10 @@ window.addEventListener('hashchange',openHashTab);
 // Dashboard tab: one card per live figure. Live numbers poll every 3 seconds; the small graphs and today's totals refresh every minute.
 let dashTimer=null,dashController=null,dashVersion=0,dashSlowAt=0,dashHomeAt=0;
 const dash={live:null,epever:null,plugs:null,home:null,hist:{},day:null,hour:null,todayWh:{}};
+// The period the card graphs show (Gareth, 25 Nov), chosen beside the pencil and remembered on this device. Today's totals stay today.
+const DASH_PERIODS={hour:{label:'Past hour',net:'1h',plug:'live',ep:'live',left:'60 min ago'},h4:{label:'Past 4 hours',net:'4h',plug:'4h',ep:'4h',left:'4 h ago'},today:{label:'Today',net:'1d',plug:'today',ep:'today',left:'midnight'}};
+let dashPeriod='hour';try{const v=localStorage.getItem('modpi-dash-period');if(DASH_PERIODS[v])dashPeriod=v;}catch(_){}
+const dashP=()=>DASH_PERIODS[dashPeriod];
 function stopDash(){dashVersion++;clearTimeout(dashTimer);dashTimer=null;dashController?.abort();dashController=null;}
 const dN=(v,unit,d)=>Number.isFinite(v)?v.toLocaleString(undefined,{minimumFractionDigits:d??0,maximumFractionDigits:d??(Math.abs(v)<10?1:0)})+' '+unit:'—';
 const dWh=wh=>Number.isFinite(wh)?Math.round(wh).toLocaleString()+' Wh':'—';
@@ -2613,7 +2617,7 @@ const D_TAGS={dcNet:'dcNetTag',dcSolar:'dcSolarTag',dcEpever:'dcEpTag',dcFridge:
 // act: 'on' (doing something: pulses), 'idle' (nothing happening: still, grey-blue), 'none' (a plain label).
 function dCard(id,state,tag,act='idle',tone=''){const c=$(id);c.dataset.state=state;c.dataset.act=state==='stale'?'idle':act;c.dataset.tone=tone;dSet(D_TAGS[id],tag);}
 // Small line graph into a box: pts are [x,y] pairs, y may be null for a gap. zero draws the zero line (for figures that go negative).
-function dSpark(id,pts,{cls='',zero=false,min,max,from,to,left='60 min ago'}={}){
+function dSpark(id,pts,{cls='',zero=false,min,max,from,to,left=dashP().left}={}){
   const box=$(id);if(!box)return;box.className='dash-spark '+cls;
   const p=(pts||[]).filter(q=>Number.isFinite(q[0])&&Number.isFinite(q[1])).sort((a,b)=>a[0]-b[0]);
   if(p.length<2){box.innerHTML='<div class="sp-empty">Collecting readings…</div>';return;}
@@ -2697,15 +2701,16 @@ function renderDash(){
   const gp=gLive?Math.max(0,ga.power_w)/200*100:0;$('dcGaBar').style.width=Math.min(100,gp)+'%';dSet('dcGaPct',gLive?Math.round(gp)+'% of 200 W':'—');
   dSpark('dcGaSpark',(dash.hist['garage-inverter']?.points||[]).map(p=>[p[0],p[1]]),{cls:'is-amber',min:0,from:dash.hist['garage-inverter']?.start,to:dash.hist['garage-inverter']?.end});
   const times=[latest?.ts,ep?.observed_at,...ds.map(d=>d?.ts),fr?.ts].filter(Number.isFinite);
-  $('dashNote').textContent=times.length?'Net power and solar update every few seconds. Latest reading '+homeTime(Math.max(...times))+'. Graphs show the past hour.':'No live readings';
+  $('dashNote').textContent=times.length?'Net power and solar update every few seconds. Latest reading '+homeTime(Math.max(...times))+'. Graphs show '+(dashPeriod==='today'?'today':'the '+dashP().label.toLowerCase())+'.':'No live readings';
+  for(const dt of document.querySelectorAll('.dash-plabel'))dt.textContent=dashP().label+(dt.dataset.suffix||'');
 }
 function d2(v){return Math.max(0,v);}
 async function readDashSlow(signal,version){
   const get=url=>getJSON(url,signal).catch(e=>{if(signal.aborted)throw e;return null;});
   const [hour,day,sh,ep]=await Promise.all([
-    get('/api/history?window=1h'),get('/api/history?window=1d'),
-    Promise.all(['inverter-1000','garage-inverter','inverter-600','fridge'].map(id=>get('/api/ewelink/history?device='+id+'&window=live'))),
-    get('/api/epever/history?window=live')]);
+    get('/api/history?window='+dashP().net),get('/api/history?window=1d'),
+    Promise.all(['inverter-1000','garage-inverter','inverter-600','fridge'].map(id=>get('/api/ewelink/history?device='+id+'&window='+dashP().plug))),
+    get('/api/epever/history?window='+dashP().ep)]);
   const [gToday,fToday]=await Promise.all([get('/api/ewelink/history?device=garage-inverter&window=today'),get('/api/ewelink/history?device=fridge&window=today')]);
   if(version!==dashVersion||signal.aborted)return;
   if(hour)dash.hour=hour;if(day)dash.day=day;
@@ -2768,11 +2773,16 @@ for(const c of dashCards()){
 }
 function dashEditing(on){
   if(dashGrid.classList.contains('editing')===on)return;
-  dashGrid.classList.toggle('editing',on);$('dashEdit').setAttribute('aria-pressed',String(on));$('dashSaveBar').hidden=!on;$('dashEdit').hidden=on;
+  dashGrid.classList.toggle('editing',on);$('dashEdit').setAttribute('aria-pressed',String(on));$('dashSaveBar').hidden=!on;$('dashEdit').hidden=on;$('dashPeriod').hidden=on;
   for(const c of dashCards())c.tabIndex=on?-1:0;
   if(!on)try{localStorage.setItem(DASH_ORDER_KEY,JSON.stringify(dashCards().map(c=>c.id)));}catch(_){}
 }
 $('dashEdit').addEventListener('click',()=>dashEditing(true));
+$('dashPeriod').value=dashPeriod;
+$('dashPeriod').addEventListener('change',()=>{
+  dashPeriod=DASH_PERIODS[$('dashPeriod').value]?$('dashPeriod').value:'hour';try{localStorage.setItem('modpi-dash-period',dashPeriod);}catch(_){}
+  stopDash();dash.hist={};dash.hour=null;dashSlowAt=0;renderDash();readDash(dashVersion);
+});
 $('dashSave').addEventListener('click',()=>{dashEditing(false);$('dashEdit').focus({preventScroll:true});});
 $('dashReset').addEventListener('click',()=>dashApply(dashDefault));
 try{const saved=JSON.parse(localStorage.getItem(DASH_ORDER_KEY)||'null');if(Array.isArray(saved))dashApply(saved);else dashArrows();}catch(_){dashArrows();}
